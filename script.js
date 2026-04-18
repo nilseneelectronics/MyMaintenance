@@ -89,6 +89,25 @@ const translations = {
 
 let currentLang = 'en';
 
+const AUTH_TOKEN_KEY = 'mymaintenance.authToken';
+
+function apiUrl(path) {
+    const isBackendHost = window.location.port === '3000';
+    return isBackendHost ? path : `http://localhost:3000${path}`;
+}
+
+async function postJson(url, payload, token) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+}
+
 /* ==================== COMMON LAYOUT (only for logged-in) ==================== */
 const COMMON_LAYOUT = {
     header: `
@@ -236,7 +255,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (gobackButton) gobackButton.addEventListener('click', () => window.location.href = 'index.html');
     if (signoutButton) {
-        signoutButton.addEventListener('click', () => {
+        signoutButton.addEventListener('click', async () => {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            try {
+                await postJson(apiUrl('/api/auth/logout'), {}, token);
+            } catch (_) {
+                // Keep UX working even when backend is unavailable.
+            }
+            localStorage.removeItem(AUTH_TOKEN_KEY);
             alert('Signed out!');
             window.location.href = 'index.html';
         });
@@ -253,7 +279,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (urlParams.get('mode') === 'signup') container.classList.add('signup-mode');
         if (switchToSignup) switchToSignup.addEventListener('click', () => container.classList.add('signup-mode'));
         if (switchToSignin) switchToSignin.addEventListener('click', () => container.classList.remove('signup-mode'));
-        if (signinForm) signinForm.addEventListener('submit', e => { e.preventDefault(); alert('Sign In submitted!'); });
+        if (signinForm) signinForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const inputs = signinForm.querySelectorAll('input');
+            const email = (inputs[0]?.value || '').trim();
+            const password = inputs[1]?.value || '';
+
+            try {
+                const { response, data } = await postJson(apiUrl('/api/auth/login'), { email, password });
+                if (!response.ok || !data?.token) {
+                    alert(data?.message || 'Invalid credentials.');
+                    return;
+                }
+                localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+                window.location.href = 'dashboard.html';
+            } catch (_) {
+                alert('Sign In submitted! Backend is not running yet.');
+            }
+        });
         if (signupForm) signupForm.addEventListener('submit', e => { e.preventDefault(); alert('Sign Up submitted!'); });
     }
 
