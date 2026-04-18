@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyPlanning - MyMaintenance</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <h1>MyPlanning</h1>
+
+        <!-- UPCOMING EVENTS -->
+        <div class="planning-content">
+            <div class="upcoming-box">
+                <h3>Upcoming events</h3>
+                
+                <a href="event-roof-inspection.html" class="box-item-link">Roof inspection – 15 March 2026</a>
+                <a href="event-hvac-service.html" class="box-item-link">HVAC service – 2 April 2026</a>
+                <a href="event-car-oil-change.html" class="box-item-link">Car oil change – 10 April 2026</a>
+                
+                <button class="view-button" onclick="window.location.href='myplanning-events.html'">
+                    Show all
+                </button>
+            </div>
+
+            <!-- Calendar -->
+            <div class="calendar-section">
+                <h3>Calendar</h3>
+                
+                <div class="calendar-mimic">
+                    <div class="month-box">
+                        <table class="month">
+                            <thead><tr><th colspan="7">November 2025</th></tr><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+                            <tbody>
+                                <tr><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td></tr>
+                                <tr><td><a href="#" class="date-circle today">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="month-box">
+                        <table class="month">
+                            <thead><tr><th colspan="7">December 2025</th></tr><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+                            <tbody>
+                                <tr><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td><td><a href="#" class="date-circle">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td></tr>
+                                <tr><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td><td><a href="#" class="date-circle">31</a></td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="view-button" onclick="window.location.href='myplanning-calendar.html'">Show all</button>
+                    <button class="add-button" onclick="alert('Add new event – coming soon!')">Add event</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TO-DO LIST -->
+        <div class="planning-content">
+            <div class="todo-box">
+                <h3>To-Do List</h3>
+                
+                <ul id="todo-list" class="todo-list"></ul>
+                
+                <!-- Add row: 75% input + 25% button, same height -->
+                <div class="add-todo">
+                    <input type="text" id="new-todo-input" placeholder="Add new task...">
+                    <button id="add-todo-btn" class="add-button">Add</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CUSTOM DELETE POPUP -->
+    <div id="delete-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Are you sure you want to delete the task</h3>
+            <p id="popup-task-text" class="popup-task"></p>
+            
+            <div class="popup-buttons">
+                <button id="popup-no" class="popup-btn cancel">NO</button>
+                <button id="popup-yes" class="popup-btn delete">YES</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+
+    <!-- Inline script for To-Do functionality -->
+    <script>
+        const todoList = document.getElementById('todo-list');
+        const newInput = document.getElementById('new-todo-input');
+        const addBtn = document.getElementById('add-todo-btn');
+
+        // Add button
+        addBtn.addEventListener('click', () => {
+            const text = newInput.value.trim();
+            if (!text) return;
+
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <button class="delete-btn" data-task="${text}">🗑</button>
+                <span>${text}</span>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider"></span>
+                </label>
+            `;
+            todoList.appendChild(li);
+            newInput.value = '';
+        });
+
+        // Delete button handler
+        todoList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const taskText = e.target.getAttribute('data-task');
+                const liToDelete = e.target.parentElement;
+
+                // Show custom popup
+                document.getElementById('popup-task-text').textContent = `"${taskText}"?`;
+                document.getElementById('delete-popup').style.display = 'flex';
+
+                // YES button
+                document.getElementById('popup-yes').onclick = () => {
+                    liToDelete.remove();
+                    document.getElementById('delete-popup').style.display = 'none';
+                };
+
+                // NO button
+                document.getElementById('popup-no').onclick = () => {
+                    document.getElementById('delete-popup').style.display = 'none';
+                };
+            }
+        });
+
+        // Initial example tasks
+        function loadExampleTasks() {
+            const examples = [
+                "Build fence around garden",
+                "Change oil in Tesla Model Y",
+                "Inspect boat hull before summer"
+            ];
+            examples.forEach(text => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <button class="delete-btn" data-task="${text}">🗑</button>
+                    <span>${text}</span>
+                    <label class="switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                `;
+                todoList.appendChild(li);
+            });
+        }
+        loadExampleTasks();
+    </script>
+</body>
+</html>

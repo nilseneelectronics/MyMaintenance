@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyHomes - MyMaintenance</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <h1>Welcome to MyHomes</h1>
+
+        <!-- Address line selector -->
+        <div class="custom-dropdown address-selector">
+            <div class="dropdown-toggle">
+                <span>Address 1, Street 123, 5000 City</span>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <ul class="dropdown-menu">
+                <li><button>Address 1, Street 123, 5000 City</button></li>
+                <li><button>Address 2 - Cabin, Mountain Road 45, 6000 City</button></li>
+                <li><button>Register new address</button></li>
+            </ul>
+        </div>
+
+        <!-- 1400px content grid -->
+        <div class="homes-content-grid">
+
+            <!-- Left: Big photo (6×6) -->
+            <div class="photo-box" id="photo-box">
+                <h3>Home Photos</h3>
+                
+                <button class="view-button" onclick="window.location.href='myhome-photos.html'">
+                    View all photos
+                </button>
+                
+                <div class="big-photo-container" id="big-photo-container">
+                    <img id="main-home-photo" src="https://picsum.photos/id/1015/1200/675" alt="Home photo">
+                    
+                    <div class="photo-arrows">
+                        <button class="arrow left" id="prev-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="arrow right" id="next-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planned maintenance -->
+            <div class="planned-box">
+                <!-- Full-box hitbox for empty space → goes to overview -->
+                <a href="planned-maintenance.html" class="box-overlay-link"></a>
+                
+                <h3>Planned maintenance</h3>
+                <a href="planned-roof-inspection.html" class="box-item-link">Roof inspection – 15 March 2026</a>
+                <a href="planned-hvac-filter.html" class="box-item-link">HVAC filter change – 2 April 2026</a>
+                
+                <!-- Turquoise button inside the box -->
+                <button class="view-button" onclick="event.stopImmediatePropagation(); window.location.href='request-quote.html'">
+                    Request a quote
+                </button>
+            </div>
+
+            <!-- Registered documentation -->
+            <div class="docs-box">
+                <!-- Full-box hitbox for empty space → goes to overview -->
+                <a href="registered-documents.html" class="box-overlay-link"></a>
+                
+                <h3>Registered documentation</h3>
+                <a href="document-electrical-2024.html" class="box-item-link">Electrical certificate 2024</a>
+                <a href="document-insurance.html" class="box-item-link">Insurance documents</a>
+            </div>
+
+            <!-- Floor Plans box (underneath photos + registered documents) -->
+            <div class="floorplan-box" id="floorplan-box">
+                <h3>Floor Plans</h3>
+                
+                <button class="view-button" onclick="window.location.href='myhome-floorplans.html'">
+                    View all floor plans
+                </button>
+                
+                <!-- NEW dedicated class for floor plan (non-square) -->
+                <div class="big-floorplan-container" id="big-floorplan-container">
+                    <!-- Clean SVG floor plan – no white fields, full green area -->
+                    <svg id="main-floorplan" width="100%" height="100%" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                        <!-- Grass / entire property land (bright green) – full area -->
+                        <rect x="0" y="0" width="1200" height="675" fill="#4CAF50"/>
+                        
+                        <!-- Main house (brownish) - tall building with division line -->
+                        <rect x="520" y="130" width="230" height="310" rx="12" ry="12" fill="#C19A6B" stroke="#263238" stroke-width="14"/>
+                        <line x1="520" y1="220" x2="750" y2="220" stroke="#263238" stroke-width="14"/>
+                        
+                        <!-- Garage (smaller brownish building) -->
+                        <rect x="520" y="470" width="230" height="135" rx="12" ry="12" fill="#C19A6B" stroke="#263238" stroke-width="14"/>
+                        
+                        <!-- Driveway (gray) - curved path from road to buildings -->
+                        <path d="M 820 560 Q 920 530 950 480" fill="none" stroke="#9E9E9E" stroke-width="55" stroke-linecap="round"/>
+                        
+                        <!-- Red location pin "6" on the house -->
+                        <circle cx="640" cy="195" r="32" fill="#E53935"/>
+                        <polygon points="640,227 610,257 670,257" fill="#E53935"/>
+                        <text x="640" y="212" text-anchor="middle" fill="#FFFFFF" font-size="42" font-weight="700" font-family="Arial">6</text>
+                        
+                        <!-- Clickable areas (transparent overlays) -->
+                        <!-- House -->
+                        <a href="house-documents.html">
+                            <rect x="520" y="130" width="230" height="310" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Garage -->
+                        <a href="garage-documents.html">
+                            <rect x="520" y="470" width="230" height="135" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Garden / rest of property -->
+                        <a href="garden-documents.html">
+                            <rect x="0" y="0" width="1200" height="675" fill="transparent" pointer-events="all"/>
+                        </a>
+                        
+                        <!-- Labels (for clarity) -->
+                        <text x="635" y="95" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">HOUSE</text>
+                        <text x="635" y="635" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">GARAGE</text>
+                        <text x="280" y="340" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">GARDEN</text>
+                        <text x="920" y="510" text-anchor="middle" fill="#263238" font-size="22" font-weight="600">DRIVEWAY</text>
+                    </svg>
+                    
+                    <div class="photo-arrows">
+                        <button class="arrow left" id="prev-floorplan-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="arrow right" id="next-floorplan-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Full-screen photo modal (shared) -->
+        <div class="photo-modal" id="photo-modal">
+            <div class="photo-modal-content">
+                <img id="modal-photo" src="" alt="Full screen photo">
+                
+                <div class="modal-arrows">
+                    <button class="modal-arrow" id="modal-prev">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="modal-arrow" id="modal-next">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-controls">
+                    <button class="modal-btn add" id="add-photo-btn">+</button>
+                    <button class="modal-btn" id="close-modal">×</button>
+                </div>
+
+                <p class="modal-photo-caption">Living room with garden view – summer 2025</p>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

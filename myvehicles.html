@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyVehicles - MyMaintenance</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <h1>Welcome to MyVehicles</h1>
+
+        <!-- Vehicle selector (cars + boats) -->
+        <div class="custom-dropdown address-selector">
+            <div class="dropdown-toggle">
+                <span>Car 1 - Tesla Model Y</span>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <ul class="dropdown-menu">
+                <li><button>Car 1 - Tesla Model Y</button></li>
+                <li><button>Car 2 - Volvo XC90</button></li>
+                <li><button>Boat - Bayliner 255</button></li>
+                <li><button>Register new vehicle</button></li>
+            </ul>
+        </div>
+
+        <!-- 1400px content grid -->
+        <div class="homes-content-grid">
+
+            <!-- Left: Big vehicle photo -->
+            <div class="photo-box" id="photo-box">
+                <h3>Vehicle Photos</h3>
+                
+                <button class="view-button" onclick="window.location.href='myvehicle-photos.html'">
+                    View all photos
+                </button>
+                
+                <div class="big-photo-container" id="big-photo-container">
+                    <img id="main-home-photo" src="https://picsum.photos/id/1015/1200/675" alt="Vehicle photo">
+                    
+                    <div class="photo-arrows">
+                        <button class="arrow left" id="prev-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="arrow right" id="next-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planned maintenance (vehicle version) -->
+            <div class="planned-box">
+                <a href="planned-maintenance.html" class="box-overlay-link"></a>
+                
+                <h3>Planned maintenance</h3>
+                <a href="planned-oil-change.html" class="box-item-link">Oil change – 15 March 2026</a>
+                <a href="planned-tire-rotation.html" class="box-item-link">Tire rotation – 2 April 2026</a>
+                
+                <button class="view-button" onclick="event.stopImmediatePropagation(); window.location.href='request-quote.html'">
+                    Request a quote
+                </button>
+            </div>
+
+            <!-- Registered documentation (vehicle version) -->
+            <div class="docs-box">
+                <a href="registered-documents.html" class="box-overlay-link"></a>
+                
+                <h3>Registered documentation</h3>
+                <a href="document-registration-2024.html" class="box-item-link">Registration certificate 2024</a>
+                <a href="document-insurance.html" class="box-item-link">Insurance documents</a>
+            </div>
+
+            <!-- Vehicle Diagrams (side-view of car – non-square container) -->
+            <div class="floorplan-box" id="floorplan-box">
+                <h3>Vehicle Diagrams</h3>
+                
+                <button class="view-button" onclick="window.location.href='myvehicle-diagrams.html'">
+                    View all diagrams
+                </button>
+                
+                <div class="big-floorplan-container" id="big-floorplan-container">
+                    <!-- Side-view car SVG (clickable parts) -->
+                    <svg id="main-floorplan" width="100%" height="100%" viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                        <!-- Car body (silver) -->
+                        <rect x="150" y="180" width="780" height="180" rx="20" ry="20" fill="#B0B0B0" stroke="#263238" stroke-width="20"/>
+                        
+                        <!-- Cabin / windows -->
+                        <polygon points="280,180 380,80 680,80 730,180" fill="#E0F0FF" stroke="#263238" stroke-width="20"/>
+                        
+                        <!-- Front wheel -->
+                        <circle cx="320" cy="360" r="70" fill="#263238"/>
+                        <circle cx="320" cy="360" r="45" fill="#F5F5F5"/>
+                        
+                        <!-- Rear wheel -->
+                        <circle cx="780" cy="360" r="70" fill="#263238"/>
+                        <circle cx="780" cy="360" r="45" fill="#F5F5F5"/>
+                        
+                        <!-- Engine area (hood) -->
+                        <rect x="150" y="180" width="220" height="120" fill="#A0A0A0" stroke="#263238" stroke-width="15"/>
+                        
+                        <!-- Trunk area -->
+                        <rect x="730" y="180" width="200" height="120" fill="#A0A0A0" stroke="#263238" stroke-width="15"/>
+                        
+                        <!-- Clickable areas -->
+                        <!-- Engine / Hood -->
+                        <a href="engine-documents.html">
+                            <rect x="150" y="180" width="220" height="120" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Body / Cabin -->
+                        <a href="body-documents.html">
+                            <polygon points="280,180 380,80 680,80 730,180" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Front wheel / Tires -->
+                        <a href="tires-documents.html">
+                            <circle cx="320" cy="360" r="70" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Rear wheel / Tires -->
+                        <a href="tires-documents.html">
+                            <circle cx="780" cy="360" r="70" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Trunk -->
+                        <a href="trunk-documents.html">
+                            <rect x="730" y="180" width="200" height="120" fill="transparent" pointer-events="all"/>
+                        </a>
+                        
+                        <!-- Labels -->
+                        <text x="260" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">ENGINE</text>
+                        <text x="500" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">BODY</text>
+                        <text x="320" y="450" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TIRES</text>
+                        <text x="780" y="450" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TIRES</text>
+                        <text x="830" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TRUNK</text>
+                    </svg>
+                    
+                    <div class="photo-arrows">
+                        <button class="arrow left" id="prev-floorplan-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="arrow right" id="next-floorplan-arrow">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Full-screen photo modal (shared) -->
+        <div class="photo-modal" id="photo-modal">
+            <div class="photo-modal-content">
+                <img id="modal-photo" src="" alt="Full screen photo">
+                
+                <div class="modal-arrows">
+                    <button class="modal-arrow" id="modal-prev">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button class="modal-arrow" id="modal-next">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="modal-controls">
+                    <button class="modal-btn add" id="add-photo-btn">+</button>
+                    <button class="modal-btn" id="close-modal">×</button>
+                </div>
+
+                <p class="modal-photo-caption">Living room with garden view – summer 2025</p>
+            </div>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
