@@ -90,6 +90,29 @@ const translations = {
 let currentLang = 'en';
 
 const AUTH_TOKEN_KEY = 'mymaintenance.authToken';
+const LOGGED_IN_PAGES = new Set([
+    'dashboard.html',
+    'myhomes.html',
+    'myvehicles.html',
+    'mydocuments.html',
+    'myplanning.html',
+    'mytools.html',
+    'myprofile.html'
+]);
+const PUBLIC_ONLY_PAGES = new Set(['login.html']);
+const KNOWN_PAGE_FILES = new Set([
+    'index.html',
+    'about.html',
+    'login.html',
+    'dashboard.html',
+    'myhomes.html',
+    'myvehicles.html',
+    'mydocuments.html',
+    'myplanning.html',
+    'mytools.html',
+    'myprofile.html',
+    'coming-soon.html'
+]);
 
 function apiUrl(path) {
     const isBackendHost = window.location.port === '3000';
@@ -106,6 +129,80 @@ async function postJson(url, payload, token) {
     });
     const data = await response.json().catch(() => ({}));
     return { response, data };
+}
+
+async function getJson(url, token) {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(url, { method: 'GET', headers });
+    const data = await response.json().catch(() => ({}));
+    return { response, data };
+}
+
+function getCurrentPageName() {
+    return location.pathname.split('/').pop() || 'index.html';
+}
+
+function routeToLogin() {
+    const currentPage = getCurrentPageName();
+    const next = encodeURIComponent(currentPage);
+    window.location.href = `login.html?mode=signin&next=${next}`;
+}
+
+function normalizePlaceholderLinks() {
+    const shouldRewrite = href => {
+        if (!href) return false;
+        if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return false;
+        if (/^https?:\/\//i.test(href)) return false;
+        if (href.startsWith('/')) return false;
+        const cleanHref = href.split('?')[0].split('#')[0];
+        if (!cleanHref.endsWith('.html')) return false;
+        return !KNOWN_PAGE_FILES.has(cleanHref);
+    };
+
+    document.querySelectorAll('a[href]').forEach(link => {
+        const href = link.getAttribute('href');
+        if (!shouldRewrite(href)) return;
+        const target = encodeURIComponent(href);
+        link.setAttribute('href', `coming-soon.html?target=${target}`);
+    });
+}
+
+async function enforceAuthRouting() {
+    const page = getCurrentPageName();
+    const isProtectedByPath = LOGGED_IN_PAGES.has(page);
+    const isProtectedByBody = document.body.classList.contains('logged-in');
+    const requiresAuth = isProtectedByPath || isProtectedByBody;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (!requiresAuth) {
+        if (PUBLIC_ONLY_PAGES.has(page) && token) {
+            try {
+                const { response } = await getJson(apiUrl('/api/auth/session'), token);
+                if (response.ok) {
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (_) {
+                // Keep public pages accessible if backend is unavailable.
+            }
+        }
+        return;
+    }
+
+    if (!token) {
+        routeToLogin();
+        return;
+    }
+
+    try {
+        const { response } = await getJson(apiUrl('/api/auth/session'), token);
+        if (!response.ok) {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            routeToLogin();
+        }
+    } catch (_) {
+        // If backend is down, allow local preview but keep stored session token.
+    }
 }
 
 /* ==================== COMMON LAYOUT (only for logged-in) ==================== */
@@ -165,6 +262,8 @@ function setActiveSidebarLink() {
 
 /* ==================== MAIN SCRIPT ==================== */
 document.addEventListener('DOMContentLoaded', () => {
+    normalizePlaceholderLinks();
+    enforceAuthRouting();
     insertCommonLayout();
 
     // Language button on EVERY page (including index.html)
@@ -292,7 +391,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-                window.location.href = 'dashboard.html';
+                const params = new URLSearchParams(window.location.search);
+                const next = params.get('next') || 'dashboard.html';
+                window.location.href = next;
             } catch (_) {
                 alert('Sign In submitted! Backend is not running yet.');
             }

@@ -27,7 +27,12 @@ const MIME_TYPES = {
 };
 
 function sendJson(res, statusCode, payload) {
-  res.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  });
   res.end(JSON.stringify(payload));
 }
 
@@ -102,6 +107,16 @@ function serveStatic(req, res) {
 }
 
 async function handleApi(req, res) {
+  if (req.url && req.url.startsWith("/api/") && req.method === "OPTIONS") {
+    res.writeHead(204, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    });
+    res.end();
+    return true;
+  }
+
   if (req.method === "GET" && req.url === "/api/health") {
     sendJson(res, 200, { ok: true, service: "backend", timestamp: new Date().toISOString() });
     return true;
