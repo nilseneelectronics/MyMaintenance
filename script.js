@@ -410,48 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (signupForm) signupForm.addEventListener('submit', e => { e.preventDefault(); alert('Sign Up submitted!'); });
     }
 
-    document.querySelectorAll('.collapse-toggle').forEach(toggle => {
-        const content = toggle.closest('.subgroup').querySelector('.subgroup-content');
-        if (content && content.style.display !== 'none') toggle.querySelector('svg').style.transform = 'rotate(180deg)';
-        toggle.addEventListener('click', () => {
-            const isHidden = content.style.display === 'none';
-            content.style.display = isHidden ? 'block' : 'none';
-            toggle.querySelector('svg').style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-        });
-    });
-
-    document.querySelectorAll('.custom-dropdown').forEach(dropdown => {
-        const toggle = dropdown.querySelector('.dropdown-toggle');
-        const menu = dropdown.querySelector('.dropdown-menu');
-        const span = toggle.querySelector('span');
-
-        toggle.addEventListener('click', () => {
-            const isOpen = menu.style.maxHeight !== '0px' && menu.style.maxHeight !== '';
-            menu.style.maxHeight = isOpen ? '0px' : '300px';
-            dropdown.classList.toggle('open', !isOpen);
-        });
-
-        menu.querySelectorAll('button').forEach(item => {
-            item.addEventListener('click', () => {
-                menu.querySelectorAll('button').forEach(btn => btn.classList.remove('selected'));
-                item.classList.add('selected');
-                span.textContent = item.textContent;
-                menu.style.maxHeight = '0px';
-                dropdown.classList.remove('open');
-            });
-        });
-
-        const initialText = span.textContent;
-        menu.querySelectorAll('button').forEach(btn => {
-            if (btn.textContent === initialText) btn.classList.add('selected');
-        });
-
-        document.addEventListener('click', e => {
-            if (!dropdown.contains(e.target)) {
-                menu.style.maxHeight = '0px';
-                dropdown.classList.remove('open');
-            }
-        });
-    });
+    if (window.MyMaintenanceCommonUi && typeof window.MyMaintenanceCommonUi.initCommonUiInteractions === 'function') {
+        window.MyMaintenanceCommonUi.initCommonUiInteractions();
+    }
 
 });
