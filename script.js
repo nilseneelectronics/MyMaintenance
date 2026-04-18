@@ -454,30 +454,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    if (document.getElementById('big-photo-container')) {
-        const images = ["https://picsum.photos/id/1015/1200/675","https://picsum.photos/id/1016/1200/675","https://picsum.photos/id/1018/1200/675","https://picsum.photos/id/102/1200/675","https://picsum.photos/id/201/1200/675"];
-        let currentIndex = 0;
-        const mainImg = document.getElementById('main-home-photo');
-        const modal = document.getElementById('photo-modal');
-        const modalImg = document.getElementById('modal-photo');
-
-        function updatePhoto() { mainImg.src = images[currentIndex]; }
-
-        document.getElementById('prev-arrow').addEventListener('click', e => { e.stopImmediatePropagation(); currentIndex = (currentIndex - 1 + images.length) % images.length; updatePhoto(); });
-        document.getElementById('next-arrow').addEventListener('click', e => { e.stopImmediatePropagation(); currentIndex = (currentIndex + 1) % images.length; updatePhoto(); });
-
-        mainImg.addEventListener('click', e => { e.stopImmediatePropagation(); modalImg.src = images[currentIndex]; modal.classList.add('active'); });
-
-        document.getElementById('close-modal').addEventListener('click', () => modal.classList.remove('active'));
-        document.getElementById('modal-prev').addEventListener('click', () => { currentIndex = (currentIndex - 1 + images.length) % images.length; modalImg.src = images[currentIndex]; });
-        document.getElementById('modal-next').addEventListener('click', () => { currentIndex = (currentIndex + 1) % images.length; modalImg.src = images[currentIndex]; });
-        document.getElementById('add-photo-btn').addEventListener('click', () => alert('Add photos to collection – coming soon!'));
-
-        document.addEventListener('keydown', e => {
-            if (!modal.classList.contains('active')) return;
-            if (e.key === "Escape") modal.classList.remove('active');
-            if (e.key === "ArrowLeft") { currentIndex = (currentIndex - 1 + images.length) % images.length; modalImg.src = images[currentIndex]; }
-            if (e.key === "ArrowRight") { currentIndex = (currentIndex + 1) % images.length; modalImg.src = images[currentIndex]; }
-        });
-    }
 });
