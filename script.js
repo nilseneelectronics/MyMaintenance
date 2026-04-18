@@ -89,34 +89,43 @@ const translations = {
 
 let currentLang = 'en';
 
-const AUTH_TOKEN_KEY = 'mymaintenance.authToken';
-const LOGGED_IN_PAGES = new Set([
-    'dashboard.html',
-    'myhomes.html',
-    'myvehicles.html',
-    'mydocuments.html',
-    'myplanning.html',
-    'mytools.html',
-    'myprofile.html'
-]);
-const PUBLIC_ONLY_PAGES = new Set(['login.html']);
-const KNOWN_PAGE_FILES = new Set([
-    'index.html',
-    'about.html',
-    'login.html',
-    'dashboard.html',
-    'myhomes.html',
-    'myvehicles.html',
-    'mydocuments.html',
-    'myplanning.html',
-    'mytools.html',
-    'myprofile.html',
-    'coming-soon.html'
-]);
+const DEFAULT_CONFIG = {
+    authTokenKey: 'mymaintenance.authToken',
+    apiBaseUrl: 'http://localhost:3000',
+    loggedInPages: [
+        'dashboard.html',
+        'myhomes.html',
+        'myvehicles.html',
+        'mydocuments.html',
+        'myplanning.html',
+        'mytools.html',
+        'myprofile.html'
+    ],
+    publicOnlyPages: ['login.html'],
+    knownPageFiles: [
+        'index.html',
+        'about.html',
+        'login.html',
+        'dashboard.html',
+        'myhomes.html',
+        'myvehicles.html',
+        'mydocuments.html',
+        'myplanning.html',
+        'mytools.html',
+        'myprofile.html',
+        'coming-soon.html'
+    ]
+};
+
+const APP_CONFIG = Object.assign({}, DEFAULT_CONFIG, window.MyMaintenanceConfig || {});
+const AUTH_TOKEN_KEY = APP_CONFIG.authTokenKey;
+const LOGGED_IN_PAGES = new Set(APP_CONFIG.loggedInPages || []);
+const PUBLIC_ONLY_PAGES = new Set(APP_CONFIG.publicOnlyPages || []);
+const KNOWN_PAGE_FILES = new Set(APP_CONFIG.knownPageFiles || []);
 
 function apiUrl(path) {
     const isBackendHost = window.location.port === '3000';
-    return isBackendHost ? path : `http://localhost:3000${path}`;
+    return isBackendHost ? path : `${APP_CONFIG.apiBaseUrl}${path}`;
 }
 
 async function postJson(url, payload, token) {
