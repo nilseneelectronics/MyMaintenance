@@ -21,7 +21,7 @@
     --accent-primary: #20B2AA;
     --accent-secondary: #008080;
     --border-color: #AFEEEE;
-    --delete-red: #FF4444
+    --delete-red: #FF4444;
     --sidebar-height: 60px; /* Height of sidebar when open */
     --hover-bg: rgba(32, 178, 170, 0.1); /* Light turquoise hover */
     --navbar-height: 80px; /* Initial navbar height */
@@ -1126,7 +1126,7 @@ body:not(.logged-in).shrunk #lang-toggle,
 
 /* 100% hidden when closed – no sliver, no scroll indication */
 .address-selector .dropdown-menu {
-    background-color: var(--bg-primary;
+    background-color: var(--bg-primary);
     border: none !important;
     border-radius: 12px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
@@ -1842,7 +1842,7 @@ input:checked + .slider:before {
 .popup-btn.delete:hover {
     transition: 500ms;
     background: var(--delete-red);
-    color: var(--delete-red);
+    color: #FFFFFF;
     border: 2px solid var(--delete-red);
     font-weight: bold;
 }
