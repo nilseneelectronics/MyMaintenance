@@ -1459,12 +1459,6 @@ body:not(.logged-in).shrunk #lang-toggle,
     color: #AFEEEE;
 }
 
-.planned-box .view-button {
-    background-color: var(--accent-primary);
-    color: #FFFFFF;
-    border-color: var(--accent-primary);
-}
-
 /* Full-screen modal (unchanged) */
 .photo-modal {
     display: none;
@@ -1631,13 +1625,6 @@ body:not(.logged-in).shrunk #lang-toggle,
 .planned-box .box-item-link:hover,
 .docs-box .box-item-link:hover {
     color: #AFEEEE;
-}
-
-/* Request-a-quote button – normal turquoise on grey box */
-.planned-box .view-button {
-    background-color: var(--accent-primary);
-    color: #FFFFFF;
-    border-color: var(--accent-primary);
 }
 
 /* =======================================
