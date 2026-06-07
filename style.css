@@ -28,6 +28,7 @@
     --navbar-sidebar-gap: 0px; /* No gap between navbar and sidebar */
     --sidebar-padding-top: 10px; /* Padding inside sidebar */
     --main-padding-top: 20px; /* Padding below sidebar in main */
+    --ui-zoom: 0.75;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +44,10 @@
 /* =======================================
    Global Styles
    ======================================= */
+html {
+    zoom: var(--ui-zoom);
+}
+
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
@@ -528,11 +533,9 @@ button[type="submit"]:hover {
    ======================================= */
 .panorama-banner {
     position: relative;
-    width: 100vw;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
+    width: calc(100vw / var(--ui-zoom));
+    margin-left: calc((100% - 100vw / var(--ui-zoom)) / 2);
+    margin-right: calc((100% - 100vw / var(--ui-zoom)) / 2);
     height: 400px;
     background-image: url('Bilder/Picture1.jpg');
     background-size: cover;

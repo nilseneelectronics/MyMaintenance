@@ -89,74 +89,23 @@ const translations = {
 
 let currentLang = 'en';
 
-const DEFAULT_CONFIG = {
-    authTokenKey: 'mymaintenance.authToken',
-    apiBaseUrl: 'http://localhost:3000',
-    loggedInPages: [
-        'dashboard.html',
-        'myhomes.html',
-        'myvehicles.html',
-        'mydocuments.html',
-        'myplanning.html',
-        'mytools.html',
-        'myprofile.html'
-    ],
-    publicOnlyPages: ['login.html'],
-    knownPageFiles: [
-        'index.html',
-        'about.html',
-        'login.html',
-        'dashboard.html',
-        'myhomes.html',
-        'myvehicles.html',
-        'mydocuments.html',
-        'myplanning.html',
-        'mytools.html',
-        'myprofile.html',
-        'coming-soon.html'
-    ]
-};
+const DEFAULT_KNOWN_PAGE_FILES = [
+    'index.html',
+    'about.html',
+    'login.html',
+    'dashboard.html',
+    'myhomes.html',
+    'myvehicles.html',
+    'mydocuments.html',
+    'myplanning.html',
+    'mytools.html',
+    'myprofile.html',
+    'coming-soon.html'
+];
 
-const APP_CONFIG = Object.assign({}, DEFAULT_CONFIG, window.MyMaintenanceConfig || {});
-const AUTH_TOKEN_KEY = APP_CONFIG.authTokenKey;
-const LOGGED_IN_PAGES = new Set(APP_CONFIG.loggedInPages || []);
-const PUBLIC_ONLY_PAGES = new Set(APP_CONFIG.publicOnlyPages || []);
-const KNOWN_PAGE_FILES = new Set(APP_CONFIG.knownPageFiles || []);
-
-function apiUrl(path) {
-    const isBackendHost = window.location.port === '3000';
-    return isBackendHost ? path : `${APP_CONFIG.apiBaseUrl}${path}`;
-}
-
-async function postJson(url, payload, token) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload || {})
-    });
-    const data = await response.json().catch(() => ({}));
-    return { response, data };
-}
-
-async function getJson(url, token) {
-    const headers = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(url, { method: 'GET', headers });
-    const data = await response.json().catch(() => ({}));
-    return { response, data };
-}
-
-function getCurrentPageName() {
-    return location.pathname.split('/').pop() || 'index.html';
-}
-
-function routeToLogin() {
-    const currentPage = getCurrentPageName();
-    const next = encodeURIComponent(currentPage);
-    window.location.href = `login.html?mode=signin&next=${next}`;
-}
+const KNOWN_PAGE_FILES = new Set(
+    (window.MyMaintenanceConfig && window.MyMaintenanceConfig.knownPageFiles) || DEFAULT_KNOWN_PAGE_FILES
+);
 
 function normalizePlaceholderLinks() {
     const shouldRewrite = href => {
@@ -175,43 +124,6 @@ function normalizePlaceholderLinks() {
         const target = encodeURIComponent(href);
         link.setAttribute('href', `coming-soon.html?target=${target}`);
     });
-}
-
-async function enforceAuthRouting() {
-    const page = getCurrentPageName();
-    const isProtectedByPath = LOGGED_IN_PAGES.has(page);
-    const isProtectedByBody = document.body.classList.contains('logged-in');
-    const requiresAuth = isProtectedByPath || isProtectedByBody;
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-
-    if (!requiresAuth) {
-        if (PUBLIC_ONLY_PAGES.has(page) && token) {
-            try {
-                const { response } = await getJson(apiUrl('/api/auth/session'), token);
-                if (response.ok) {
-                    window.location.href = 'dashboard.html';
-                }
-            } catch (_) {
-                // Keep public pages accessible if backend is unavailable.
-            }
-        }
-        return;
-    }
-
-    if (!token) {
-        routeToLogin();
-        return;
-    }
-
-    try {
-        const { response } = await getJson(apiUrl('/api/auth/session'), token);
-        if (!response.ok) {
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            routeToLogin();
-        }
-    } catch (_) {
-        // If backend is down, allow local preview but keep stored session token.
-    }
 }
 
 /* ==================== COMMON LAYOUT (only for logged-in) ==================== */
@@ -272,7 +184,9 @@ function setActiveSidebarLink() {
 /* ==================== MAIN SCRIPT ==================== */
 document.addEventListener('DOMContentLoaded', () => {
     normalizePlaceholderLinks();
-    enforceAuthRouting();
+    if (window.MyMaintenanceAuth && typeof window.MyMaintenanceAuth.enforceAuthRouting === 'function') {
+        window.MyMaintenanceAuth.enforceAuthRouting();
+    }
     insertCommonLayout();
 
     // Language button on EVERY page (including index.html)
@@ -352,62 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lastScroll = currentScroll;
     });
 
-    const signinButton = document.getElementById('signin');
-    const signupButton = document.getElementById('signup');
-    const gobackButton = document.getElementById('goback');
-    const signoutButton = document.getElementById('signout');
-
-    if (signinButton && signupButton) {
-        signinButton.addEventListener('click', () => window.location.href = 'login.html?mode=signin');
-        signupButton.addEventListener('click', () => window.location.href = 'login.html?mode=signup');
-    }
-    if (gobackButton) gobackButton.addEventListener('click', () => window.location.href = 'index.html');
-    if (signoutButton) {
-        signoutButton.addEventListener('click', async () => {
-            const token = localStorage.getItem(AUTH_TOKEN_KEY);
-            try {
-                await postJson(apiUrl('/api/auth/logout'), {}, token);
-            } catch (_) {
-                // Keep UX working even when backend is unavailable.
-            }
-            localStorage.removeItem(AUTH_TOKEN_KEY);
-            alert('Signed out!');
-            window.location.href = 'index.html';
-        });
-    }
-
-    // (auth page, collapse arrows, custom dropdowns, and MYHOMES PHOTO GALLERY – exactly your original code)
-    const container = document.getElementById('auth-container');
-    if (container) {
-        const switchToSignup = document.getElementById('switch-to-signup');
-        const switchToSignin = document.getElementById('switch-to-signin');
-        const signinForm = document.getElementById('signin-form');
-        const signupForm = document.getElementById('signup-form');
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mode') === 'signup') container.classList.add('signup-mode');
-        if (switchToSignup) switchToSignup.addEventListener('click', () => container.classList.add('signup-mode'));
-        if (switchToSignin) switchToSignin.addEventListener('click', () => container.classList.remove('signup-mode'));
-        if (signinForm) signinForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            const inputs = signinForm.querySelectorAll('input');
-            const email = (inputs[0]?.value || '').trim();
-            const password = inputs[1]?.value || '';
-
-            try {
-                const { response, data } = await postJson(apiUrl('/api/auth/login'), { email, password });
-                if (!response.ok || !data?.token) {
-                    alert(data?.message || 'Invalid credentials.');
-                    return;
-                }
-                localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-                const params = new URLSearchParams(window.location.search);
-                const next = params.get('next') || 'dashboard.html';
-                window.location.href = next;
-            } catch (_) {
-                alert('Sign In submitted! Backend is not running yet.');
-            }
-        });
-        if (signupForm) signupForm.addEventListener('submit', e => { e.preventDefault(); alert('Sign Up submitted!'); });
+    if (window.MyMaintenanceAuth && typeof window.MyMaintenanceAuth.initAuthInteractions === 'function') {
+        window.MyMaintenanceAuth.initAuthInteractions();
     }
 
     if (window.MyMaintenanceCommonUi && typeof window.MyMaintenanceCommonUi.initCommonUiInteractions === 'function') {
