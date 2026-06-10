@@ -1,0 +1,128 @@
+/* auth.css */
+
+/* =======================================
+   Authentication Styles (Login/Signup)
+   ======================================= */
+.auth-container {
+    position: relative;
+    width: 75%;
+    margin: calc(var(--navbar-height) + var(--sidebar-height) + 30px) auto 20px;
+    background-color: var(--bg-primary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 30px;
+    overflow: hidden;
+    display: flex;
+    height: 600px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.form-panel {
+    width: 50%;
+    padding: 60px 40px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+}
+
+.overlay-container {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    top: 0;
+    left: 50%;
+    transition: left 0.6s ease-in-out;
+    z-index: 100;
+}
+
+.auth-container.signup-mode .overlay-container {
+    left: 0;
+}
+
+.overlay {
+    width: 100%;
+    height: 100%;
+    background-color: var(--accent-primary);
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 40px;
+    box-sizing: border-box;
+}
+
+.overlay-panel.overlay-left {
+    display: none;
+}
+
+.overlay-panel.overlay-right {
+    display: grid;
+    grid-template-columns: 450px;
+    grid-template-rows: 1fr 50px;
+}
+
+.auth-container.signup-mode .overlay-panel.overlay-left {
+    display: grid;
+    grid-template-columns: 450px;
+    grid-template-rows: 1fr 50px;
+}
+
+.auth-container.signup-mode .overlay-panel.overlay-right {
+    display: none;
+}
+
+.overlay-panel h1 {
+    margin-bottom: 40px;
+    font-size: 1.8em;
+}
+
+.input-group {
+    width: 100%;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.input-group svg {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    width: 20px;
+    height: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 15px 15px 15px 50px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+    font-size: 1em;
+}
+
+.terms {
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .auth-container {
+        background-color: var(--bg-secondary);
+    }
+
+    .input-group input {
+        background-color: var(--bg-primary);
+        border-color: var(--border-color);
+    }
+}

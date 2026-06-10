@@ -1,0 +1,58 @@
+/* profile.css */
+
+/* =======================================
+   Profile Page Styles
+   ======================================= */
+.profile-box {
+    display: flex;
+    align-items: center;
+    margin-bottom: 40px;
+    max-width: 800px;
+    height: 200px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 2px solid var(--accent-primary);
+    border-radius: 20px;
+    background-color: var(--bg-secondary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-image {
+    margin-left: 140px;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-info p {
+    margin: 10px 0;
+    font-size: 1.2em;
+    color: var(--text-primary);
+}
+
+.profile-upload-button {
+    cursor: pointer;
+    display: inline-block;
+    transition: opacity 0.3s;
+}
+
+.profile-upload-button:hover {
+    opacity: 0.8;
+}
+
+.profile-buttons, .security-buttons, .subscription-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 40px;
+}
+
+.main-profile h2 {
+    font-size: 1.8em;
+    margin: 30px 0 20px;
+    text-align: center;
+}

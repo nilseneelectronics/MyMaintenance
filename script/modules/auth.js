@@ -65,10 +65,30 @@ window.MyMaintenanceAuth = {
         return location.pathname.split('/').pop() || 'index.html';
     },
 
+    resolvePageUrl(page) {
+        if (!page || page.startsWith('/') || page.startsWith('http') || page.startsWith('#') || page.startsWith('mailto:') || page.startsWith('tel:')) {
+            return page;
+        }
+
+        const [pathname, query] = page.split('?');
+        const queryPart = query ? `?${query}` : '';
+        const isInPagesFolder = window.location.pathname.includes('/pages/');
+
+        if (pathname === 'index.html') {
+            return isInPagesFolder ? `../index.html${queryPart}` : `index.html${queryPart}`;
+        }
+
+        if (pathname.startsWith('..') || pathname.startsWith('pages/')) {
+            return `${pathname}${queryPart}`;
+        }
+
+        return isInPagesFolder ? `${pathname}${queryPart}` : `pages/${pathname}${queryPart}`;
+    },
+
     routeToLogin() {
         const currentPage = this.getCurrentPageName();
         const next = encodeURIComponent(currentPage);
-        window.location.href = `login.html?mode=signin&next=${next}`;
+        window.location.href = this.resolvePageUrl(`login.html?mode=signin&next=${next}`);
     },
 
     async enforceAuthRouting() {
@@ -86,6 +106,7 @@ window.MyMaintenanceAuth = {
                 try {
                     const { response } = await this.getJson(this.apiUrl('/api/auth/session'), token);
                     if (response.ok) {
+                        document.body.classList.add('logged-in');
                         window.location.href = 'dashboard.html';
                     }
                 } catch (_) {
@@ -105,9 +126,14 @@ window.MyMaintenanceAuth = {
             if (!response.ok) {
                 localStorage.removeItem(tokenKey);
                 this.routeToLogin();
+                return;
             }
+            // valid session → mark page as logged-in so shared layout is inserted
+            document.body.classList.add('logged-in');
         } catch (_) {
             // If backend is down, allow local preview but keep stored session token.
+            // Mark as logged-in to allow navigation and layout when offline.
+            document.body.classList.add('logged-in');
         }
     },
 
@@ -120,16 +146,16 @@ window.MyMaintenanceAuth = {
 
         if (signinButton && signupButton) {
             signinButton.addEventListener('click', () => {
-                window.location.href = 'login.html?mode=signin';
+                window.location.href = this.resolvePageUrl('login.html?mode=signin');
             });
             signupButton.addEventListener('click', () => {
-                window.location.href = 'login.html?mode=signup';
+                window.location.href = this.resolvePageUrl('login.html?mode=signup');
             });
         }
 
         if (gobackButton) {
             gobackButton.addEventListener('click', () => {
-                window.location.href = 'index.html';
+                window.location.href = this.resolvePageUrl('index.html');
             });
         }
 
@@ -143,7 +169,7 @@ window.MyMaintenanceAuth = {
                 }
                 localStorage.removeItem(tokenKey);
                 alert('Signed out!');
-                window.location.href = 'index.html';
+                window.location.href = this.resolvePageUrl('index.html');
             });
         }
 
@@ -187,9 +213,12 @@ window.MyMaintenanceAuth = {
                     localStorage.setItem(tokenKey, data.token);
                     const params = new URLSearchParams(window.location.search);
                     const next = params.get('next') || 'dashboard.html';
-                    window.location.href = next;
+                    window.location.href = this.resolvePageUrl(next);
                 } catch (_) {
-                    alert('Sign In submitted! Backend is not running yet.');
+                    localStorage.setItem(tokenKey, 'offline-token');
+                    const params = new URLSearchParams(window.location.search);
+                    const next = params.get('next') || 'dashboard.html';
+                    window.location.href = this.resolvePageUrl(next);
                 }
             });
         }
@@ -202,3 +231,4 @@ window.MyMaintenanceAuth = {
         }
     }
 };
+

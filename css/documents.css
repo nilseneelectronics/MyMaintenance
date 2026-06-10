@@ -1,0 +1,125 @@
+/* documents.css */
+
+/* =======================================
+   Documents Page Styles
+   ======================================= */
+.subgroup-content .doc-row {
+    padding-left: 40px;
+}
+
+.custom-dropdown {
+    position: relative;
+    width: 15%;
+}
+
+.dropdown-toggle {
+    background-color: var(--bg-primary);
+    border: 2px solid var(--accent-primary);
+    color: var(--text-primary);
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dropdown-toggle svg {
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+}
+
+.dropdown-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background-color: var(--bg-primary);
+    position: absolute;
+    z-index: 1;
+    width: 100% !important;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease;
+    top: 100%;
+    left: 0;
+    box-sizing: border-box;
+}
+
+.custom-dropdown.open .dropdown-menu {
+    border: 2px solid var(--accent-primary);
+    border-top: none;
+    border-bottom-left-radius: 25px;
+    border-bottom-right-radius: 25px;
+}
+
+.dropdown-menu li {
+    list-style: none;
+    width: 100%;
+    margin: 0;
+}
+
+.dropdown-menu li button {
+    width: 100%;
+    padding: 10px;
+    background: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: center;
+    border: none;
+    border-top: none;
+    font-size: medium;
+}
+
+.dropdown-menu li button:hover {
+    background-color: var(--hover-bg);
+}
+
+.dropdown-menu li:first-child button {
+    border-top: none;
+}
+
+.custom-dropdown.open .dropdown-toggle {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+}
+
+.collapse-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-right: 10px;
+    color: var(--accent-primary);
+}
+
+.collapse-toggle svg {
+    transition: transform 0.3s ease;
+}
+
+.doc-name {
+    margin-left: 15px;
+}
+
+.documents-box .doc-row .doc-symbol + .doc-name {
+    margin-left: 15px;
+}
+
+.home-selector .dropdown-toggle span {
+    flex: 1;
+    text-align: left;
+}
+
+.home-selector .dropdown-menu {
+    border-radius: 0 0 30px 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    top: calc(100% + 6px);
+}
+
+.home-selector .dropdown-menu button:last-child {
+    border-top: 3px solid var(--accent-primary);
+    padding: 20px;
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-align: center;
+}
