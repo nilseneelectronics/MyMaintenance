@@ -84,7 +84,41 @@ const translations = {
     "Terms of use": { en: "Terms of use", no: "Bruksvilkår" },
     "Revolutionise the way you take care of your home": { en: "Revolutionise the way you take care of your home", no: "Revolusjoner måten du tar vare på hjemmet ditt på" },
     "For Businesses": { en: "For Businesses", no: "For Bedrifter" },
-    "Welcome to MyDashboard": {en: "Welcome to MyDashboard", no: "Velkommen til Mitt Dashbord"}
+    "Welcome to MyDashboard": {en: "Welcome to MyDashboard", no: "Velkommen til Mitt Dashbord"},
+    "Start managing smarter today.": {en: "Start managing smarter today.", no: "Begynn å administrere smartere i dag."},
+    "Join homeowners, landlords, and contractors who keep their properties organized and their clients happy.": {en: "Join homeowners, landlords, and contractors who keep their properties organized and their clients happy.", no: "Bli med homeowners, landlords, og entrepreneurs som holder sine eiendommer organisert og kundene sine fornøyde."},
+    "Get Started Free": {en: "Get Started Free", no: "Kom i gang gratis"},
+    "Learn More": {en: "Learn More", no: "Lær mer"},
+    "Ready to simplify your property care?": {en: "Ready to simplify your property care?", no: "Klar til å forenkle eiendomsvedlikeholdet ditt?"},
+    "No credit card required. Start organizing in minutes.": {en: "No credit card required. Start organizing in minutes.", no: "Intet kredittkort påkrevd. Begynn å organisere på få minutter."},
+    "Start Your Free Account": {en: "Start Your Free Account", no: "Start din gratis konto"},
+    "For Homeowners": {en: "For Homeowners", no: "For huseiere"},
+    "Keep your home running smoothly with organized maintenance records, seasonal reminders, and contractor history all in one place.": {en: "Keep your home running smoothly with organized maintenance records, seasonal reminders, and contractor history all in one place.", no: "Hold hjemmet ditt i gang med organiserte vedlikeholdsposter, sesongmessige påminnelser og entreprenørhistorikk på ett sted."},
+    "Track Everything": {en: "Track Everything", no: "Spor alt"},
+    "Document repairs, warranties, service dates, and costs in one easy-to-search home file.": {en: "Document repairs, warranties, service dates, and costs in one easy-to-search home file.", no: "Dokumenter reparasjoner, garantier, servicedatoer og kostnader i en lett søkbar hjemmefil."},
+    "Never Miss a Task": {en: "Never Miss a Task", no: "Gå aldri glipp av en oppgave"},
+    "Get reminders for HVAC maintenance, gutter cleaning, inspections, and seasonal care.": {en: "Get reminders for HVAC maintenance, gutter cleaning, inspections, and seasonal care.", no: "Få påminnelser om HVAC-vedlikehold, rengjøring av takrennestylter, inspeksjoner og sesongmessig pleie."},
+    "Build Your Home Profile": {en: "Build Your Home Profile", no: "Bygg din hjemmeprofil"},
+    "Plan upgrades, track improvements, and keep receipts that help when selling.": {en: "Plan upgrades, track improvements, and keep receipts that help when selling.", no: "Planlegg oppgraderinger, spor forbedringer, og hold kvitteringer som hjelper ved salg."},
+    "Explore for Homeowners →": {en: "Explore for Homeowners →", no: "Utforsk for huseiere →"},
+    "For Landlords": {en: "For Landlords", no: "For utleiere"},
+    "Manage multiple properties with maintenance schedules, tenant communications, and property compliance records.": {en: "Manage multiple properties with maintenance schedules, tenant communications, and property compliance records.", no: "Administrer flere eiendommer med vedlikeholdsplaner, tenantkommunikasjon og eiendomsoverholdelsesregistre."},
+    "Schedule & Track": {en: "Schedule & Track", no: "Planlegg og spor"},
+    "Plan annual inspections, coordinate contractor visits, and monitor maintenance deadlines across all units.": {en: "Plan annual inspections, coordinate contractor visits, and monitor maintenance deadlines across all units.", no: "Planlegg årlige inspeksjoner, koordiner entreprenørbesøk, og overvåk vedlikeholdsfrister på alle enheter."},
+    "Property Portfolios": {en: "Property Portfolios", no: "Eiendomsporteføljer"},
+    "Keep each property organized with dedicated maintenance logs, tenant histories, and cost tracking.": {en: "Keep each property organized with dedicated maintenance logs, tenant histories, and cost tracking.", no: "Hold hver eiendom organisert med dediserte vedlikeholdsmeldinger, tenanthistorier og kostnadssporing."},
+    "Stay Compliant": {en: "Stay Compliant", no: "Forbli kompatibel"},
+    "Maintain records for inspections, safety checks, and regulatory requirements by property.": {en: "Maintain records for inspections, safety checks, and regulatory requirements by property.", no: "Oppretthold poster for inspeksjoner, sikkerhetskontroller og regulatoriske krav per eiendom."},
+    "Explore for Landlords →": {en: "Explore for Landlords →", no: "Utforsk for utleiere →"},
+    "For Contractors": {en: "For Contractors", no: "For entreprenører"},
+    "Manage client projects with estimates, progress photos, invoices, and professional documentation your clients trust.": {en: "Manage client projects with estimates, progress photos, invoices, and professional documentation your clients trust.", no: "Administrer klientprosjekter med estimater, progresfoto, fakturaer og profesjonell dokumentasjon som kundene dine stoler på."},
+    "Capture & Document": {en: "Capture & Document", no: "Fanger og dokumenterer"},
+    "Store before/after photos, estimates, invoices, and work notes for every job in one searchable location.": {en: "Store before/after photos, estimates, invoices, and work notes for every job in one searchable location.", no: "Lagre før/etter-bilder, estimater, fakturaer og arbeidsmerknaderk for hver jobb på ett søkbart sted."},
+    "Client Communication": {en: "Client Communication", no: "Klientkommunikasjon"},
+    "Share project progress, timeline updates, and completion reports that build confidence and trust.": {en: "Share project progress, timeline updates, and completion reports that build confidence and trust.", no: "Del prosjektfremgang, tidslinjeoppateringar og sluttrapporter som bygger tillit og tillit."},
+    "Professional Records": {en: "Professional Records", no: "Profesjonelle poster"},
+    "Maintain organized project files that demonstrate quality work and help with repeat business.": {en: "Maintain organized project files that demonstrate quality work and help with repeat business.", no: "Oppretthold organiserte prosjektfiler som demonstrerer kvalitetsarbeid og hjelp med gjentatt virksomhet."},
+    "Explore for Contractors →": {en: "Explore for Contractors →", no: "Utforsk for entreprenører →"}
 };
 
 let currentLang = 'en';
@@ -214,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === YOUR ORIGINAL FUNCTIONS (initDataKeys + translateAll) ===
     function initDataKeys() {
-        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .overlay-text h2').forEach(el => {
+        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .overlay-text h2, .btn, .cta-hero h2, .cta-hero p, .cta-final h2, .cta-final p, .section-header-alt h2, .section-header-alt p, .value-card strong, .value-card p, .customer-cta .btn').forEach(el => {
             if (!el.dataset.key) el.dataset.key = el.textContent.trim();
         });
         document.querySelectorAll('footer p').forEach(p => {
