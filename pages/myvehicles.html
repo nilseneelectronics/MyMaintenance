@@ -3,42 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyHomes - MyMaintenance</title>
-    <link rel="stylesheet" href="style.css">
+    <title>MyVehicles - MyMaintenance</title>
+        <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/banner.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/profile.css">
+    <link rel="stylesheet" href="../css/documents.css">
+    <link rel="stylesheet" href="../css/planning.css">
+    <link rel="stylesheet" href="../css/tools.css">
+    <link rel="stylesheet" href="../css/homes.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body class="sidebar-open logged-in">
     <main class="main">
-        <h1>Welcome to MyHomes</h1>
+        <h1>Welcome to MyVehicles</h1>
 
-        <!-- Address line selector -->
+        <!-- Vehicle selector (cars + boats) -->
         <div class="custom-dropdown address-selector">
             <div class="dropdown-toggle">
-                <span>Address 1, Street 123, 5000 City</span>
+                <span>Car 1 - Tesla Model Y</span>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
             <ul class="dropdown-menu">
-                <li><button>Address 1, Street 123, 5000 City</button></li>
-                <li><button>Address 2 - Cabin, Mountain Road 45, 6000 City</button></li>
-                <li><button>Register new address</button></li>
+                <li><button>Car 1 - Tesla Model Y</button></li>
+                <li><button>Car 2 - Volvo XC90</button></li>
+                <li><button>Boat - Bayliner 255</button></li>
+                <li><button>Register new vehicle</button></li>
             </ul>
         </div>
 
         <!-- 1400px content grid -->
         <div class="homes-content-grid">
 
-            <!-- Left: Big photo (6×6) -->
+            <!-- Left: Big vehicle photo -->
             <div class="photo-box" id="photo-box">
-                <h3>Home Photos</h3>
+                <h3>Vehicle Photos</h3>
                 
-                <button class="view-button" onclick="window.location.href='myhome-photos.html'">
+                <button class="view-button" onclick="window.location.href='myvehicle-photos.html'">
                     View all photos
                 </button>
                 
                 <div class="big-photo-container" id="big-photo-container">
-                    <img id="main-home-photo" src="https://picsum.photos/id/1015/1200/675" alt="Home photo">
+                    <img id="main-home-photo" src="https://picsum.photos/id/1015/1200/675" alt="Vehicle photo">
                     
                     <div class="photo-arrows">
                         <button class="arrow left" id="prev-arrow">
@@ -55,80 +67,87 @@
                 </div>
             </div>
 
-            <!-- Planned maintenance -->
+            <!-- Planned maintenance (vehicle version) -->
             <div class="planned-box">
-                <!-- Full-box hitbox for empty space → goes to overview -->
                 <a href="planned-maintenance.html" class="box-overlay-link"></a>
                 
                 <h3>Planned maintenance</h3>
-                <a href="planned-roof-inspection.html" class="box-item-link">Roof inspection – 15 March 2026</a>
-                <a href="planned-hvac-filter.html" class="box-item-link">HVAC filter change – 2 April 2026</a>
+                <a href="planned-oil-change.html" class="box-item-link">Oil change – 15 March 2026</a>
+                <a href="planned-tire-rotation.html" class="box-item-link">Tire rotation – 2 April 2026</a>
                 
-                <!-- Turquoise button inside the box -->
                 <button class="view-button" onclick="event.stopImmediatePropagation(); window.location.href='request-quote.html'">
                     Request a quote
                 </button>
             </div>
 
-            <!-- Registered documentation -->
+            <!-- Registered documentation (vehicle version) -->
             <div class="docs-box">
-                <!-- Full-box hitbox for empty space → goes to overview -->
                 <a href="registered-documents.html" class="box-overlay-link"></a>
                 
                 <h3>Registered documentation</h3>
-                <a href="document-electrical-2024.html" class="box-item-link">Electrical certificate 2024</a>
+                <a href="document-registration-2024.html" class="box-item-link">Registration certificate 2024</a>
                 <a href="document-insurance.html" class="box-item-link">Insurance documents</a>
             </div>
 
-            <!-- Floor Plans box (underneath photos + registered documents) -->
+            <!-- Vehicle Diagrams (side-view of car – non-square container) -->
             <div class="floorplan-box" id="floorplan-box">
-                <h3>Floor Plans</h3>
+                <h3>Vehicle Diagrams</h3>
                 
-                <button class="view-button" onclick="window.location.href='myhome-floorplans.html'">
-                    View all floor plans
+                <button class="view-button" onclick="window.location.href='myvehicle-diagrams.html'">
+                    View all diagrams
                 </button>
                 
-                <!-- NEW dedicated class for floor plan (non-square) -->
                 <div class="big-floorplan-container" id="big-floorplan-container">
-                    <!-- Clean SVG floor plan – no white fields, full green area -->
-                    <svg id="main-floorplan" width="100%" height="100%" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-                        <!-- Grass / entire property land (bright green) – full area -->
-                        <rect x="0" y="0" width="1200" height="675" fill="#4CAF50"/>
+                    <!-- Side-view car SVG (clickable parts) -->
+                    <svg id="main-floorplan" width="100%" height="100%" viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                        <!-- Car body (silver) -->
+                        <rect x="150" y="180" width="780" height="180" rx="20" ry="20" fill="#B0B0B0" stroke="#263238" stroke-width="20"/>
                         
-                        <!-- Main house (brownish) - tall building with division line -->
-                        <rect x="520" y="130" width="230" height="310" rx="12" ry="12" fill="#C19A6B" stroke="#263238" stroke-width="14"/>
-                        <line x1="520" y1="220" x2="750" y2="220" stroke="#263238" stroke-width="14"/>
+                        <!-- Cabin / windows -->
+                        <polygon points="280,180 380,80 680,80 730,180" fill="#E0F0FF" stroke="#263238" stroke-width="20"/>
                         
-                        <!-- Garage (smaller brownish building) -->
-                        <rect x="520" y="470" width="230" height="135" rx="12" ry="12" fill="#C19A6B" stroke="#263238" stroke-width="14"/>
+                        <!-- Front wheel -->
+                        <circle cx="320" cy="360" r="70" fill="#263238"/>
+                        <circle cx="320" cy="360" r="45" fill="#F5F5F5"/>
                         
-                        <!-- Driveway (gray) - curved path from road to buildings -->
-                        <path d="M 820 560 Q 920 530 950 480" fill="none" stroke="#9E9E9E" stroke-width="55" stroke-linecap="round"/>
+                        <!-- Rear wheel -->
+                        <circle cx="780" cy="360" r="70" fill="#263238"/>
+                        <circle cx="780" cy="360" r="45" fill="#F5F5F5"/>
                         
-                        <!-- Red location pin "6" on the house -->
-                        <circle cx="640" cy="195" r="32" fill="#E53935"/>
-                        <polygon points="640,227 610,257 670,257" fill="#E53935"/>
-                        <text x="640" y="212" text-anchor="middle" fill="#FFFFFF" font-size="42" font-weight="700" font-family="Arial">6</text>
+                        <!-- Engine area (hood) -->
+                        <rect x="150" y="180" width="220" height="120" fill="#A0A0A0" stroke="#263238" stroke-width="15"/>
                         
-                        <!-- Clickable areas (transparent overlays) -->
-                        <!-- House -->
-                        <a href="house-documents.html">
-                            <rect x="520" y="130" width="230" height="310" fill="transparent" pointer-events="all"/>
+                        <!-- Trunk area -->
+                        <rect x="730" y="180" width="200" height="120" fill="#A0A0A0" stroke="#263238" stroke-width="15"/>
+                        
+                        <!-- Clickable areas -->
+                        <!-- Engine / Hood -->
+                        <a href="engine-documents.html">
+                            <rect x="150" y="180" width="220" height="120" fill="transparent" pointer-events="all"/>
                         </a>
-                        <!-- Garage -->
-                        <a href="garage-documents.html">
-                            <rect x="520" y="470" width="230" height="135" fill="transparent" pointer-events="all"/>
+                        <!-- Body / Cabin -->
+                        <a href="body-documents.html">
+                            <polygon points="280,180 380,80 680,80 730,180" fill="transparent" pointer-events="all"/>
                         </a>
-                        <!-- Garden / rest of property -->
-                        <a href="garden-documents.html">
-                            <rect x="0" y="0" width="1200" height="675" fill="transparent" pointer-events="all"/>
+                        <!-- Front wheel / Tires -->
+                        <a href="tires-documents.html">
+                            <circle cx="320" cy="360" r="70" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Rear wheel / Tires -->
+                        <a href="tires-documents.html">
+                            <circle cx="780" cy="360" r="70" fill="transparent" pointer-events="all"/>
+                        </a>
+                        <!-- Trunk -->
+                        <a href="trunk-documents.html">
+                            <rect x="730" y="180" width="200" height="120" fill="transparent" pointer-events="all"/>
                         </a>
                         
-                        <!-- Labels (for clarity) -->
-                        <text x="635" y="95" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">HOUSE</text>
-                        <text x="635" y="635" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">GARAGE</text>
-                        <text x="280" y="340" text-anchor="middle" fill="#263238" font-size="26" font-weight="600">GARDEN</text>
-                        <text x="920" y="510" text-anchor="middle" fill="#263238" font-size="22" font-weight="600">DRIVEWAY</text>
+                        <!-- Labels -->
+                        <text x="260" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">ENGINE</text>
+                        <text x="500" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">BODY</text>
+                        <text x="320" y="450" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TIRES</text>
+                        <text x="780" y="450" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TIRES</text>
+                        <text x="830" y="140" text-anchor="middle" fill="#263238" font-size="28" font-weight="600">TRUNK</text>
                     </svg>
                     
                     <div class="photo-arrows">
@@ -175,10 +194,15 @@
             </div>
         </div>
     </main>
-    <script src="frontend/js/app-config.js"></script>
-    <script src="frontend/js/modules/auth.js"></script>
-    <script src="frontend/js/modules/common-ui.js"></script>
-    <script src="script.js"></script>
-    <script src="frontend/js/pages/myhomes-gallery.js"></script>
+    
+    
+    
+    
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
 </body>
 </html>
+
+

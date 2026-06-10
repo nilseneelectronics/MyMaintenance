@@ -86,6 +86,7 @@ window.MyMaintenanceAuth = {
                 try {
                     const { response } = await this.getJson(this.apiUrl('/api/auth/session'), token);
                     if (response.ok) {
+                        document.body.classList.add('logged-in');
                         window.location.href = 'dashboard.html';
                     }
                 } catch (_) {
@@ -105,9 +106,14 @@ window.MyMaintenanceAuth = {
             if (!response.ok) {
                 localStorage.removeItem(tokenKey);
                 this.routeToLogin();
+                return;
             }
+            // valid session → mark page as logged-in so shared layout is inserted
+            document.body.classList.add('logged-in');
         } catch (_) {
             // If backend is down, allow local preview but keep stored session token.
+            // Mark as logged-in to allow navigation and layout when offline.
+            document.body.classList.add('logged-in');
         }
     },
 

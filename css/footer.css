@@ -1,0 +1,47 @@
+/* footer.css */
+
+/* =======================================
+   Footer Styles
+   ======================================= */
+footer {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--bg-secondary);
+    border-top: 2px solid var(--border-color);
+    padding: 20px;
+    transition: background-color 0.3s;
+    margin-top: 40px;
+}
+
+footer .column {
+    flex: 1;
+    max-width: 300px;
+    margin: 0 10px;
+}
+
+footer h3 {
+    color: var(--accent-primary);
+    margin-bottom: 10px;
+}
+
+footer ul {
+    list-style: none;
+    padding: 0;
+}
+
+footer li {
+    margin-bottom: 5px;
+}
+
+footer a {
+    color: var(--text-secondary);
+}
+
+footer a:hover {
+    color: var(--accent-primary);
+}
+
+footer p {
+    color: var(--text-secondary);
+    margin: 5px 0;
+}

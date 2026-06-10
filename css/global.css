@@ -1,0 +1,99 @@
+/* global.css */
+
+/* =======================================
+   Color Palette and Root Variables
+   ======================================= */
+/* Color Palette:
+- Main accent (turquoise): #20B2AA
+- Lighter turquoise: #AFEEEE
+- Darker turquoise: #008080
+- White: #FFFFFF
+- Relaxed white for dark: #F0F4F8
+- Black: #000000
+- Text secondary: #333333 (light), #CCCCCC (dark)
+*/
+
+:root {
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F5F5F5;
+    --text-primary: #05141c;
+    --text-secondary: #333333;
+    --accent-primary: #20B2AA;
+    --accent-secondary: #008080;
+    --border-color: #AFEEEE;
+    --delete-red: #FF4444;
+    --sidebar-height: 60px;
+    --hover-bg: rgba(32, 178, 170, 0.1);
+    --navbar-height: 80px;
+    --navbar-height-shrunk: 60px;
+    --navbar-sidebar-gap: 0px;
+    --sidebar-padding-top: 10px;
+    --main-padding-top: 20px;
+    --ui-zoom: 0.75;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #05141c;
+        --bg-secondary: #1A1A1A;
+        --text-primary: #F0F4F8;
+        --text-secondary: #CCCCCC;
+        --hover-bg: rgba(32, 178, 170, 0.2);
+    }
+}
+
+/* =======================================
+   Global Styles
+   ======================================= */
+html {
+    zoom: var(--ui-zoom);
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+a {
+    text-decoration: none;
+}
+
+/* =======================================
+   Main Content Styles
+   ======================================= */
+main {
+    margin-top: var(--navbar-height);
+    padding-top: var(--main-padding-top);
+    transition: margin-top 0.3s ease;
+    min-height: 1000px;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+main .grid-container {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+main h1 {
+    margin-bottom: 30px;
+    font-size: 2em;
+}
+
+.sidebar-open main {
+    margin-top: calc(var(--navbar-height) + var(--sidebar-height));
+}
+
+body:not(.logged-in).shrunk.sidebar-open main,
+.logged-in.sidebar-open main {
+    margin-top: calc(var(--navbar-height-shrunk) + var(--sidebar-height));
+}
