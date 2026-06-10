@@ -143,12 +143,33 @@ window.MyMaintenanceAuth = {
         const signupButton = document.getElementById('signup');
         const gobackButton = document.getElementById('goback');
         const signoutButton = document.getElementById('signout');
+        const ctaSignupButton = document.getElementById('cta-signup');
+        const ctaLearnButton = document.getElementById('cta-learn');
+        const finalCtaButton = document.getElementById('final-cta');
 
         if (signinButton && signupButton) {
             signinButton.addEventListener('click', () => {
                 window.location.href = this.resolvePageUrl('login.html?mode=signin');
             });
             signupButton.addEventListener('click', () => {
+                window.location.href = this.resolvePageUrl('login.html?mode=signup');
+            });
+        }
+
+        if (ctaSignupButton) {
+            ctaSignupButton.addEventListener('click', () => {
+                window.location.href = this.resolvePageUrl('login.html?mode=signup');
+            });
+        }
+
+        if (ctaLearnButton) {
+            ctaLearnButton.addEventListener('click', () => {
+                document.querySelector('.content-section').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        if (finalCtaButton) {
+            finalCtaButton.addEventListener('click', () => {
                 window.location.href = this.resolvePageUrl('login.html?mode=signup');
             });
         }
