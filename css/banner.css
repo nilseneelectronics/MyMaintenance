@@ -36,13 +36,19 @@
     z-index: 3;
     text-align: center;
     color: #FFFFFF;
+    max-width: 780px;
+    padding: 16px 18px;
 }
 
 .overlay-text h1 {
-    font-size: 3em;
-    margin-bottom: 10px;
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin: 0 0 8px;
+    line-height: 1.05;
 }
 
 .overlay-text h2 {
-    font-size: 1.8em;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.4;
+    margin: 0;
+    color: #F0F4F8;
 }
