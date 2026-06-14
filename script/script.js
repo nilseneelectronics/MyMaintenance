@@ -134,7 +134,13 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'myplanning.html',
     'mytools.html',
     'myprofile.html',
-    'coming-soon.html'
+    'coming-soon.html',
+    'tool-floorplan.html',
+    'tool-kitchen.html',
+    'tool-bathroom.html',
+    'tool-living.html',
+    'tool-garden.html',
+    'tool-garage.html'
 ];
 
 const KNOWN_PAGE_FILES = new Set(
@@ -212,7 +218,11 @@ function insertCommonLayout() {
 
 function setActiveSidebarLink() {
     const current = location.pathname.split('/').pop() || 'dashboard.html';
-    document.querySelectorAll('.sidebar a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === current));
+    const isToolPage = /^tool-/.test(current);
+    document.querySelectorAll('.sidebar a').forEach(a => {
+        const href = a.getAttribute('href');
+        a.classList.toggle('active', href === current || (isToolPage && href === 'mytools.html'));
+    });
 }
 
 /* ==================== MAIN SCRIPT ==================== */

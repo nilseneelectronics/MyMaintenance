@@ -2,43 +2,172 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Floor Plan Maker - Clean CAD Dimensions</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floor Plan Designer - MyMaintenance</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/header.css">
+  <link rel="stylesheet" href="../css/footer.css">
+  <link rel="stylesheet" href="../css/button.css">
+  <link rel="stylesheet" href="../css/floorplan.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 </head>
-<body>
-  <div class="toolbar">
-    <button onclick="setMode('select')">Select</button>
-    <button onclick="setMode('draw')">Draw Walls</button>
-    <button onclick="setMode('room')">Draw Room</button>
-    <button onclick="setMode('measure')">Measure</button>
-    <button onclick="setMode('window')">🪟 Window</button>
-    <button onclick="setMode('door')">🚪 Door</button>
-    
-    <label>Grid: <input id="gridSize" type="number" value="20" onchange="updateGrid()" style="width:60px"></label>
-    <button onclick="toggleGrid()">Toggle Grid</button>
-    <button onclick="toggleSnap()">Toggle Snap</button>
-    <button onclick="finishCurrent()">Finish Wall</button>
-    
-    <button onclick="undo()">Undo</button>
-    <button onclick="clearCanvas()">Clear</button>
-    <button onclick="exportJSON()">Export JSON</button>
-    <button onclick="importJSON()">Import JSON</button>
+<body class="sidebar-open logged-in">
+  <main class="main floorplan-main">
+    <div class="fp-layout">
+      <!-- Toolbar -->
+      <div class="fp-toolbar">
+        <div class="fp-tool-group">
+          <button class="btn btn-sm fp-back-btn" onclick="goBack()" title="Back to MyTools">← Back</button>
+        </div>
+        <div class="fp-tool-group">
+          <span class="fp-tool-label">Draw</span>
+          <button class="btn btn-sm" data-tool="select" onclick="setTool('select')">Select</button>
+          <button class="btn btn-sm" data-tool="wall" onclick="setTool('wall')">Wall</button>
+          <button class="btn btn-sm" data-tool="door" onclick="setTool('door')">Door</button>
+          <button class="btn btn-sm" data-tool="window" onclick="setTool('window')">Window</button>
+          <button class="btn btn-sm" data-tool="room" onclick="setTool('room')">Room</button>
+          <button class="btn btn-sm" data-tool="dimension" onclick="setTool('dimension')">Measure</button>
+        </div>
+        <div class="fp-tool-group">
+          <span class="fp-tool-label">Edit</span>
+          <button class="btn btn-sm" onclick="undo()">Undo</button>
+          <button class="btn btn-sm" onclick="finishCurrent()">Finish</button>
+          <button class="btn btn-sm btn-delete" onclick="deleteSelected()">Delete</button>
+        </div>
+        <div class="fp-tool-group">
+          <span class="fp-tool-label">View</span>
+          <button class="btn btn-sm" onclick="zoomIn()">Zoom +</button>
+          <button class="btn btn-sm" onclick="zoomOut()">Zoom -</button>
+          <button class="btn btn-sm" onclick="resetZoom()">Fit</button>
+          <span class="fp-zoom-level" id="zoomLevel">100%</span>
+        </div>
+        <div class="fp-tool-group">
+          <span class="fp-tool-label">Grid</span>
+          <button class="btn btn-sm" onclick="toggleGrid()" id="gridBtn">Grid</button>
+          <button class="btn btn-sm" onclick="toggleSnap()" id="snapBtn">Snap</button>
+        </div>
+      </div>
+      <input type="file" id="importInput" accept=".json" style="display:none" onchange="importPlan(event)">
 
-    <label>Scale (px = 1 cm): <input id="scaleInput" type="number" value="2" style="width:70px" onchange="updateScale()"></label>
+      <!-- Canvas Area -->
+      <div class="fp-canvas-area">
+        <div class="fp-canvas-wrapper" id="canvasWrapper">
+          <div class="fp-filebar">
+            <button class="btn btn-sm" onclick="clearAll()" title="New plan">New</button>
+            <button class="btn btn-sm btn-primary" onclick="savePlan()" title="Save plan">Save</button>
+            <button class="btn btn-sm" onclick="importPlan()" title="Import plan">Import</button>
+            <button class="btn btn-sm" onclick="exportPlan()" title="Export plan">Export</button>
+            <button class="btn btn-sm" onclick="sharePlan()" title="Share plan">Share</button>
+          </div>
+          <canvas id="gridCanvas"></canvas>
+          <canvas id="canvas"></canvas>
+          <div class="fp-plan-title" id="planTitle">Untitled Plan</div>
+        </div>
 
-    <button onclick="zoomIn()">🔍+</button>
-    <button onclick="zoomOut()">🔍-</button>
-    <button onclick="resetZoom()">Reset Zoom</button>
-    <span id="zoomLevel">100%</span>
+        <!-- Right Panel -->
+        <div class="fp-panel" id="rightPanel">
+          <div class="fp-panel-section">
+            <h3>Properties</h3>
+            <div id="propertiesContent">
+              <p class="fp-hint">Select an element</p>
+            </div>
+          </div>
+          <div class="fp-panel-section">
+            <h3>Rooms</h3>
+            <div id="roomsList">
+              <p class="fp-hint">No rooms defined</p>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="addRoomFromWalls()" style="width:100%;margin-top:8px">Detect Rooms</button>
+            <button class="btn btn-sm" onclick="autoClassifyWalls()" style="width:100%;margin-top:4px">Classify Walls</button>
+          </div>
+          <div class="fp-panel-section">
+            <h3>Zones</h3>
+            <div id="zonesList">
+              <p class="fp-hint">No zones created</p>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="showNewZoneDialog()" style="width:100%;margin-top:8px">+ New Zone</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="fp-modal-overlay" id="confirmModal" style="display:none">
+    <div class="fp-modal">
+      <p class="fp-modal-message" id="confirmMessage">You have unsaved changes.</p>
+      <div class="fp-modal-actions" id="confirmActions">
+        <button class="btn btn-sm btn-primary" id="confirmSaveBtn" onclick="confirmSave()">Save</button>
+        <button class="btn btn-sm" id="confirmDiscardBtn" onclick="confirmDiscard()">Don't Save</button>
+        <button class="btn btn-sm" onclick="confirmCancel()">Cancel</button>
+      </div>
+    </div>
   </div>
 
-  <div class="canvas-container">
-    <canvas id="canvas" width="1400" height="900"></canvas>
+  <div class="fp-modal-overlay" id="inputModal" style="display:none">
+    <div class="fp-modal">
+      <p class="fp-modal-message" id="inputModalMessage">Save plan as:</p>
+      <input type="text" class="fp-modal-input" id="inputModalField" value="" placeholder="Plan name">
+      <div class="fp-modal-actions">
+        <button class="btn btn-sm btn-primary" onclick="inputConfirm()">Save</button>
+        <button class="btn btn-sm" onclick="inputCancel()">Cancel</button>
+      </div>
+    </div>
   </div>
 
-  <div id="properties" class="properties-panel"></div>
+  <div class="fp-modal-overlay" id="fileManagerModal" style="display:none">
+    <div class="fp-modal fp-modal-wide">
+      <div class="fp-fileman-header">
+        <h2 class="fp-fileman-title">Floor Plans</h2>
+        <button class="btn btn-sm" onclick="closeFileManager()">✕</button>
+      </div>
+      <div class="fp-fileman-new" onclick="newFromFileManager()">
+        <span class="fp-fileman-new-icon">+</span>
+        <span>New Floor Plan</span>
+      </div>
+      <div class="fp-fileman-list" id="fileList"></div>
+    </div>
+  </div>
 
-  <script src="app.js"></script>
+  <div class="fp-modal-overlay" id="shareModal" style="display:none">
+    <div class="fp-modal">
+      <p class="fp-modal-message" id="shareModalTitle">Share Plan</p>
+      <p class="fp-modal-sub" id="shareModalName"></p>
+      <div class="fp-modal-actions" style="flex-direction:column;gap:12px;margin:20px 0 8px">
+        <button class="btn btn-sm" id="shareEmailBtn" style="width:100%;padding:10px 0">Share via Email</button>
+        <button class="btn btn-sm" id="sharePrintBtn" style="width:100%;padding:10px 0">Print</button>
+      </div>
+      <div class="fp-modal-actions" style="margin-top:20px">
+        <button class="btn btn-sm" onclick="closeShareModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fp-modal-overlay" id="exportModal" style="display:none">
+    <div class="fp-modal">
+      <p class="fp-modal-message">Export as:</p>
+      <div class="fp-modal-options">
+        <label class="fp-option"><input type="checkbox" id="expGrid" checked> Show grid</label>
+        <label class="fp-option"><input type="checkbox" id="expName" checked> Show name</label>
+        <label class="fp-option"><input type="checkbox" id="expText" checked> Show text</label>
+        <label class="fp-option"><input type="checkbox" id="expMeas" checked> Show measurements</label>
+      </div>
+      <div class="fp-modal-export-grid">
+        <button class="btn btn-sm fp-export-btn" onclick="doExport('json')">JSON</button>
+        <button class="btn btn-sm fp-export-btn" onclick="doExport('pdf')">PDF</button>
+        <button class="btn btn-sm fp-export-btn" onclick="doExport('png')">PNG</button>
+        <button class="btn btn-sm fp-export-btn" onclick="doExport('svg')">SVG</button>
+      </div>
+      <div class="fp-modal-actions" style="margin-top:20px">
+        <button class="btn btn-sm" onclick="closeExportModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../script/app-config.js"></script>
+  <script src="../script/modules/auth.js"></script>
+  <script src="../script/modules/common-ui.js"></script>
+  <script src="../script/script.js"></script>
+  <script src="../script/pages/floorplan.js"></script>
 </body>
 </html>
