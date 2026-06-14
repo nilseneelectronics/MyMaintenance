@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Floor Plan Maker - Clean CAD Dimensions</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="setMode('select')">Select</button>
+    <button onclick="setMode('draw')">Draw Walls</button>
+    <button onclick="setMode('room')">Draw Room</button>
+    <button onclick="setMode('measure')">Measure</button>
+    <button onclick="setMode('window')">🪟 Window</button>
+    <button onclick="setMode('door')">🚪 Door</button>
+    
+    <label>Grid: <input id="gridSize" type="number" value="20" onchange="updateGrid()" style="width:60px"></label>
+    <button onclick="toggleGrid()">Toggle Grid</button>
+    <button onclick="toggleSnap()">Toggle Snap</button>
+    <button onclick="finishCurrent()">Finish Wall</button>
+    
+    <button onclick="undo()">Undo</button>
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="exportJSON()">Export JSON</button>
+    <button onclick="importJSON()">Import JSON</button>
+
+    <label>Scale (px = 1 cm): <input id="scaleInput" type="number" value="2" style="width:70px" onchange="updateScale()"></label>
+
+    <button onclick="zoomIn()">🔍+</button>
+    <button onclick="zoomOut()">🔍-</button>
+    <button onclick="resetZoom()">Reset Zoom</button>
+    <span id="zoomLevel">100%</span>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="canvas" width="1400" height="900"></canvas>
+  </div>
+
+  <div id="properties" class="properties-panel"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
