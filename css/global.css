@@ -68,7 +68,7 @@ main {
     margin-top: var(--navbar-height);
     padding-top: var(--main-padding-top);
     transition: margin-top 0.3s ease;
-    min-height: 1000px;
+    min-height: 800px;
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
