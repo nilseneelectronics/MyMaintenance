@@ -1,44 +1,57 @@
-# MyMaintenance - Reorganized
+# MyMaintenance
 
-## Proj Structure
+## Project Structure
 
 ```
 root/
-├── index.html          # Main page
-├── pages/              # All sub-pages
-├── css/                # Split CSS files
-│   ├── global.css      # Global styles & vars
-│   ├── header.css      # Navbar & sidebar
-│   ├── footer.css      # Footer
-│   ├── button.css      # Buttons
-│   ├── auth.css        # Login/signup
-│   ├── banner.css      # Banner
-│   ├── grid.css        # Grid layouts
-│   ├── profile.css     # Profile page
-│   ├── documents.css   # Documents
-│   ├── planning.css    # Planning/todo
-│   ├── tools.css       # Tools page
-│   └── homes.css       # Homes page
-├── script/             # JS files
+├── index.html              # Main entry point
+├── pages/                  # All sub-pages
+│   ├── about.html
+│   ├── coming-soon.html
+│   ├── dashboard.html
+│   ├── login.html
+│   ├── mydocuments.html
+│   ├── myhomes.html
+│   ├── myplanning.html
+│   ├── myprofile.html
+│   ├── mytools.html
+│   ├── myvehicles.html
+│   └── tool-floorplan.html # CAD-style floor plan designer
+├── css/                    # Split CSS files
+│   ├── auth.css
+│   ├── banner.css
+│   ├── button.css          # Buttons (turquoise accent, border-radius 8px)
+│   ├── documents.css
+│   ├── floorplan.css       # Floor plan layout, grid canvas, modals, filebar
+│   ├── footer.css
+│   ├── global.css          # Global styles & CSS vars
+│   ├── grid.css            # Grid layouts
+│   ├── header.css          # Navbar & sidebar
+│   ├── homes.css
+│   ├── planning.css
+│   ├── profile.css
+│   ├── style.css
+│   └── tools.css
+├── script/                 # JavaScript files
 │   ├── app-config.js
+│   ├── app.js
 │   ├── script.js
-│   └── modules/        # Module subdirs
-├── svg/                # SVG icons
-├── img/                # Images
-└── README.md           # This file
+│   ├── modules/
+│   │   ├── auth.js
+│   │   └── common-ui.js
+│   └── pages/
+│       ├── floorplan.js    # Canvas, grid, zoom, pan, file CRUD, modals
+│       ├── myhomes-gallery.js
+│       └── myplanning.js
+├── svg/                    # SVG icons (Material-style)
+├── img/                    # Images
+└── README.md               # This file
 ```
-
-## Changes Made
-
-- **Split CSS** into organized files by component
-- **Reorganized files** into logical folders (pages, script, svg, img)
-- **Updated all paths** in HTML files to reference new locations
-- **Maintained visual design** - all styles work same as before
 
 ## Installation
 
-Clone & open `root/index.html` in browser.
+Clone & open `index.html` in a browser.
 
-## GitHub
+## Branch
 
-Branch: `reorganize-structure`
+`floorplanmaker2`

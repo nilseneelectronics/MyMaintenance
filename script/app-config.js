@@ -22,6 +22,7 @@ window.MyMaintenanceConfig = {
         'myplanning.html',
         'mytools.html',
         'myprofile.html',
+        'tool-floorplan.html',
         'coming-soon.html'
     ]
 };

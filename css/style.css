@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+
+.toolbar {
+  padding: 10px;
+  background: #333;
+  color: white;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar button,
+.toolbar label {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.canvas-container {
+  border: 1px solid #ccc;
+  background: #fff;
+  margin: 10px;
+}
+
+.properties-panel {
+  position: absolute;
+  top: 60px;
+  right: 10px;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 15px;
+  width: 280px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+/* Wall styles */
+.wall {
+  stroke: #222;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
