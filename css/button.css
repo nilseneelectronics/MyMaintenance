@@ -97,13 +97,11 @@ button[type="submit"]:hover {
 .btn-primary {
     background-color: var(--accent-primary);
     color: #FFFFFF;
-    box-shadow: 0 8px 16px rgba(32, 178, 170, 0.3);
 }
 
 .btn-primary:hover {
     background-color: var(--accent-secondary);
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(32, 178, 170, 0.4);
 }
 
 .btn-secondary {
