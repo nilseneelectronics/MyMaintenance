@@ -25,11 +25,11 @@
     align-items: center;
     justify-content: center;
     gap: 15px;
-    min-height: 260px;
+    min-height: 230px;
 }
 
 .tool-box svg {
-    fill: none;
+    fill: var(--accent-primary);
     stroke: var(--accent-primary);
 }
 
