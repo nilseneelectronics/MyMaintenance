@@ -63,7 +63,6 @@
 
         /* Day view */
         .day-view { max-width: 600px; margin: 0 auto; }
-        .day-view h2 { text-align: center; margin-bottom: 24px; }
         .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); }
         .day-event .ev-time { font-size: 0.8rem; color: var(--accent-primary); font-weight: 500; display: block; margin-top: 4px; }
         .day-event .ev-location { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
@@ -324,7 +323,6 @@
         const events = getEvents(viewYear, viewMonth, viewDay);
         const key = dateKey(viewYear, viewMonth, viewDay);
         let html = '<div class="day-view">';
-        html += '<h2>' + d.toLocaleDateString('en-US', options) + '</h2>';
         if (events.length === 0) {
             html += '<p class="day-empty">No events on this day.</p>';
         } else {
