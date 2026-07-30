@@ -102,21 +102,21 @@
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label>Start date</label>
-                    <input type="date" id="ev-start-date">
+                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
                 </div>
                 <div class="event-modal-field">
                     <label>Finish date</label>
-                    <input type="date" id="ev-finish-date">
+                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
                 </div>
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label>Start time</label>
-                    <input type="time" id="ev-start-time">
+                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
                 </div>
                 <div class="event-modal-field">
                     <label>Finish time</label>
-                    <input type="time" id="ev-finish-time">
+                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
                 </div>
             </div>
             <div class="event-modal-field">
@@ -190,13 +190,26 @@
 
     function pad(n) { return String(n).padStart(2,'0'); }
 
+    function defaultTimes() {
+        const now = new Date();
+        const mins = now.getMinutes();
+        const rounded = new Date(now);
+        rounded.setMinutes(Math.ceil(mins / 15) * 15, 0, 0);
+        const h = String(rounded.getHours()).padStart(2,'0');
+        const m = String(rounded.getMinutes()).padStart(2,'0');
+        const later = new Date(rounded.getTime() + 60*60*1000);
+        const h2 = String(later.getHours()).padStart(2,'0');
+        const m2 = String(later.getMinutes()).padStart(2,'0');
+        evStartTime.value = `${h}:${m}`;
+        evFinishTime.value = `${h2}:${m2}`;
+    }
+
     function openModal(key) {
         modal.classList.add('open');
         evName.value = '';
         evStartDate.value = key;
-        evFinishDate.value = '';
-        evStartTime.value = '';
-        evFinishTime.value = '';
+        evFinishDate.value = key;
+        defaultTimes();
         evLocation.value = '';
         evDesc.value = '';
         evName.focus();
