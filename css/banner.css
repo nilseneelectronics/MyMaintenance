@@ -1,54 +1,50 @@
 /* banner.css */
 
-/* =======================================
-   Panorama Banner Styles
-   ======================================= */
-.panorama-banner {
-    position: relative;
-    width: calc(100vw / var(--ui-zoom));
-    margin-left: calc((100% - 100vw / var(--ui-zoom)) / 2);
-    margin-right: calc((100% - 100vw / var(--ui-zoom)) / 2);
-    height: 400px;
-    background-image: url('../img/Picture1.jpg');
-    background-size: cover;
-    background-position: center;
-    z-index: 1;
-    margin-bottom: 40px;
-    margin-top: calc(-1 * var(--main-padding-top));
+.hero {
+  position: relative;
+  height: 70vh;
+  min-height: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('../img/Picture1.jpg');
+  background-size: cover;
+  background-position: center;
+  margin-top: calc(-1 * var(--main-padding-top));
 }
 
-.panorama-banner::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 2;
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(5, 20, 28, 0.7), rgba(5, 20, 28, 0.3));
+  z-index: 1;
 }
 
-.overlay-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 3;
-    text-align: center;
-    color: #FFFFFF;
-    max-width: 780px;
-    padding: 16px 18px;
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #fff;
+  padding: 0 18px;
+  max-width: 700px;
 }
 
-.overlay-text h1 {
-    font-size: clamp(2rem, 5vw, 3rem);
-    margin: 0 0 8px;
-    line-height: 1.05;
+.hero-content h1 {
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-weight: 700;
+  margin: 0 0 12px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
-.overlay-text h2 {
-    font-size: clamp(1rem, 2vw, 1.2rem);
-    line-height: 1.4;
-    margin: 0;
-    color: #F0F4F8;
+.hero-sub {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin: 0 0 36px;
+  font-weight: 400;
+}
+
+.hero-content .btn {
+  font-size: 1.1rem;
+  padding: 14px 40px;
 }
