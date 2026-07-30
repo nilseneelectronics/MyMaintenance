@@ -111,7 +111,7 @@
 
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
-            <h3>Add event</h3>
+            <h3 id="ev-modal-title">Add event</h3>
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
@@ -145,6 +145,7 @@
                 <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
             </div>
             <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-delete" id="ev-delete" style="padding:8px 20px;border-radius:8px;border:1.5px solid #e74c3c;background:transparent;color:#e74c3c;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;display:none;margin-right:auto;">Delete</button>
                 <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
                 <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
             </div>
@@ -177,6 +178,7 @@
     const content = document.getElementById('cal-content');
     const viewBtns = document.querySelectorAll('.cal-view-toggle button');
     const modal = document.getElementById('event-modal');
+    const evModalTitle = document.getElementById('ev-modal-title');
     const evName = document.getElementById('ev-name');
     const evStartDate = document.getElementById('ev-start-date');
     const evFinishDate = document.getElementById('ev-finish-date');
@@ -186,6 +188,7 @@
     const evDesc = document.getElementById('ev-desc');
     const evCancel = document.getElementById('ev-cancel');
     const evAdd = document.getElementById('ev-add');
+    const evDelete = document.getElementById('ev-delete');
 
     function getMonthData(year, month) {
         const first = new Date(year, month, 1);
@@ -230,6 +233,9 @@
         editingIdx = idx !== undefined ? idx : -1;
         if (idx >= 0 && EVENTS[key] && EVENTS[key][idx]) {
             const e = EVENTS[key][idx];
+            evModalTitle.textContent = 'Edit event';
+            evAdd.textContent = 'Save';
+            evDelete.style.display = '';
             evName.value = e.name || '';
             evStartDate.value = e.startDate || key;
             evFinishDate.value = e.finishDate || key;
@@ -238,6 +244,9 @@
             evLocation.value = e.location || '';
             evDesc.value = e.description || '';
         } else {
+            evModalTitle.textContent = 'Add event';
+            evAdd.textContent = 'Add';
+            evDelete.style.display = 'none';
             evName.value = '';
             evStartDate.value = key;
             evFinishDate.value = key;
@@ -255,6 +264,16 @@
     }
 
     evCancel.addEventListener('click', closeModal);
+    evDelete.addEventListener('click', () => {
+        if (!editingKey || editingIdx < 0) return;
+        if (confirm('Delete event "' + (EVENTS[editingKey][editingIdx].name || '') + '"? This cannot be undone.')) {
+            EVENTS[editingKey].splice(editingIdx, 1);
+            if (EVENTS[editingKey].length === 0) delete EVENTS[editingKey];
+            saveEvents();
+            closeModal();
+            render();
+        }
+    });
     evAdd.addEventListener('click', () => {
         const name = evName.value.trim();
         const startDate = evStartDate.value;
