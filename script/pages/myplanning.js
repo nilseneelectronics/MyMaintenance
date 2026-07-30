@@ -70,10 +70,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadExampleTasks();
 
+    // === EVENTS ===
+    const STORAGE_KEY = 'floorplan_calendar_events';
+    function loadEvents() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch (_) {}
+        return { "2026-08-17": [{ name:"Going home", time:"14:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+    }
+    function saveEvents() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
+    }
+    let EVENTS = loadEvents();
+
+    // === MODAL ===
+    const modal = document.getElementById('event-modal');
+    const evName = document.getElementById('ev-name');
+    const evDate = document.getElementById('ev-date');
+    const evTime = document.getElementById('ev-time');
+    const evLocation = document.getElementById('ev-location');
+    const evDesc = document.getElementById('ev-desc');
+    const evCancel = document.getElementById('ev-cancel');
+    const evAdd = document.getElementById('ev-add');
+
+    function openModal(key) {
+        if (!modal) return;
+        modal.classList.add('open');
+        evName.value = '';
+        evDate.value = key;
+        evTime.value = '';
+        evLocation.value = '';
+        evDesc.value = '';
+        evName.focus();
+    }
+
+    function closeModal() {
+        if (!modal) return;
+        modal.classList.remove('open');
+    }
+
+    if (evCancel) evCancel.addEventListener('click', closeModal);
+    if (evAdd) evAdd.addEventListener('click', () => {
+        const name = evName.value.trim();
+        const date = evDate.value;
+        const time = evTime.value;
+        const location = evLocation.value.trim();
+        const description = evDesc.value.trim();
+        if (!name || !date) return;
+        if (!EVENTS[date]) EVENTS[date] = [];
+        EVENTS[date].push({ name, time, location, description });
+        saveEvents();
+        closeModal();
+        renderCalendar();
+    });
+    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
     // === CALENDAR ===
-    const EVENTS = {
-        "2026-08-17": ["Going home"],
-    };
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -83,8 +138,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextBtn = document.getElementById('cal-next');
     if (!container || !prevBtn || !nextBtn) return;
 
-    function dateKey(year, month, day) { return `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
-    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)]; }
+    function pad(n) { return String(n).padStart(2,'0'); }
+    function dateKey(year, month, day) { return `${year}-${pad(month+1)}-${pad(day)}`; }
+    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
 
     function getMonthData(year, month) {
         const first = new Date(year, month, 1);
@@ -131,7 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isToday) classes.push('today');
                 if (isPast) classes.push('past');
                 if (hasEvents(year, month, d)) classes.push('has-event');
-                html += `<td><a href="#" class="${classes.join(' ')}">${d}</a></td>`;
+                const key = dateKey(year, month, d);
+                html += `<td><a href="#" class="${classes.join(' ')}" data-key="${key}">${d}</a></td>`;
                 const pos = (startDay + d - 1) % 7;
                 if (pos === 6 && d < daysInMonth) {
                     html += `</tr><tr>`;
@@ -152,7 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     container.addEventListener('click', (e) => {
-        if (e.target.tagName === 'A') e.preventDefault();
+        const link = e.target.closest('a[data-key]');
+        if (link) {
+            e.preventDefault();
+            openModal(link.dataset.key);
+        }
     });
 
     renderCalendar();

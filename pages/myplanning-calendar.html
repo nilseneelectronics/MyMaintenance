@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../css/footer.css">
     <link rel="stylesheet" href="../css/button.css">
     <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/planning.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         .cal-page { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
@@ -25,7 +26,6 @@
 
         #cal-content { min-height: 560px; }
 
-        /* Add happening button */
         .add-event-top { width: 100%; padding: 12px; border: 1.5px dashed var(--border-color); border-radius: 10px; background: transparent; color: var(--accent-primary); font-family: 'Poppins', sans-serif; font-size: 0.95rem; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; }
         .add-event-top:hover { background: rgba(32,178,170,0.05); border-color: var(--accent-primary); }
         .add-event-bottom { display: block; width: 100%; padding: 12px; border: 1.5px dashed var(--border-color); border-radius: 10px; background: transparent; color: var(--accent-primary); font-family: 'Poppins', sans-serif; font-size: 0.95rem; cursor: pointer; margin-top: 20px; transition: all 0.2s; }
@@ -37,7 +37,7 @@
         .year-month h3 { margin: 0 0 8px; font-size: 1rem; text-align: center; }
         .year-month table { width: 100%; border-collapse: collapse; }
         .year-month th { font-size: 0.65rem; padding: 2px 0; color: var(--text-secondary); font-weight: 500; }
-        .year-month td { text-align: center; padding: 2px 0; font-size: 0.72rem; position: relative; }
+        .year-month td { text-align: center; padding: 2px 0; font-size: 0.72rem; position: relative; cursor: pointer; }
         .year-month .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; }
         .year-month .today .date-circle { background: var(--accent-primary); color: #fff; }
         .year-month td.has-event::after { content: ''; display: block; width: 10px; height: 2px; background: var(--accent-primary); border-radius: 2px; margin: 0 auto; margin-top: 2px; }
@@ -45,15 +45,15 @@
         .year-month .past .date-circle { opacity: 0.3; }
         .year-month td.past.has-event::after { opacity: 0.35; }
 
-        /* Month view – matches calendar-mimic style */
+        /* Month view */
         .month-view-wrap { border: 1.5px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-primary); }
         .month-view { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .month-view th { text-align: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); font-weight: 500; color: var(--text-secondary); }
-        .month-view td { text-align: center; padding: 8px 0; vertical-align: top; height: 100px; position: relative; }
+        .month-view td { text-align: center; padding: 8px 0; vertical-align: top; height: 100px; position: relative; cursor: pointer; }
         .month-view .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border-color); font-size: 0.95rem; color: var(--text-primary); margin-bottom: 4px; }
         .month-view .today .date-circle { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
         .month-view .past .date-circle { opacity: 0.35; }
-        .month-view .event-line { display: block; font-size: 0.65rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 3px; padding: 2px 6px; margin: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .month-view .event-line { display: block; font-size: 0.65rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 3px; padding: 2px 6px; margin: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .month-view td:hover { background: var(--hover-bg); border-radius: 8px; }
 
         /* Day view */
@@ -61,22 +61,11 @@
         .day-view h2 { text-align: center; margin-bottom: 24px; }
         .day-view .day-body { flex: 1 1 auto; }
         .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); }
-        .day-event strong { display: block; font-size: 1rem; margin-bottom: 4px; }
-        .day-event span { font-size: 0.85rem; color: var(--text-secondary); }
+        .day-event h4 { margin: 0 0 4px; font-size: 1rem; }
+        .day-event .ev-time { font-size: 0.8rem; color: var(--accent-primary); font-weight: 500; }
+        .day-event .ev-location { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+        .day-event .ev-desc { font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-color); }
         .day-empty { text-align: center; color: var(--text-secondary); padding: 40px; }
-        .day-view .add-event-bottom { margin-top: auto; }
-
-        /* Add event modal */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 9999; align-items: center; justify-content: center; }
-        .modal-overlay.open { display: flex; }
-        .modal-card { background: var(--bg-primary); border-radius: 16px; padding: 32px; max-width: 420px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }
-        .modal-card h3 { margin: 0 0 16px; font-size: 1.2rem; }
-        .modal-card input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border-color); border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.95rem; background: var(--bg-secondary); color: var(--text-primary); box-sizing: border-box; margin-bottom: 16px; }
-        .modal-card input:focus { outline: none; border-color: var(--accent-primary); }
-        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
-        .modal-buttons button { padding: 8px 20px; border-radius: 8px; border: 1.5px solid var(--border-color); font-family: 'Poppins', sans-serif; font-size: 0.9rem; cursor: pointer; }
-        .modal-buttons .btn-cancel { background: var(--bg-primary); color: var(--text-primary); }
-        .modal-buttons .btn-add { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
 
         @media (max-width: 768px) {
             .year-grid { grid-template-columns: repeat(2, 1fr); }
@@ -103,14 +92,34 @@
         </div>
     </main>
 
-    <!-- Add event modal -->
-    <div class="modal-overlay" id="event-modal">
-        <div class="modal-card">
+    <div class="event-modal-overlay" id="event-modal">
+        <div class="event-modal-card">
             <h3>Add happening</h3>
-            <input type="text" id="event-input" placeholder="Enter event name...">
-            <div class="modal-buttons">
-                <button class="btn-cancel" id="event-cancel">Cancel</button>
-                <button class="btn-add" id="event-add">Add</button>
+            <div class="event-modal-field">
+                <label>Name</label>
+                <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Day</label>
+                    <input type="date" id="ev-date">
+                </div>
+                <div class="event-modal-field">
+                    <label>Time</label>
+                    <input type="time" id="ev-time">
+                </div>
+            </div>
+            <div class="event-modal-field">
+                <label>Location</label>
+                <input type="text" id="ev-location" placeholder="Location">
+            </div>
+            <div class="event-modal-field">
+                <label>Description</label>
+                <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
+            </div>
+            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
             </div>
         </div>
     </div>
@@ -122,7 +131,7 @@
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) return JSON.parse(saved);
         } catch (_) {}
-        return { "2026-08-17": ["Going home"] };
+        return { "2026-08-17": [{ name:"Going home", time:"14:00", location:"Cabin", description:"Pack up and head back to the city" }] };
     }
     function saveEvents() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
@@ -140,11 +149,14 @@
     const navLabel = document.getElementById('nav-label');
     const content = document.getElementById('cal-content');
     const viewBtns = document.querySelectorAll('.cal-view-toggle button');
-    const modalOverlay = document.getElementById('event-modal');
-    const eventInput = document.getElementById('event-input');
-    const eventCancel = document.getElementById('event-cancel');
-    const eventAdd = document.getElementById('event-add');
-    let pendingDateKey = null;
+    const modal = document.getElementById('event-modal');
+    const evName = document.getElementById('ev-name');
+    const evDate = document.getElementById('ev-date');
+    const evTime = document.getElementById('ev-time');
+    const evLocation = document.getElementById('ev-location');
+    const evDesc = document.getElementById('ev-desc');
+    const evCancel = document.getElementById('ev-cancel');
+    const evAdd = document.getElementById('ev-add');
 
     function getMonthData(year, month) {
         const first = new Date(year, month, 1);
@@ -153,7 +165,7 @@
     }
 
     function dateKey(year, month, day) { return `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
-    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)]; }
+    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
     function getEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] || []; }
 
     function isToday(year, month, day) {
@@ -164,39 +176,44 @@
         return new Date(year, month, day) < new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
     }
 
-    function openAddModal(key) {
-        pendingDateKey = key;
-        eventInput.value = '';
-        modalOverlay.classList.add('open');
-        eventInput.focus();
+    function pad(n) { return String(n).padStart(2,'0'); }
+
+    function openModal(key) {
+        modal.classList.add('open');
+        evName.value = '';
+        evDate.value = key;
+        evTime.value = '';
+        evLocation.value = '';
+        evDesc.value = '';
+        evName.focus();
     }
 
-    function closeAddModal() {
-        modalOverlay.classList.remove('open');
-        pendingDateKey = null;
+    function closeModal() {
+        modal.classList.remove('open');
     }
 
-    eventCancel.addEventListener('click', closeAddModal);
-    eventAdd.addEventListener('click', () => {
-        const text = eventInput.value.trim();
-        if (!text || !pendingDateKey) return;
-        if (!EVENTS[pendingDateKey]) EVENTS[pendingDateKey] = [];
-        EVENTS[pendingDateKey].push(text);
+    evCancel.addEventListener('click', closeModal);
+    evAdd.addEventListener('click', () => {
+        const name = evName.value.trim();
+        const date = evDate.value;
+        const time = evTime.value;
+        const location = evLocation.value.trim();
+        const description = evDesc.value.trim();
+        if (!name || !date) return;
+        if (!EVENTS[date]) EVENTS[date] = [];
+        EVENTS[date].push({ name, time, location, description });
         saveEvents();
-        closeAddModal();
+        closeModal();
         render();
     });
-    eventInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') eventAdd.click();
-        if (e.key === 'Escape') closeAddModal();
-    });
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) closeAddModal();
-    });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    evName.addEventListener('keydown', (e) => { if (e.key === 'Enter') evAdd.click(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     function renderYear() {
         navLabel.textContent = viewYear;
-        let html = `<button class="add-event-top" data-addkey="${viewYear}-01-01">+ Add happening</button>`;
+        const todayKey = dateKey(viewYear, new Date().getMonth(), new Date().getDate());
+        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add happening</button>`;
         html += '<div class="year-grid">';
         for (let m = 0; m < 12; m++) {
             const { startDay, daysInMonth } = getMonthData(viewYear, m);
@@ -210,7 +227,8 @@
                 if (isToday(viewYear, m, d)) tdCls.push('today');
                 if (isPast(viewYear, m, d)) tdCls.push('past');
                 if (hasEvents(viewYear, m, d)) tdCls.push('has-event');
-                html += `<td class="${tdCls.join(' ')}"><span class="date-circle">${d}</span></td>`;
+                const key = dateKey(viewYear, m, d);
+                html += `<td class="${tdCls.join(' ')}" data-key="${key}"><span class="date-circle">${d}</span></td>`;
                 if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
             }
             const lastCell = (startDay + daysInMonth) % 7;
@@ -223,9 +241,9 @@
 
     function renderMonth() {
         navLabel.textContent = `${MONTHS[viewMonth]} ${viewYear}`;
-        const key = dateKey(viewYear, viewMonth, 1);
         const { startDay, daysInMonth } = getMonthData(viewYear, viewMonth);
-        let html = `<button class="add-event-top" data-addkey="${key}">+ Add happening</button>`;
+        const todayKey = dateKey(viewYear, viewMonth, Math.min(viewDay, daysInMonth));
+        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add happening</button>`;
         html += '<div class="month-view-wrap"><table class="month-view"><thead><tr>';
         DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
         html += '</tr></thead><tbody><tr>';
@@ -234,10 +252,11 @@
             const tdCls = [];
             if (isToday(viewYear, viewMonth, d)) tdCls.push('today');
             if (isPast(viewYear, viewMonth, d)) tdCls.push('past');
-            html += `<td class="${tdCls.join(' ')}">`;
+            const key = dateKey(viewYear, viewMonth, d);
+            html += `<td class="${tdCls.join(' ')}" data-key="${key}">`;
             html += `<span class="date-circle">${d}</span>`;
             const events = getEvents(viewYear, viewMonth, d);
-            events.forEach(e => html += `<span class="event-line">${e}</span>`);
+            events.forEach(e => html += `<span class="event-line">${e.name}${e.time ? ' \u2022 '+e.time : ''}</span>`);
             html += '</td>';
             if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
         }
@@ -258,10 +277,17 @@
         if (events.length === 0) {
             html += '<p class="day-empty">No events on this day.</p>';
         } else {
-            events.forEach(e => html += `<div class="day-event"><strong>${e}</strong></div>`);
+            events.forEach(e => {
+                html += '<div class="day-event">';
+                html += `<h4>${e.name}</h4>`;
+                if (e.time) html += `<span class="ev-time">${e.time}</span>`;
+                if (e.location) html += `<div class="ev-location">${e.location}</div>`;
+                if (e.description) html += `<div class="ev-desc">${e.description}</div>`;
+                html += '</div>';
+            });
         }
         html += '</div>';
-        html += `<button class="add-event-bottom" data-addkey="${key}">+ Add happening</button>`;
+        html += `<button class="add-event-bottom" data-key="${key}">+ Add happening</button>`;
         html += '</div>';
         content.innerHTML = html;
     }
@@ -302,28 +328,23 @@
     content.addEventListener('click', (e) => {
         const addBtn = e.target.closest('.add-event-top, .add-event-bottom');
         if (addBtn) {
-            const key = addBtn.dataset.addkey;
-            if (view === 'year') {
-                const year = parseInt(key);
-                openAddModal(`${year}-01-01`);
-            } else if (view === 'month') {
-                openAddModal(key);
-            } else {
-                openAddModal(key);
-            }
+            openModal(addBtn.dataset.key);
             return;
         }
-        if (view === 'month') {
-            const td = e.target.closest('td');
-            if (td) {
-                const circle = td.querySelector('.date-circle');
-                if (circle) {
-                    view = 'day';
-                    viewDay = parseInt(circle.textContent);
-                    viewBtns.forEach(b => b.classList.remove('active'));
-                    document.querySelector('[data-view="day"]').classList.add('active');
-                    render();
-                }
+        const td = e.target.closest('td[data-key]');
+        if (td) {
+            const key = td.dataset.key;
+            if (view === 'month' && !e.target.closest('.event-line')) {
+                const parts = key.split('-');
+                view = 'day';
+                viewYear = parseInt(parts[0]);
+                viewMonth = parseInt(parts[1]) - 1;
+                viewDay = parseInt(parts[2]);
+                viewBtns.forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-view="day"]').classList.add('active');
+                render();
+            } else {
+                openModal(key);
             }
         }
     });

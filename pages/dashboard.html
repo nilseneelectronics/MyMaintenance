@@ -100,24 +100,105 @@
             </div>
         </div>
     </main>
-    
+
+    <div class="event-modal-overlay" id="event-modal">
+        <div class="event-modal-card">
+            <h3>Add happening</h3>
+            <div class="event-modal-field">
+                <label>Name</label>
+                <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Day</label>
+                    <input type="date" id="ev-date">
+                </div>
+                <div class="event-modal-field">
+                    <label>Time</label>
+                    <input type="time" id="ev-time">
+                </div>
+            </div>
+            <div class="event-modal-field">
+                <label>Location</label>
+                <input type="text" id="ev-location" placeholder="Location">
+            </div>
+            <div class="event-modal-field">
+                <label>Description</label>
+                <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
+            </div>
+            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            </div>
+        </div>
+    </div>
     
     
     
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const EVENTS = {
-            "2026-08-17": ["Going home"],
-        };
+        const STORAGE_KEY = 'floorplan_calendar_events';
+        function loadEvents() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (_) {}
+            return { "2026-08-17": [{ name:"Going home", time:"14:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+        }
+        function saveEvents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
+        }
+        let EVENTS = loadEvents();
+
+        const modal = document.getElementById('event-modal');
+        const evName = document.getElementById('ev-name');
+        const evDate = document.getElementById('ev-date');
+        const evTime = document.getElementById('ev-time');
+        const evLocation = document.getElementById('ev-location');
+        const evDesc = document.getElementById('ev-desc');
+        const evCancel = document.getElementById('ev-cancel');
+        const evAdd = document.getElementById('ev-add');
+
+        function openModal(key) {
+            if (!modal) return;
+            modal.classList.add('open');
+            evName.value = '';
+            evDate.value = key;
+            evTime.value = '';
+            evLocation.value = '';
+            evDesc.value = '';
+            evName.focus();
+        }
+        function closeModal() {
+            if (modal) modal.classList.remove('open');
+        }
+        if (evCancel) evCancel.addEventListener('click', closeModal);
+        if (evAdd) evAdd.addEventListener('click', () => {
+            const name = evName.value.trim();
+            const date = evDate.value;
+            const time = evTime.value;
+            const location = evLocation.value.trim();
+            const description = evDesc.value.trim();
+            if (!name || !date) return;
+            if (!EVENTS[date]) EVENTS[date] = [];
+            EVENTS[date].push({ name, time, location, description });
+            saveEvents();
+            closeModal();
+            renderCalendar();
+        });
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
         const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
         const container = document.getElementById('dash-calendar');
         if (!container) return;
         const now = new Date();
-        const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
 
-        function dateKey(year, month, day) { return `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
-        function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)]; }
+        function pad(n) { return String(n).padStart(2,'0'); }
+        function dateKey(year, month, day) { return `${year}-${pad(month+1)}-${pad(day)}`; }
+        function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
 
         function getMonthData(year, month) {
             const first = new Date(year, month, 1);
@@ -125,36 +206,48 @@
             return { startDay: (first.getDay() + 6) % 7, daysInMonth: last.getDate() };
         }
 
-        [0, 1].forEach(offset => {
-            const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-            const year = date.getFullYear(), month = date.getMonth();
-            const { startDay, daysInMonth } = getMonthData(year, month);
-            const box = document.createElement('div');
-            box.className = 'month-box';
-            let html = `<table class="month"><thead><tr><th colspan="7">${MONTHS[month]} ${year}</th></tr><tr>`;
-            DAYS.forEach(d => html += `<th>${d}</th>`);
-            html += `</tr></thead><tbody><tr>`;
-            for (let i = 0; i < startDay; i++) html += `<td class="noday">&nbsp;</td>`;
-            for (let d = 1; d <= daysInMonth; d++) {
-                const cellStr = `${year}-${month}-${d}`;
-                const isToday = cellStr === todayStr;
-                const isPast = new Date(year, month, d) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const cls = ['date-circle'];
-                if (isToday) cls.push('today');
-                if (isPast) cls.push('past');
-                if (hasEvents(year, month, d)) cls.push('has-event');
-                html += `<td><a href="#" class="${cls.join(' ')}">${d}</a></td>`;
-                if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += `</tr><tr>`;
-            }
-            const lastCell = (startDay + daysInMonth) % 7;
-            if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += `<td class="noday">&nbsp;</td>`;
-            html += `</tr></tbody></table>`;
-            box.innerHTML = html;
-            container.appendChild(box);
-        });
+        function renderCalendar() {
+            const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+            container.innerHTML = '';
+            [0, 1].forEach(offset => {
+                const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+                const year = date.getFullYear(), month = date.getMonth();
+                const { startDay, daysInMonth } = getMonthData(year, month);
+                const box = document.createElement('div');
+                box.className = 'month-box';
+                let html = `<table class="month"><thead><tr><th colspan="7">${MONTHS[month]} ${year}</th></tr><tr>`;
+                DAYS.forEach(d => html += `<th>${d}</th>`);
+                html += `</tr></thead><tbody><tr>`;
+                for (let i = 0; i < startDay; i++) html += `<td class="noday">&nbsp;</td>`;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const cellStr = `${year}-${month}-${d}`;
+                    const isToday = cellStr === todayStr;
+                    const isPast = new Date(year, month, d) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const cls = ['date-circle'];
+                    if (isToday) cls.push('today');
+                    if (isPast) cls.push('past');
+                    if (hasEvents(year, month, d)) cls.push('has-event');
+                    const key = dateKey(year, month, d);
+                    html += `<td><a href="#" class="${cls.join(' ')}" data-key="${key}">${d}</a></td>`;
+                    if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += `</tr><tr>`;
+                }
+                const lastCell = (startDay + daysInMonth) % 7;
+                if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += `<td class="noday">&nbsp;</td>`;
+                html += `</tr></tbody></table>`;
+                box.innerHTML = html;
+                container.appendChild(box);
+            });
+        }
+
         container.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A') e.preventDefault();
+            const link = e.target.closest('a[data-key]');
+            if (link) {
+                e.preventDefault();
+                openModal(link.dataset.key);
+            }
         });
+
+        renderCalendar();
     });
     </script>
     <script src="../script/app-config.js"></script>
