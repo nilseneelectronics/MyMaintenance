@@ -224,6 +224,7 @@
     function renderMonth() {
         navLabel.textContent = `${MONTHS[viewMonth]} ${viewYear}`;
         const key = dateKey(viewYear, viewMonth, 1);
+        const { startDay, daysInMonth } = getMonthData(viewYear, viewMonth);
         let html = `<button class="add-event-top" data-addkey="${key}">+ Add happening</button>`;
         html += '<div class="month-view-wrap"><table class="month-view"><thead><tr>';
         DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
