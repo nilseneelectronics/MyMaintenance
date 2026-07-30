@@ -596,18 +596,22 @@
 .calendar-mimic .has-event::after {
     content: '';
     display: block;
-    width: 5px;
-    height: 5px;
+    width: 16px;
+    height: 2px;
     background: var(--accent-primary);
-    border-radius: 50%;
+    border-radius: 2px;
     position: absolute;
-    bottom: -4px;
+    bottom: -2px;
     left: 50%;
-    margin-left: -2.5px;
+    margin-left: -8px;
 }
 
 .calendar-mimic .today.has-event::after {
     background: #fff;
+}
+
+.calendar-mimic .past.has-event::after {
+    opacity: 0.35;
 }
 
 .button-group {
