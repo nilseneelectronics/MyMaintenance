@@ -117,6 +117,8 @@
         </div>
     </main>
 
+    <button onclick="history.back()" style="position:fixed;top:20px;left:20px;z-index:100;width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'" title="Go back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
             <h3 id="ev-modal-title">Add event</h3>
