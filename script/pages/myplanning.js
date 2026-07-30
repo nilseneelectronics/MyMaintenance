@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) return JSON.parse(saved);
         } catch (_) {}
-        return { "2026-08-17": [{ name:"Going home", time:"14:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+        return { "2026-08-17": [{ name:"Going home", startDate:"2026-08-17", finishDate:"2026-08-17", startTime:"14:00", finishTime:"16:00", location:"Cabin", description:"Pack up and head back to the city" }] };
     }
     function saveEvents() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
@@ -87,8 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // === MODAL ===
     const modal = document.getElementById('event-modal');
     const evName = document.getElementById('ev-name');
-    const evDate = document.getElementById('ev-date');
-    const evTime = document.getElementById('ev-time');
+    const evStartDate = document.getElementById('ev-start-date');
+    const evFinishDate = document.getElementById('ev-finish-date');
+    const evStartTime = document.getElementById('ev-start-time');
+    const evFinishTime = document.getElementById('ev-finish-time');
     const evLocation = document.getElementById('ev-location');
     const evDesc = document.getElementById('ev-desc');
     const evCancel = document.getElementById('ev-cancel');
@@ -98,8 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) return;
         modal.classList.add('open');
         evName.value = '';
-        evDate.value = key;
-        evTime.value = '';
+        evStartDate.value = key;
+        evFinishDate.value = '';
+        evStartTime.value = '';
+        evFinishTime.value = '';
         evLocation.value = '';
         evDesc.value = '';
         evName.focus();
@@ -113,13 +117,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (evCancel) evCancel.addEventListener('click', closeModal);
     if (evAdd) evAdd.addEventListener('click', () => {
         const name = evName.value.trim();
-        const date = evDate.value;
-        const time = evTime.value;
+        const startDate = evStartDate.value;
+        const finishDate = evFinishDate.value;
+        const startTime = evStartTime.value;
+        const finishTime = evFinishTime.value;
         const location = evLocation.value.trim();
         const description = evDesc.value.trim();
-        if (!name || !date) return;
-        if (!EVENTS[date]) EVENTS[date] = [];
-        EVENTS[date].push({ name, time, location, description });
+        if (!name || !startDate) return;
+        if (!EVENTS[startDate]) EVENTS[startDate] = [];
+        EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
         saveEvents();
         closeModal();
         renderCalendar();

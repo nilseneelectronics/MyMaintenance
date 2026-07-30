@@ -101,12 +101,22 @@
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
-                    <label>Day</label>
-                    <input type="date" id="ev-date">
+                    <label>Start date</label>
+                    <input type="date" id="ev-start-date">
                 </div>
                 <div class="event-modal-field">
-                    <label>Time</label>
-                    <input type="time" id="ev-time">
+                    <label>Finish date</label>
+                    <input type="date" id="ev-finish-date">
+                </div>
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Start time</label>
+                    <input type="time" id="ev-start-time">
+                </div>
+                <div class="event-modal-field">
+                    <label>Finish time</label>
+                    <input type="time" id="ev-finish-time">
                 </div>
             </div>
             <div class="event-modal-field">
@@ -131,7 +141,7 @@
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) return JSON.parse(saved);
         } catch (_) {}
-        return { "2026-08-17": [{ name:"Going home", time:"14:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+        return { "2026-08-17": [{ name:"Going home", startDate:"2026-08-17", finishDate:"2026-08-17", startTime:"14:00", finishTime:"16:00", location:"Cabin", description:"Pack up and head back to the city" }] };
     }
     function saveEvents() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
@@ -151,8 +161,10 @@
     const viewBtns = document.querySelectorAll('.cal-view-toggle button');
     const modal = document.getElementById('event-modal');
     const evName = document.getElementById('ev-name');
-    const evDate = document.getElementById('ev-date');
-    const evTime = document.getElementById('ev-time');
+    const evStartDate = document.getElementById('ev-start-date');
+    const evFinishDate = document.getElementById('ev-finish-date');
+    const evStartTime = document.getElementById('ev-start-time');
+    const evFinishTime = document.getElementById('ev-finish-time');
     const evLocation = document.getElementById('ev-location');
     const evDesc = document.getElementById('ev-desc');
     const evCancel = document.getElementById('ev-cancel');
@@ -181,8 +193,10 @@
     function openModal(key) {
         modal.classList.add('open');
         evName.value = '';
-        evDate.value = key;
-        evTime.value = '';
+        evStartDate.value = key;
+        evFinishDate.value = '';
+        evStartTime.value = '';
+        evFinishTime.value = '';
         evLocation.value = '';
         evDesc.value = '';
         evName.focus();
@@ -195,13 +209,15 @@
     evCancel.addEventListener('click', closeModal);
     evAdd.addEventListener('click', () => {
         const name = evName.value.trim();
-        const date = evDate.value;
-        const time = evTime.value;
+        const startDate = evStartDate.value;
+        const finishDate = evFinishDate.value;
+        const startTime = evStartTime.value;
+        const finishTime = evFinishTime.value;
         const location = evLocation.value.trim();
         const description = evDesc.value.trim();
-        if (!name || !date) return;
-        if (!EVENTS[date]) EVENTS[date] = [];
-        EVENTS[date].push({ name, time, location, description });
+        if (!name || !startDate) return;
+        if (!EVENTS[startDate]) EVENTS[startDate] = [];
+        EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
         saveEvents();
         closeModal();
         render();
@@ -256,7 +272,10 @@
             html += `<td class="${tdCls.join(' ')}" data-key="${key}">`;
             html += `<span class="date-circle">${d}</span>`;
             const events = getEvents(viewYear, viewMonth, d);
-            events.forEach(e => html += `<span class="event-line">${e.name}${e.time ? ' \u2022 '+e.time : ''}</span>`);
+            events.forEach(e => {
+                const t = e.startTime ? (e.finishTime ? `${e.startTime}-${e.finishTime}` : e.startTime) : '';
+                html += `<span class="event-line">${e.name}${t ? ' \u2022 '+t : ''}</span>`;
+            });
             html += '</td>';
             if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
         }
@@ -280,7 +299,15 @@
             events.forEach(e => {
                 html += '<div class="day-event">';
                 html += `<h4>${e.name}</h4>`;
-                if (e.time) html += `<span class="ev-time">${e.time}</span>`;
+                if (e.startDate) {
+                    const sd = e.startDate.split('-');
+                    const fd = e.finishDate ? e.finishDate.split('-') : null;
+                    const startLabel = `${sd[2]}.${sd[1]}.${sd[0]}`;
+                    const finishLabel = fd ? `${fd[2]}.${fd[1]}.${fd[0]}` : '';
+                    html += `<span class="ev-time">${startLabel}${finishLabel ? ' - '+finishLabel : ''}`;
+                    if (e.startTime) html += ` &middot; ${e.startTime}${e.finishTime ? '-'+e.finishTime : ''}`;
+                    html += '</span>';
+                }
                 if (e.location) html += `<div class="ev-location">${e.location}</div>`;
                 if (e.description) html += `<div class="ev-desc">${e.description}</div>`;
                 html += '</div>';
