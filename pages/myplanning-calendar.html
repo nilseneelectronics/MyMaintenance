@@ -19,7 +19,9 @@
         .cal-view-toggle button.active { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
 
         .cal-nav { position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; min-height: 40px; }
-        .cal-nav button { position: absolute; padding: 6px 14px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; font-size: 1rem; color: var(--accent-primary); }
+        .cal-nav button { position: absolute; width: 36px; height: 36px; padding: 0; border: 2px solid var(--border-color); border-radius: 50%; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
+        .cal-nav button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        .cal-nav button:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
         .cal-nav button:first-child { left: 0; }
         .cal-nav button:last-child { right: 0; }
         .cal-nav span { font-size: 1.2rem; font-weight: 600; text-align: center; }
@@ -84,9 +86,9 @@
                 <button data-view="day">Day</button>
             </div>
             <div class="cal-nav">
-                <button id="nav-prev">&larr;</button>
+                <button id="nav-prev"><svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
                 <span id="nav-label"></span>
-                <button id="nav-next">&rarr;</button>
+                <button id="nav-next"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
             </div>
             <div id="cal-content"></div>
         </div>
