@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const link = e.target.closest('a[data-key]');
         if (link) {
             e.preventDefault();
-            openModal(link.dataset.key);
+            window.location.href = 'myplanning-calendar.html?date=' + link.dataset.key;
         }
     });
 

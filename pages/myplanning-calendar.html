@@ -390,6 +390,21 @@
     });
 
     render();
+
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get('date');
+    if (dateParam) {
+        const parts = dateParam.split('-');
+        if (parts.length === 3) {
+            view = 'day';
+            viewYear = parseInt(parts[0]);
+            viewMonth = parseInt(parts[1]) - 1;
+            viewDay = parseInt(parts[2]);
+            viewBtns.forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-view="day"]').classList.add('active');
+            render();
+        }
+    }
     </script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
