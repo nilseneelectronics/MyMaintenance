@@ -467,7 +467,7 @@
     margin: 10px 0;
     overflow: auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 20px;
 }
 
