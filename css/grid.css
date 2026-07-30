@@ -13,6 +13,10 @@
   padding: 0 24px;
 }
 
+.showcase:first-of-type {
+  padding-top: 40px;
+}
+
 .showcase-tag {
   display: inline-block;
   font-size: 0.75rem;
