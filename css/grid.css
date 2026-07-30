@@ -1,55 +1,6 @@
 /* grid.css */
 
 /* =======================================
-   Features
-   ======================================= */
-.features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  max-width: 960px;
-  margin: -48px auto 80px;
-  padding: 0 18px;
-  position: relative;
-  z-index: 3;
-}
-
-.feature-card {
-  background: var(--bg-primary);
-  border: 1.5px solid var(--border-color);
-  border-radius: 16px;
-  padding: 32px 24px;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 28px rgba(32, 178, 170, 0.12);
-}
-
-.feature-icon {
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: center;
-}
-
-.feature-card h3 {
-  margin: 0 0 8px;
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.feature-card p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-/* =======================================
    Showcase
    ======================================= */
 .showcase {
@@ -62,23 +13,136 @@
   padding: 0 18px;
 }
 
+.showcase-tag {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-primary);
+  margin-bottom: 8px;
+}
+
 .showcase-text h2 {
-  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  font-size: clamp(1.6rem, 3vw, 2rem);
   margin: 0 0 12px;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .showcase-text p {
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 24px;
+  max-width: 480px;
 }
 
 .showcase-image svg {
   width: 100%;
   height: auto;
   border-radius: 12px;
+}
+
+.showcase-reverse .showcase-text {
+  order: 1;
+}
+
+.showcase-reverse .showcase-image {
+  order: 0;
+}
+
+/* =======================================
+   Personas
+   ======================================= */
+.personas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto 80px;
+  padding: 0 18px;
+}
+
+.persona {
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-primary);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.persona:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(32, 178, 170, 0.1);
+}
+
+.persona-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.persona-homeowner {
+  background: linear-gradient(135deg, #20B2AA, #008080);
+}
+
+.persona-landlord {
+  background: linear-gradient(135deg, #008080, #20B2AA);
+}
+
+.persona-contractor {
+  background: linear-gradient(135deg, #20B2AA, #AFEEEE);
+}
+
+.persona-body {
+  padding: 24px;
+}
+
+.persona-body h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.persona-body > p {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.persona-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.persona-features li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.persona-features li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  opacity: 0.4;
+}
+
+.persona-body .btn {
+  width: 100%;
 }
 
 /* =======================================
@@ -112,19 +176,17 @@
    Responsive
    ======================================= */
 @media (max-width: 768px) {
-  .features {
-    grid-template-columns: 1fr;
-    margin-top: 32px;
-    gap: 16px;
-  }
-
   .showcase {
     grid-template-columns: 1fr;
     gap: 32px;
   }
 
   .showcase-image {
-    order: -1;
+    order: -1 !important;
+  }
+
+  .personas {
+    grid-template-columns: 1fr;
   }
 
   .hero {
