@@ -80,7 +80,7 @@
                 <p>No plans yet</p>
                 <div class="calendar-mimic" id="dash-calendar"></div>
                 <div class="button-group">
-                    <button class="add-plan">Add new plan</button>
+                    <button class="add-button" id="dash-add-event">Add event</button>
                     <button class="view-button" onclick="window.location.href='myplanning-calendar.html'">View full calendar</button>
                 </div>
             </div>
@@ -103,7 +103,7 @@
 
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
-            <h3>Add happening</h3>
+            <h3>Add event</h3>
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
@@ -271,6 +271,15 @@
                 window.location.href = 'myplanning-calendar.html?date=' + link.dataset.key;
             }
         });
+
+        const dashAddBtn = document.getElementById('dash-add-event');
+        if (dashAddBtn) {
+            dashAddBtn.addEventListener('click', () => {
+                const now = new Date();
+                const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+                openModal(key);
+            });
+        }
 
         renderCalendar();
     });

@@ -94,7 +94,7 @@
 
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
-            <h3>Add happening</h3>
+            <h3>Add event</h3>
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
@@ -242,7 +242,7 @@
     function renderYear() {
         navLabel.textContent = viewYear;
         const todayKey = dateKey(viewYear, new Date().getMonth(), new Date().getDate());
-        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add happening</button>`;
+        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add event</button>`;
         html += '<div class="year-grid">';
         for (let m = 0; m < 12; m++) {
             const { startDay, daysInMonth } = getMonthData(viewYear, m);
@@ -272,7 +272,7 @@
         navLabel.textContent = `${MONTHS[viewMonth]} ${viewYear}`;
         const { startDay, daysInMonth } = getMonthData(viewYear, viewMonth);
         const todayKey = dateKey(viewYear, viewMonth, Math.min(viewDay, daysInMonth));
-        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add happening</button>`;
+        let html = `<button class="add-event-top" data-key="${todayKey}">+ Add event</button>`;
         html += '<div class="month-view-wrap"><table class="month-view"><thead><tr>';
         DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
         html += '</tr></thead><tbody><tr>';
@@ -327,7 +327,7 @@
             });
         }
         html += '</div>';
-        html += `<button class="add-event-bottom" data-key="${key}">+ Add happening</button>`;
+        html += `<button class="add-event-bottom" data-key="${key}">+ Add event</button>`;
         html += '</div>';
         content.innerHTML = html;
     }

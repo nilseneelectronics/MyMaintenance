@@ -601,7 +601,7 @@
     background: var(--accent-primary);
     border-radius: 2px;
     position: absolute;
-    bottom: -2px;
+    bottom: -6px;
     left: 50%;
     margin-left: -8px;
 }

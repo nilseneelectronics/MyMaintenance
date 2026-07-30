@@ -231,6 +231,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const planAddBtn = document.getElementById('plan-add-event');
+    if (planAddBtn) {
+        planAddBtn.addEventListener('click', () => {
+            const now = new Date();
+            const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            openModal(key);
+        });
+    }
+
     renderCalendar();
     prevBtn.addEventListener('click', () => { calOffset--; renderCalendar(); });
     nextBtn.addEventListener('click', () => { calOffset++; renderCalendar(); });
