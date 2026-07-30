@@ -17,9 +17,11 @@
         .cal-view-toggle button { padding: 8px 20px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; color: var(--text-primary); font-family: 'Poppins', sans-serif; font-size: 0.9rem; transition: all 0.2s; }
         .cal-view-toggle button.active { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
 
-        .cal-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px; }
-        .cal-nav button { padding: 6px 14px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; font-size: 1rem; color: var(--accent-primary); flex-shrink: 0; }
-        .cal-nav span { font-size: 1.2rem; font-weight: 600; min-width: 180px; text-align: center; flex-shrink: 0; }
+        .cal-nav { position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; min-height: 40px; }
+        .cal-nav button { position: absolute; padding: 6px 14px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; font-size: 1rem; color: var(--accent-primary); }
+        .cal-nav button:first-child { left: 0; }
+        .cal-nav button:last-child { right: 0; }
+        .cal-nav span { font-size: 1.2rem; font-weight: 600; text-align: center; }
 
         #cal-content { min-height: 560px; }
 
@@ -55,12 +57,14 @@
         .month-view td:hover { background: var(--hover-bg); border-radius: 8px; }
 
         /* Day view */
-        .day-view { max-width: 600px; margin: 0 auto; }
+        .day-view { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; min-height: 400px; }
         .day-view h2 { text-align: center; margin-bottom: 24px; }
+        .day-view .day-body { flex: 1 1 auto; }
         .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); }
         .day-event strong { display: block; font-size: 1rem; margin-bottom: 4px; }
         .day-event span { font-size: 0.85rem; color: var(--text-secondary); }
         .day-empty { text-align: center; color: var(--text-secondary); padding: 40px; }
+        .day-view .add-event-bottom { margin-top: auto; }
 
         /* Add event modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 9999; align-items: center; justify-content: center; }
@@ -249,11 +253,13 @@
         const events = getEvents(viewYear, viewMonth, viewDay);
         const key = dateKey(viewYear, viewMonth, viewDay);
         let html = '<div class="day-view">';
+        html += '<div class="day-body">';
         if (events.length === 0) {
             html += '<p class="day-empty">No events on this day.</p>';
         } else {
             events.forEach(e => html += `<div class="day-event"><strong>${e}</strong></div>`);
         }
+        html += '</div>';
         html += `<button class="add-event-bottom" data-addkey="${key}">+ Add happening</button>`;
         html += '</div>';
         content.innerHTML = html;
