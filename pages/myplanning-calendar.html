@@ -63,7 +63,8 @@
 
         /* Day view */
         .day-view { max-width: 600px; margin: 0 auto; }
-        .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); }
+        .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); cursor: pointer; transition: border-color 0.15s; }
+        .day-event:hover { border-color: var(--accent-primary); }
         .day-event .ev-time { font-size: 0.8rem; color: var(--accent-primary); font-weight: 500; display: block; margin-top: 4px; }
         .day-event .ev-location { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
         .day-event .ev-desc { font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
@@ -220,19 +221,37 @@
         evFinishTime.value = `${h2}:${m2}`;
     }
 
-    function openModal(key) {
+    var editingKey = null;
+    var editingIdx = -1;
+
+    function openModal(key, idx) {
         modal.classList.add('open');
-        evName.value = '';
-        evStartDate.value = key;
-        evFinishDate.value = key;
-        defaultTimes();
-        evLocation.value = '';
-        evDesc.value = '';
+        editingKey = key;
+        editingIdx = idx !== undefined ? idx : -1;
+        if (idx >= 0 && EVENTS[key] && EVENTS[key][idx]) {
+            const e = EVENTS[key][idx];
+            evName.value = e.name || '';
+            evStartDate.value = e.startDate || key;
+            evFinishDate.value = e.finishDate || key;
+            evStartTime.value = e.startTime || '';
+            evFinishTime.value = e.finishTime || '';
+            evLocation.value = e.location || '';
+            evDesc.value = e.description || '';
+        } else {
+            evName.value = '';
+            evStartDate.value = key;
+            evFinishDate.value = key;
+            defaultTimes();
+            evLocation.value = '';
+            evDesc.value = '';
+        }
         evName.focus();
     }
 
     function closeModal() {
         modal.classList.remove('open');
+        editingKey = null;
+        editingIdx = -1;
     }
 
     evCancel.addEventListener('click', closeModal);
@@ -245,8 +264,13 @@
         const location = evLocation.value.trim();
         const description = evDesc.value.trim();
         if (!name || !startDate) return;
-        if (!EVENTS[startDate]) EVENTS[startDate] = [];
-        EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
+        if (editingKey && editingIdx >= 0) {
+            if (!EVENTS[editingKey]) EVENTS[editingKey] = [];
+            EVENTS[editingKey][editingIdx] = { name, startDate, finishDate, startTime, finishTime, location, description };
+        } else {
+            if (!EVENTS[startDate]) EVENTS[startDate] = [];
+            EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
+        }
         saveEvents();
         closeModal();
         render();
@@ -326,8 +350,8 @@
         if (events.length === 0) {
             html += '<p class="day-empty">No events on this day.</p>';
         } else {
-            events.forEach(e => {
-                html += '<div class="day-event">';
+            events.forEach((e, i) => {
+                html += `<div class="day-event" data-key="${key}" data-idx="${i}">`;
                 html += `<strong>${e.name}</strong>`;
                 if (e.startDate) {
                     const sd = e.startDate.split('-');
@@ -387,6 +411,11 @@
     });
 
     content.addEventListener('click', (e) => {
+        const dayEvent = e.target.closest('.day-event');
+        if (dayEvent) {
+            openModal(dayEvent.dataset.key, parseInt(dayEvent.dataset.idx));
+            return;
+        }
         const addBtn = e.target.closest('.add-event-top, .add-event-bottom');
         if (addBtn) {
             openModal(addBtn.dataset.key);
