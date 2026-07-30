@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadExampleTasks();
 
     // === CALENDAR ===
+    const EVENTS = {
+        "2026-08-17": ["Going home"],
+    };
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
@@ -79,6 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('cal-prev');
     const nextBtn = document.getElementById('cal-next');
     if (!container || !prevBtn || !nextBtn) return;
+
+    function dateKey(year, month, day) { return `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
+    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)]; }
 
     function getMonthData(year, month) {
         const first = new Date(year, month, 1);
@@ -124,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const classes = ['date-circle'];
                 if (isToday) classes.push('today');
                 if (isPast) classes.push('past');
+                if (hasEvents(year, month, d)) classes.push('has-event');
                 html += `<td><a href="#" class="${classes.join(' ')}">${d}</a></td>`;
                 const pos = (startDay + d - 1) % 7;
                 if (pos === 6 && d < daysInMonth) {
@@ -143,6 +150,10 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(box);
         });
     }
+
+    container.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') e.preventDefault();
+    });
 
     renderCalendar();
     prevBtn.addEventListener('click', () => { calOffset--; renderCalendar(); });

@@ -590,6 +590,26 @@
     color: #FFFFFF;
 }
 
+.calendar-mimic .has-event {
+    position: relative;
+}
+.calendar-mimic .has-event::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 5px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    margin-left: -2.5px;
+}
+
+.calendar-mimic .today.has-event::after {
+    background: #fff;
+}
+
 .button-group {
     display: flex;
     gap: 10px;
