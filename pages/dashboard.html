@@ -78,38 +78,7 @@
             <div class="dash-box planning-box no-scale">
                 <h3>Planning</h3>
                 <p>No plans yet</p>
-                <div class="calendar-mimic">
-                    <div class="month-box">
-                        <table class="month">
-                            <thead>
-                                <tr><th colspan="7">November 2025</th></tr>
-                                <tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td></tr>
-                                <tr><td><a href="#" class="date-circle today">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="month-box">
-                        <table class="month">
-                            <thead>
-                                <tr><th colspan="7">December 2025</th></tr>
-                                <tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td><td><a href="#" class="date-circle">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td><td><a href="#" class="date-circle">31</a></td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <div class="calendar-mimic" id="dash-calendar"></div>
                 <div class="button-group">
                     <button class="add-plan">Add new plan</button>
                     <button class="view-button">View full calendar</button>
@@ -135,6 +104,49 @@
     
     
     
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const container = document.getElementById('dash-calendar');
+        if (!container) return;
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+        function getMonthData(year, month) {
+            const first = new Date(year, month, 1);
+            const last = new Date(year, month + 1, 0);
+            return { startDay: (first.getDay() + 6) % 7, daysInMonth: last.getDate() };
+        }
+
+        [0, 1].forEach(offset => {
+            const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+            const year = date.getFullYear(), month = date.getMonth();
+            const { startDay, daysInMonth } = getMonthData(year, month);
+            const box = document.createElement('div');
+            box.className = 'month-box';
+            let html = `<table class="month"><thead><tr><th colspan="7">${MONTHS[month]} ${year}</th></tr><tr>`;
+            DAYS.forEach(d => html += `<th>${d}</th>`);
+            html += `</tr></thead><tbody><tr>`;
+            for (let i = 0; i < startDay; i++) html += `<td class="noday">&nbsp;</td>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cellStr = `${year}-${month}-${d}`;
+                const isToday = cellStr === todayStr;
+                const isPast = new Date(year, month, d) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const cls = ['date-circle'];
+                if (isToday) cls.push('today');
+                if (isPast) cls.push('past');
+                html += `<td><a href="#" class="${cls.join(' ')}">${d}</a></td>`;
+                if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += `</tr><tr>`;
+            }
+            const lastCell = (startDay + daysInMonth) % 7;
+            if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += `<td class="noday">&nbsp;</td>`;
+            html += `</tr></tbody></table>`;
+            box.innerHTML = html;
+            container.appendChild(box);
+        });
+    });
+    </script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
