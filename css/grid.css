@@ -17,6 +17,10 @@
   padding-top: 60px;
 }
 
+.cta-section {
+  margin-bottom: 0;
+}
+
 .showcase-tag {
   display: inline-block;
   font-size: 0.75rem;
@@ -54,33 +58,6 @@
 
 .showcase-reverse .showcase-image {
   order: 0;
-}
-
-/* =======================================
-   CTA Final
-   ======================================= */
-.cta-final {
-  text-align: center;
-  padding: 60px 24px;
-  background: var(--bg-secondary);
-}
-
-.cta-content {
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.cta-final h2 {
-  font-size: clamp(1.4rem, 2.5vw, 1.7rem);
-  margin: 0 0 6px;
-  line-height: 1.2;
-  color: var(--text-primary);
-}
-
-.cta-final p {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  margin: 0 0 24px;
 }
 
 /* =======================================
