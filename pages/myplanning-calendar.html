@@ -51,12 +51,14 @@
         .month-view-wrap { border: 1.5px solid var(--border-color); border-radius: 12px; padding: 20px; background: var(--bg-primary); }
         .month-view { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         .month-view th { text-align: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); font-weight: 500; color: var(--text-secondary); }
-        .month-view td { text-align: center; padding: 8px 0; vertical-align: top; height: 100px; position: relative; cursor: pointer; }
-        .month-view .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border-color); font-size: 0.95rem; color: var(--text-primary); margin-bottom: 4px; }
+        .month-view td { text-align: center; padding: 8px 4px; vertical-align: top; height: 100px; position: relative; cursor: pointer; }
+        .month-view td.empty { cursor: default; background: none; border: none; height: auto; }
+        .month-view td.empty:hover { background: none; }
+        .month-view .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border-color); font-size: 0.95rem; color: var(--text-primary); margin: 0 auto 4px; }
         .month-view .today .date-circle { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
         .month-view .past .date-circle { opacity: 0.35; }
         .month-view .event-line { display: block; font-size: 0.65rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 3px; padding: 2px 6px; margin: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .month-view td:hover { background: var(--hover-bg); border-radius: 8px; }
+        .month-view td:not(.empty):hover { background: var(--hover-bg); border-radius: 8px; }
 
         /* Day view */
         .day-view { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; min-height: 400px; }
@@ -278,7 +280,7 @@
         html += '<div class="month-view-wrap"><table class="month-view"><thead><tr>';
         DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
         html += '</tr></thead><tbody><tr>';
-        for (let i = 0; i < startDay; i++) html += '<td></td>';
+        for (let i = 0; i < startDay; i++) html += '<td class="empty"></td>';
         for (let d = 1; d <= daysInMonth; d++) {
             const tdCls = [];
             if (isToday(viewYear, viewMonth, d)) tdCls.push('today');
@@ -295,9 +297,38 @@
             if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
         }
         const lastCell = (startDay + daysInMonth) % 7;
-        if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += '<td></td>';
+        if (lastCell !== 0) {
+            const emptyAfter = 7 - lastCell;
+            for (let i = 0; i < emptyAfter; i++) html += '<td class="empty"></td>';
+        }
         html += '</tr></tbody></table></div>';
         content.innerHTML = html;
+
+        if (lastCell !== 0 && lastCell < 7) {
+            const tbody = content.querySelector('.month-view tbody');
+            const lastRow = tbody.lastElementChild;
+            if (lastRow) {
+                const cells = Array.from(lastRow.children);
+                const dateCells = cells.filter(c => !c.classList.contains('empty'));
+                const emptyCells = cells.filter(c => c.classList.contains('empty'));
+                if (dateCells.length > 0 && dateCells.length < 7) {
+                    const before = Math.floor((7 - dateCells.length) / 2);
+                    lastRow.innerHTML = '';
+                    for (let e = 0; e < before; e++) {
+                        const td = document.createElement('td');
+                        td.className = 'empty';
+                        lastRow.appendChild(td);
+                    }
+                    dateCells.forEach(c => lastRow.appendChild(c));
+                    const after = 7 - before - dateCells.length;
+                    for (let e = 0; e < after; e++) {
+                        const td = document.createElement('td');
+                        td.className = 'empty';
+                        lastRow.appendChild(td);
+                    }
+                }
+            }
+        }
     }
 
     function renderDay() {
