@@ -474,7 +474,7 @@
         const td = e.target.closest('td[data-key]');
         if (td) {
             const key = td.dataset.key;
-            if (view === 'month' && !e.target.closest('.event-line')) {
+            if (view !== 'day' && !e.target.closest('.event-line')) {
                 const parts = key.split('-');
                 view = 'day';
                 viewYear = parseInt(parts[0]);
