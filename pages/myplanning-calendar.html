@@ -102,9 +102,11 @@
 <body class="sidebar-open logged-in">
     <main class="main">
         <div class="cal-page">
-            <h1>MyCalendar</h1>
-            <div class="cal-view-toggle">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
                 <button onclick="history.back()" style="display:inline-flex;align-items:center;gap:6px;padding:10px 28px;border:2px solid var(--border-color);border-radius:25px;background:var(--bg-primary);cursor:pointer;color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:1rem;font-weight:600;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+                <h1 style="margin:0;flex:1;text-align:center;">MyCalendar</h1>
+            </div>
+            <div class="cal-view-toggle">
                 <button class="active" data-view="year">Year</button>
                 <button data-view="month">Month</button>
                 <button data-view="day">Day</button>
