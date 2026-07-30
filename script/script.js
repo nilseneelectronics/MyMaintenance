@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === YOUR ORIGINAL FUNCTIONS (initDataKeys + translateAll) ===
     function initDataKeys() {
-        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .btn, .cta-final h2, .cta-final p, .hero-content h1, .hero-sub, .showcase-text h2, .showcase-text p').forEach(el => {
+        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .btn, .btn-cta, .cta-banner h2, .cta-banner p, .hero-content h1, .hero-sub, .showcase-text h2, .showcase-text p').forEach(el => {
             if (!el.dataset.key) el.dataset.key = el.textContent.trim();
         });
         document.querySelectorAll('footer p').forEach(p => {

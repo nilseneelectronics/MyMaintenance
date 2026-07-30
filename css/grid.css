@@ -21,6 +21,33 @@
   margin-bottom: 0;
 }
 
+/* =======================================
+   CTA Banner
+   ======================================= */
+.cta-banner {
+  background: linear-gradient(135deg, #20B2AA, #008080);
+  padding: 100px 24px;
+  text-align: center;
+}
+
+.cta-banner-content {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.cta-banner h2 {
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  margin: 0 0 10px;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.cta-banner p {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 32px;
+}
+
 .showcase-tag {
   display: inline-block;
   font-size: 0.75rem;
