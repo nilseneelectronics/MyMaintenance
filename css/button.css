@@ -121,6 +121,25 @@ button[type="submit"]:hover {
     font-size: 1.1rem;
 }
 
+.btn-cta {
+    padding: 16px 48px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    background-color: #fff;
+    color: #008080;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
 .view-button {
     flex: 1;
     padding: 10px 20px;

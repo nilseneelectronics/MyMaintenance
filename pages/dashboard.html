@@ -78,41 +78,10 @@
             <div class="dash-box planning-box no-scale">
                 <h3>Planning</h3>
                 <p>No plans yet</p>
-                <div class="calendar-mimic">
-                    <div class="month-box">
-                        <table class="month">
-                            <thead>
-                                <tr><th colspan="7">November 2025</th></tr>
-                                <tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td></tr>
-                                <tr><td><a href="#" class="date-circle today">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="month-box">
-                        <table class="month">
-                            <thead>
-                                <tr><th colspan="7">December 2025</th></tr>
-                                <tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr>
-                            </thead>
-                            <tbody>
-                                <tr><td><a href="#" class="date-circle">1</a></td><td><a href="#" class="date-circle">2</a></td><td><a href="#" class="date-circle">3</a></td><td><a href="#" class="date-circle">4</a></td><td><a href="#" class="date-circle">5</a></td><td><a href="#" class="date-circle">6</a></td><td><a href="#" class="date-circle">7</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">8</a></td><td><a href="#" class="date-circle">9</a></td><td><a href="#" class="date-circle">10</a></td><td><a href="#" class="date-circle">11</a></td><td><a href="#" class="date-circle">12</a></td><td><a href="#" class="date-circle">13</a></td><td><a href="#" class="date-circle">14</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">15</a></td><td><a href="#" class="date-circle">16</a></td><td><a href="#" class="date-circle">17</a></td><td><a href="#" class="date-circle">18</a></td><td><a href="#" class="date-circle">19</a></td><td><a href="#" class="date-circle">20</a></td><td><a href="#" class="date-circle">21</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">22</a></td><td><a href="#" class="date-circle">23</a></td><td><a href="#" class="date-circle">24</a></td><td><a href="#" class="date-circle">25</a></td><td><a href="#" class="date-circle">26</a></td><td><a href="#" class="date-circle">27</a></td><td><a href="#" class="date-circle">28</a></td></tr>
-                                <tr><td><a href="#" class="date-circle">29</a></td><td><a href="#" class="date-circle">30</a></td><td><a href="#" class="date-circle">31</a></td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td><td class="noday">&nbsp;</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <div class="calendar-mimic" id="dash-calendar"></div>
                 <div class="button-group">
-                    <button class="add-plan">Add new plan</button>
-                    <button class="view-button">View full calendar</button>
+                    <button class="add-button" id="dash-add-event">Add event</button>
+                    <button class="view-button" onclick="window.location.href='myplanning-calendar.html'">View full calendar</button>
                 </div>
             </div>
             <div class="dash-box tools">
@@ -131,10 +100,190 @@
             </div>
         </div>
     </main>
+
+    <div class="event-modal-overlay" id="event-modal">
+        <div class="event-modal-card">
+            <h3>Add event</h3>
+            <div class="event-modal-field">
+                <label>Name</label>
+                <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Start date</label>
+                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label>Finish date</label>
+                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Start time</label>
+                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label>Finish time</label>
+                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-field">
+                <label>Location</label>
+                <input type="text" id="ev-location" placeholder="Location">
+            </div>
+            <div class="event-modal-field">
+                <label>Description</label>
+                <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
+            </div>
+            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            </div>
+        </div>
+    </div>
     
     
     
-    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const STORAGE_KEY = 'floorplan_calendar_events';
+        function loadEvents() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (_) {}
+            return { "2026-08-17": [{ name:"Going home", startDate:"2026-08-17", finishDate:"2026-08-17", startTime:"14:00", finishTime:"16:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+        }
+        function saveEvents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
+        }
+        let EVENTS = loadEvents();
+
+        const modal = document.getElementById('event-modal');
+        const evName = document.getElementById('ev-name');
+        const evStartDate = document.getElementById('ev-start-date');
+        const evFinishDate = document.getElementById('ev-finish-date');
+        const evStartTime = document.getElementById('ev-start-time');
+        const evFinishTime = document.getElementById('ev-finish-time');
+        const evLocation = document.getElementById('ev-location');
+        const evDesc = document.getElementById('ev-desc');
+        const evCancel = document.getElementById('ev-cancel');
+        const evAdd = document.getElementById('ev-add');
+
+        function openModal(key) {
+            if (!modal) return;
+            modal.classList.add('open');
+            evName.value = '';
+            evStartDate.value = key;
+            evFinishDate.value = key;
+            const now = new Date();
+            const mins = now.getMinutes();
+            const rounded = new Date(now);
+            rounded.setMinutes(Math.ceil(mins / 15) * 15, 0, 0);
+            const h = String(rounded.getHours()).padStart(2,'0');
+            const m = String(rounded.getMinutes()).padStart(2,'0');
+            const later = new Date(rounded.getTime() + 60*60*1000);
+            const h2 = String(later.getHours()).padStart(2,'0');
+            const m2 = String(later.getMinutes()).padStart(2,'0');
+            evStartTime.value = `${h}:${m}`;
+            evFinishTime.value = `${h2}:${m2}`;
+            evLocation.value = '';
+            evDesc.value = '';
+            evName.focus();
+        }
+        function closeModal() {
+            if (modal) modal.classList.remove('open');
+        }
+        if (evCancel) evCancel.addEventListener('click', closeModal);
+        if (evAdd) evAdd.addEventListener('click', () => {
+            const name = evName.value.trim();
+            const startDate = evStartDate.value;
+            const finishDate = evFinishDate.value;
+            const startTime = evStartTime.value;
+            const finishTime = evFinishTime.value;
+            const location = evLocation.value.trim();
+            const description = evDesc.value.trim();
+            if (!name || !startDate) return;
+            if (!EVENTS[startDate]) EVENTS[startDate] = [];
+            EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
+            saveEvents();
+            closeModal();
+            renderCalendar();
+        });
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const container = document.getElementById('dash-calendar');
+        if (!container) return;
+        const now = new Date();
+
+        function pad(n) { return String(n).padStart(2,'0'); }
+        function dateKey(year, month, day) { return `${year}-${pad(month+1)}-${pad(day)}`; }
+        function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
+
+        function getMonthData(year, month) {
+            const first = new Date(year, month, 1);
+            const last = new Date(year, month + 1, 0);
+            return { startDay: (first.getDay() + 6) % 7, daysInMonth: last.getDate() };
+        }
+
+        function renderCalendar() {
+            const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+            container.innerHTML = '';
+            [0, 1].forEach(offset => {
+                const date = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+                const year = date.getFullYear(), month = date.getMonth();
+                const { startDay, daysInMonth } = getMonthData(year, month);
+                const box = document.createElement('div');
+                box.className = 'month-box';
+                let html = `<table class="month"><thead><tr><th colspan="7">${MONTHS[month]} ${year}</th></tr><tr>`;
+                DAYS.forEach(d => html += `<th>${d}</th>`);
+                html += `</tr></thead><tbody><tr>`;
+                for (let i = 0; i < startDay; i++) html += `<td class="noday">&nbsp;</td>`;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const cellStr = `${year}-${month}-${d}`;
+                    const isToday = cellStr === todayStr;
+                    const isPast = new Date(year, month, d) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const cls = ['date-circle'];
+                    if (isToday) cls.push('today');
+                    if (isPast) cls.push('past');
+                    if (hasEvents(year, month, d)) cls.push('has-event');
+                    const key = dateKey(year, month, d);
+                    html += `<td><a href="#" class="${cls.join(' ')}" data-key="${key}">${d}</a></td>`;
+                    if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += `</tr><tr>`;
+                }
+                const lastCell = (startDay + daysInMonth) % 7;
+                if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += `<td class="noday">&nbsp;</td>`;
+                html += `</tr></tbody></table>`;
+                box.innerHTML = html;
+                container.appendChild(box);
+            });
+        }
+
+        container.addEventListener('click', (e) => {
+            const link = e.target.closest('a[data-key]');
+            if (link) {
+                e.preventDefault();
+                window.location.href = 'myplanning-calendar.html?date=' + link.dataset.key;
+            }
+        });
+
+        const dashAddBtn = document.getElementById('dash-add-event');
+        if (dashAddBtn) {
+            dashAddBtn.addEventListener('click', () => {
+                const now = new Date();
+                const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+                openModal(key);
+            });
+        }
+
+        renderCalendar();
+    });
+    </script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>

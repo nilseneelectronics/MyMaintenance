@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === YOUR ORIGINAL FUNCTIONS (initDataKeys + translateAll) ===
     function initDataKeys() {
-        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .overlay-text h2, .btn, .cta-hero h2, .cta-hero p, .cta-final h2, .cta-final p, .section-header-alt h2, .section-header-alt p, .value-card strong, .value-card p, .customer-cta .btn').forEach(el => {
+        document.querySelectorAll('.sidebar a, footer h3, main h1, main h2, .profile-info strong, .profile-button, .dash-box h3, .dash-box p, .button-group button, .add-button, #signin, #signup, #signout, #goback, .subgroup h4, .doc-row span, .dropdown-toggle span, .dropdown-menu button, .auth-container h1, .overlay-panel h1, .ghost, .terms-link, .overlay-text h2, .btn, .btn-cta, .cta-hero h2, .cta-hero p, .cta-final h2, .cta-final p, .section-header-alt h2, .section-header-alt p, .value-card strong, .value-card p, .customer-cta .btn, .hero-content h1, .hero-sub, .showcase-text h2, .showcase-text p, .cta-banner h2, .cta-banner p').forEach(el => {
             if (!el.dataset.key) el.dataset.key = el.textContent.trim();
         });
         document.querySelectorAll('footer p').forEach(p => {

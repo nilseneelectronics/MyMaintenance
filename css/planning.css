@@ -202,3 +202,93 @@ input:checked + .slider:before {
     border: 2px solid var(--delete-red);
     font-weight: bold;
 }
+
+/* =======================================
+   Calendar
+   ======================================= */
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.calendar-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.cal-nav-btn {
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--accent-primary);
+    transition: background 0.2s;
+}
+
+.cal-nav-btn:hover {
+    background: var(--hover-bg);
+}
+
+.date-circle.past {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+/* =======================================
+   Event Modal
+   ======================================= */
+.event-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+.event-modal-overlay.open { display: flex; }
+.event-modal-card {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.event-modal-card h3 { margin: 0 0 20px; font-size: 1.2rem; }
+.event-modal-field { margin-bottom: 16px; }
+.event-modal-field label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+.event-modal-field input,
+.event-modal-field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+.event-modal-field input:focus,
+.event-modal-field textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+.event-modal-field textarea { resize: vertical; min-height: 60px; }
+.event-modal-row { display: flex; gap: 12px; }
+.event-modal-row .event-modal-field { flex: 1; }
+@media (max-width: 480px) { .event-modal-row { flex-direction: column; } }
