@@ -2,8 +2,8 @@
 
 .hero {
   position: relative;
-  height: 60vh;
-  min-height: 400px;
+  height: 70vh;
+  min-height: 480px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,6 +11,7 @@
   background-size: cover;
   background-position: center;
   margin-top: calc(-1 * var(--main-padding-top));
+  margin-bottom: 80px;
 }
 
 .hero-overlay {
