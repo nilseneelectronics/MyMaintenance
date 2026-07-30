@@ -69,4 +69,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadExampleTasks();
+
+    // === CALENDAR ===
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    let calOffset = 0;
+    const container = document.getElementById('calendar-container');
+    const prevBtn = document.getElementById('cal-prev');
+    const nextBtn = document.getElementById('cal-next');
+    if (!container || !prevBtn || !nextBtn) return;
+
+    function getMonthData(year, month) {
+        const first = new Date(year, month, 1);
+        const last = new Date(year, month + 1, 0);
+        const startDay = (first.getDay() + 6) % 7;
+        const daysInMonth = last.getDate();
+        return { startDay, daysInMonth };
+    }
+
+    function renderCalendar() {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+        const months = [
+            new Date(now.getFullYear(), now.getMonth() + calOffset, 1),
+            new Date(now.getFullYear(), now.getMonth() + calOffset + 1, 1)
+        ];
+
+        container.innerHTML = '';
+
+        months.forEach((date) => {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const { startDay, daysInMonth } = getMonthData(year, month);
+
+            const box = document.createElement('div');
+            box.className = 'month-box';
+
+            let html = `<table class="month">`;
+            html += `<thead><tr><th colspan="7">${MONTHS[month]} ${year}</th></tr><tr>`;
+            DAYS.forEach(d => html += `<th>${d}</th>`);
+            html += `</tr></thead><tbody><tr>`;
+
+            for (let i = 0; i < startDay; i++) {
+                html += `<td class="noday">&nbsp;</td>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cellDate = new Date(year, month, d);
+                const cellStr = `${year}-${month}-${d}`;
+                const isToday = cellStr === todayStr;
+                const isPast = cellDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const classes = ['date-circle'];
+                if (isToday) classes.push('today');
+                if (isPast) classes.push('past');
+                html += `<td><a href="#" class="${classes.join(' ')}">${d}</a></td>`;
+                const pos = (startDay + d - 1) % 7;
+                if (pos === 6 && d < daysInMonth) {
+                    html += `</tr><tr>`;
+                }
+            }
+
+            const lastCell = (startDay + daysInMonth) % 7;
+            if (lastCell !== 0) {
+                for (let i = lastCell; i < 7; i++) {
+                    html += `<td class="noday">&nbsp;</td>`;
+                }
+            }
+
+            html += `</tr></tbody></table>`;
+            box.innerHTML = html;
+            container.appendChild(box);
+        });
+    }
+
+    renderCalendar();
+    prevBtn.addEventListener('click', () => { calOffset--; renderCalendar(); });
+    nextBtn.addEventListener('click', () => { calOffset++; renderCalendar(); });
 });

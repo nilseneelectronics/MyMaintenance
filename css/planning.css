@@ -202,3 +202,38 @@ input:checked + .slider:before {
     border: 2px solid var(--delete-red);
     font-weight: bold;
 }
+
+/* =======================================
+   Calendar
+   ======================================= */
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.calendar-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.cal-nav-btn {
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--accent-primary);
+    transition: background 0.2s;
+}
+
+.cal-nav-btn:hover {
+    background: var(--hover-bg);
+}
+
+.date-circle.past {
+    opacity: 0.35;
+    pointer-events: none;
+}
