@@ -298,37 +298,10 @@
         }
         const lastCell = (startDay + daysInMonth) % 7;
         if (lastCell !== 0) {
-            const emptyAfter = 7 - lastCell;
-            for (let i = 0; i < emptyAfter; i++) html += '<td class="empty"></td>';
+            for (let i = lastCell; i < 7; i++) html += '<td class="empty"></td>';
         }
         html += '</tr></tbody></table></div>';
         content.innerHTML = html;
-
-        if (lastCell !== 0 && lastCell < 7) {
-            const tbody = content.querySelector('.month-view tbody');
-            const lastRow = tbody.lastElementChild;
-            if (lastRow) {
-                const cells = Array.from(lastRow.children);
-                const dateCells = cells.filter(c => !c.classList.contains('empty'));
-                const emptyCells = cells.filter(c => c.classList.contains('empty'));
-                if (dateCells.length > 0 && dateCells.length < 7) {
-                    const before = Math.floor((7 - dateCells.length) / 2);
-                    lastRow.innerHTML = '';
-                    for (let e = 0; e < before; e++) {
-                        const td = document.createElement('td');
-                        td.className = 'empty';
-                        lastRow.appendChild(td);
-                    }
-                    dateCells.forEach(c => lastRow.appendChild(c));
-                    const after = 7 - before - dateCells.length;
-                    for (let e = 0; e < after; e++) {
-                        const td = document.createElement('td');
-                        td.className = 'empty';
-                        lastRow.appendChild(td);
-                    }
-                }
-            }
-        }
     }
 
     function renderDay() {
