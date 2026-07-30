@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar - MyMaintenance</title>
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        .cal-page { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+        .cal-page h1 { text-align: left; margin-bottom: 8px; }
+        .cal-view-toggle { display: flex; gap: 8px; margin-bottom: 24px; }
+        .cal-view-toggle button { padding: 8px 20px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; color: var(--text-primary); font-family: 'Poppins', sans-serif; font-size: 0.9rem; transition: all 0.2s; }
+        .cal-view-toggle button.active { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
+        .cal-nav { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .cal-nav button { padding: 6px 14px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); cursor: pointer; font-size: 1rem; color: var(--accent-primary); }
+        .cal-nav span { font-size: 1.2rem; font-weight: 600; min-width: 160px; text-align: center; }
+        .cal-nav select { padding: 6px 12px; border: 1.5px solid var(--border-color); border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 1rem; background: var(--bg-primary); color: var(--text-primary); }
+
+        /* Year grid */
+        .year-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+        .year-month { border: 1.5px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-primary); }
+        .year-month h3 { margin: 0 0 8px; font-size: 1rem; text-align: center; }
+        .year-month table { width: 100%; border-collapse: collapse; }
+        .year-month th { font-size: 0.65rem; padding: 2px 0; color: var(--text-secondary); font-weight: 500; }
+        .year-month td { text-align: center; padding: 2px 0; font-size: 0.72rem; position: relative; }
+        .year-month .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; }
+        .year-month .today { background: var(--accent-primary); color: #fff; }
+        .year-month .has-event::after { content: ''; display: block; width: 4px; height: 4px; background: var(--accent-primary); border-radius: 50%; margin: 0 auto; }
+        .year-month .past { opacity: 0.3; }
+
+        /* Month view */
+        .month-view table { width: 100%; border-collapse: collapse; }
+        .month-view th { padding: 10px 0; font-weight: 500; color: var(--text-secondary); text-align: center; }
+        .month-view td { text-align: center; padding: 6px 0; vertical-align: top; height: 80px; border: 1px solid var(--border-color); position: relative; }
+        .month-view .date-num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.85rem; margin-bottom: 2px; }
+        .month-view .today .date-num { background: var(--accent-primary); color: #fff; }
+        .month-view .past .date-num { opacity: 0.35; }
+        .month-view .event-line { display: block; font-size: 0.65rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 3px; padding: 1px 4px; margin: 1px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .month-view td:hover { background: var(--hover-bg); }
+
+        /* Day view */
+        .day-view { max-width: 600px; margin: 0 auto; }
+        .day-view h2 { text-align: center; margin-bottom: 24px; }
+        .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); }
+        .day-event strong { display: block; font-size: 1rem; margin-bottom: 4px; }
+        .day-event span { font-size: 0.85rem; color: var(--text-secondary); }
+        .day-empty { text-align: center; color: var(--text-secondary); padding: 40px; }
+
+        @media (max-width: 768px) {
+            .year-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <main class="main">
+        <div class="cal-page">
+            <h1>Calendar</h1>
+            <div class="cal-view-toggle">
+                <button class="active" data-view="year">Year</button>
+                <button data-view="month">Month</button>
+                <button data-view="day">Day</button>
+            </div>
+            <div class="cal-nav">
+                <button id="nav-prev">&larr;</button>
+                <span id="nav-label"></span>
+                <button id="nav-next">&rarr;</button>
+            </div>
+            <div id="cal-content"></div>
+        </div>
+    </main>
+
+    <script>
+    const EVENTS = { "2026-08-17": ["Going home"] };
+
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    let view = 'year';
+    let viewYear = new Date().getFullYear();
+    let viewMonth = new Date().getMonth();
+    let viewDay = new Date().getDate();
+
+    const navLabel = document.getElementById('nav-label');
+    const content = document.getElementById('cal-content');
+    const viewBtns = document.querySelectorAll('.cal-view-toggle button');
+
+    function getMonthData(year, month) {
+        const first = new Date(year, month, 1);
+        const last = new Date(year, month + 1, 0);
+        return { startDay: (first.getDay() + 6) % 7, daysInMonth: last.getDate() };
+    }
+
+    function dateKey(year, month, day) { return `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`; }
+    function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)]; }
+    function getEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] || []; }
+
+    function isToday(year, month, day) {
+        const n = new Date();
+        return n.getFullYear() === year && n.getMonth() === month && n.getDate() === day;
+    }
+    function isPast(year, month, day) {
+        return new Date(year, month, day) < new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    }
+
+    function renderYear() {
+        navLabel.textContent = viewYear;
+        let html = '<div class="year-grid">';
+        for (let m = 0; m < 12; m++) {
+            const { startDay, daysInMonth } = getMonthData(viewYear, m);
+            html += `<div class="year-month"><h3>${MONTHS[m]}</h3><table>`;
+            html += '<thead><tr>';
+            DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
+            html += '</tr></thead><tbody><tr>';
+            for (let i = 0; i < startDay; i++) html += '<td></td>';
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cls = ['date-circle'];
+                if (isToday(viewYear, m, d)) cls.push('today');
+                if (isPast(viewYear, m, d)) cls.push('past');
+                if (hasEvents(viewYear, m, d)) cls.push('has-event');
+                html += `<td><span class="${cls.join(' ')}">${d}</span></td>`;
+                if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
+            }
+            const lastCell = (startDay + daysInMonth) % 7;
+            if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += '<td></td>';
+            html += '</tr></tbody></table></div>';
+        }
+        html += '</div>';
+        content.innerHTML = html;
+    }
+
+    function renderMonth() {
+        navLabel.textContent = `${MONTHS[viewMonth]} ${viewYear}`;
+        const { startDay, daysInMonth } = getMonthData(viewYear, viewMonth);
+        let html = '<table class="month-view"><thead><tr>';
+        DAYS_SHORT.forEach(d => html += `<th>${d}</th>`);
+        html += '</tr></thead><tbody><tr>';
+        for (let i = 0; i < startDay; i++) html += '<td></td>';
+        for (let d = 1; d <= daysInMonth; d++) {
+            const tdCls = [];
+            if (isToday(viewYear, viewMonth, d)) tdCls.push('today');
+            if (isPast(viewYear, viewMonth, d)) tdCls.push('past');
+            html += `<td class="${tdCls.join(' ')}">`;
+            html += `<span class="date-num">${d}</span>`;
+            const events = getEvents(viewYear, viewMonth, d);
+            events.forEach(e => html += `<span class="event-line">${e}</span>`);
+            html += '</td>';
+            if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';
+        }
+        const lastCell = (startDay + daysInMonth) % 7;
+        if (lastCell !== 0) for (let i = lastCell; i < 7; i++) html += '<td></td>';
+        html += '</tr></tbody></table>';
+        content.innerHTML = html;
+    }
+
+    function renderDay() {
+        const d = new Date(viewYear, viewMonth, viewDay);
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        navLabel.textContent = d.toLocaleDateString('en-US', options);
+        const events = getEvents(viewYear, viewMonth, viewDay);
+        let html = '<div class="day-view">';
+        if (events.length === 0) {
+            html += '<p class="day-empty">No events on this day.</p>';
+        } else {
+            events.forEach(e => html += `<div class="day-event"><strong>${e}</strong></div>`);
+        }
+        html += '</div>';
+        content.innerHTML = html;
+    }
+
+    function render() {
+        if (view === 'year') renderYear();
+        else if (view === 'month') renderMonth();
+        else renderDay();
+    }
+
+    document.getElementById('nav-prev').addEventListener('click', () => {
+        if (view === 'year') { viewYear--; }
+        else if (view === 'month') { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } }
+        else { viewDay--; if (viewDay < 1) { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } const { daysInMonth } = getMonthData(viewYear, viewMonth); viewDay = daysInMonth; } }
+        render();
+    });
+
+    document.getElementById('nav-next').addEventListener('click', () => {
+        if (view === 'year') { viewYear++; }
+        else if (view === 'month') { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } }
+        else { const { daysInMonth } = getMonthData(viewYear, viewMonth); viewDay++; if (viewDay > daysInMonth) { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } viewDay = 1; } }
+        render();
+    });
+
+    viewBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            viewBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            view = btn.dataset.view;
+            const now = new Date();
+            viewYear = now.getFullYear();
+            viewMonth = now.getMonth();
+            viewDay = now.getDate();
+            render();
+        });
+    });
+
+    render();
+
+    <script src="../script/app-config.js"></script>
+        if (e.target.closest('.month-view td') && view === 'month') {
+            const td = e.target.closest('td');
+            const dayNum = td.querySelector('.date-num');
+            if (dayNum) {
+                view = 'day';
+                viewDay = parseInt(dayNum.textContent);
+                viewBtns.forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-view="day"]').classList.add('active');
+                render();
+            }
+        }
+    });
+    </script>
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+</body>
+</html>
