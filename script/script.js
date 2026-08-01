@@ -132,15 +132,11 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'myvehicles.html',
     'mydocuments.html',
     'myplanning.html',
+    'myplanning-calendar.html',
     'mytools.html',
     'myprofile.html',
     'coming-soon.html',
-    'tool-floorplan.html',
-    'tool-kitchen.html',
-    'tool-bathroom.html',
-    'tool-living.html',
-    'tool-garden.html',
-    'tool-garage.html'
+    'tool-floorplan.html'
 ];
 
 const KNOWN_PAGE_FILES = new Set(
@@ -148,6 +144,11 @@ const KNOWN_PAGE_FILES = new Set(
 );
 
 function normalizePlaceholderLinks() {
+    // coming-soon.html lives in the pages/ directory
+    const comingSoonHref = location.pathname.includes('/pages/')
+        ? 'coming-soon.html'
+        : 'pages/coming-soon.html';
+
     const shouldRewrite = href => {
         if (!href) return false;
         if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return false;
@@ -155,14 +156,15 @@ function normalizePlaceholderLinks() {
         if (href.startsWith('/')) return false;
         const cleanHref = href.split('?')[0].split('#')[0];
         if (!cleanHref.endsWith('.html')) return false;
-        return !KNOWN_PAGE_FILES.has(cleanHref);
+        const filename = cleanHref.split('/').pop();
+        return !KNOWN_PAGE_FILES.has(filename);
     };
 
     document.querySelectorAll('a[href]').forEach(link => {
         const href = link.getAttribute('href');
         if (!shouldRewrite(href)) return;
         const target = encodeURIComponent(href);
-        link.setAttribute('href', `coming-soon.html?target=${target}`);
+        link.setAttribute('href', `${comingSoonHref}?target=${target}`);
     });
 }
 

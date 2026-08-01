@@ -129,6 +129,10 @@ input:checked + .slider:before {
     height: 52px;
     box-sizing: border-box;
     white-space: nowrap;
+    margin-top: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .popup-overlay {
