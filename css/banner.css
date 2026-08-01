@@ -2,6 +2,9 @@
 
 .hero {
   position: relative;
+  width: calc(100vw / var(--ui-zoom));
+  margin-left: calc((100% - 100vw / var(--ui-zoom)) / 2);
+  margin-right: calc((100% - 100vw / var(--ui-zoom)) / 2);
   height: 400px;
   display: flex;
   align-items: center;
@@ -30,7 +33,7 @@
 }
 
 .hero-content h1 {
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: clamp(3rem, 6vw, 4.5rem);
   font-weight: 700;
   margin: 0 0 10px;
   line-height: 1.1;
@@ -38,12 +41,12 @@
 }
 
 .hero-sub {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   opacity: 0.9;
   margin: 0 0 32px;
 }
 
 .hero-content .btn {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   padding: 12px 36px;
 }

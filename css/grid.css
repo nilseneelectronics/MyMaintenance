@@ -22,13 +22,14 @@
 }
 
 .section-heading h2 {
-    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-size: clamp(1.9rem, 3.2vw, 2.5rem);
     margin: 0 0 10px;
 }
 
 .support-copy {
     color: var(--text-secondary);
     line-height: 1.6;
+    font-size: 1.15rem;
 }
 
 .value-strip {
@@ -41,7 +42,7 @@
 }
 
 .value-strip article {
-    background: linear-gradient(145deg, var(--bg-secondary), #ffffff);
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 18px;
     padding: 18px;
@@ -56,20 +57,33 @@
 }
 
 .strip-icon {
-    font-size: 1.6rem;
-    display: block;
-    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    background: var(--hover-bg);
+    color: var(--accent-primary);
+}
+
+.strip-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
 }
 
 .value-strip strong {
     display: block;
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     margin-bottom: 8px;
 }
 
 .value-strip p {
     color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.6;
+    font-size: 1.05rem;
     margin: 0;
 }
 
@@ -240,6 +254,7 @@
 }
 
 .value-card {
+    background: var(--bg-secondary);
     padding: 28px 24px;
     border-radius: 16px;
     text-align: center;
@@ -255,28 +270,23 @@
     border-color: rgba(32, 178, 170, 0.3);
 }
 
-.homeowner-bg {
-    background: linear-gradient(145deg, #f0fffe, #ffffff);
-}
-
-.landlord-bg {
-    background: linear-gradient(145deg, #eef9ff, #ffffff);
-}
-
-.contractor-bg {
-    background: linear-gradient(145deg, #fffef5, #ffffff);
-}
-
 .value-card .card-symbol {
     display: block;
     margin: 0 auto 14px;
     width: 40px;
     height: 40px;
+    color: var(--accent-primary);
+}
+
+.value-card .card-symbol svg {
+    width: 40px;
+    height: 40px;
+    fill: currentColor;
 }
 
 .value-card strong {
     display: block;
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     margin-bottom: 10px;
     color: var(--text-primary);
 }
@@ -285,7 +295,7 @@
     color: var(--text-secondary);
     line-height: 1.55;
     margin: 0;
-    font-size: 0.93rem;
+    font-size: 1.05rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -463,12 +473,14 @@
 
 .calendar-mimic {
     border: none;
-    padding: 10px;
+    padding: 0;
     margin: 10px 0;
-    overflow: auto;
-    display: flex;
-    flex-direction: row;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (max-width: 1024px) {
@@ -483,7 +495,7 @@
 
 @media (max-width: 768px) {
     .calendar-mimic {
-        flex-direction: row;
+        grid-template-columns: 1fr;
     }
 
     .value-strip,
@@ -541,6 +553,7 @@
     border-radius: 10px;
     padding: 10px;
     background-color: var(--bg-primary);
+    min-width: 0;
 }
 
 .calendar-mimic .month {
@@ -657,7 +670,7 @@
 
 .showcase-tag {
   display: inline-block;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -666,14 +679,14 @@
 }
 
 .showcase-text h2 {
-  font-size: clamp(1.5rem, 2.5vw, 1.8rem);
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
   margin: 0 0 10px;
   color: var(--text-primary);
   line-height: 1.2;
 }
 
 .showcase-text p {
-  font-size: 0.95rem;
+  font-size: 1.15rem;
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 20px;
@@ -709,14 +722,14 @@
 }
 
 .cta-banner h2 {
-  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  font-size: clamp(2rem, 3.4vw, 2.5rem);
   margin: 0 0 10px;
   color: #fff;
   line-height: 1.2;
 }
 
 .cta-banner p {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   color: rgba(255, 255, 255, 0.85);
   margin: 0 0 32px;
 }

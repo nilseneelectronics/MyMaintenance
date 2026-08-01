@@ -72,6 +72,7 @@ main {
     padding-top: var(--main-padding-top);
     transition: margin-top 0.3s ease;
     min-height: 800px;
+    width: 100%;
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
@@ -91,6 +92,10 @@ main .grid-container {
 main h1 {
     margin-bottom: 30px;
     font-size: 2em;
+}
+
+.marketing-page main h1 {
+    font-size: 2.6em;
 }
 
 .sidebar-open main {
