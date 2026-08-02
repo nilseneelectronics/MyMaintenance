@@ -6,7 +6,7 @@
 .auth-page-wrap {
     position: relative;
     width: 75%;
-    margin: calc(var(--navbar-height) + var(--sidebar-height) + 30px) auto 20px;
+    margin: calc(var(--navbar-height) + var(--sidebar-height) + 10px) auto 20px;
 }
 
 .auth-back-btn {

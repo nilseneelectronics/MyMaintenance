@@ -82,9 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const doneTaskText = document.getElementById('done-task-text');
     const donePictureBtn = document.getElementById('done-picture-btn');
     const donePhotoOptions = document.getElementById('done-photo-options');
-    const donePhotoPreview = document.getElementById('done-photo-preview');
-    const donePhotoImg = document.getElementById('done-photo-img');
-    const donePhotoRemove = document.getElementById('done-photo-remove');
+    const doneNoPhotos = document.getElementById('done-no-photos');
+    const donePhotoGrid = document.getElementById('done-photo-grid');
     const doneEquipment = document.getElementById('done-equipment');
     const doneComments = document.getElementById('done-comments');
     const doneTime = document.getElementById('done-time');
@@ -94,27 +93,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewDoneBtn = document.getElementById('view-done-btn');
 
     let pendingDoneTask = null;
-    let pendingPhoto = null;
+    let pendingPhotos = [];
+
+    function renderPendingPhotos() {
+        if (donePhotoGrid) donePhotoGrid.innerHTML = '';
+        if (doneNoPhotos) doneNoPhotos.style.display = pendingPhotos.length ? 'none' : 'block';
+        pendingPhotos.forEach((src, i) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'done-photo-thumb';
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = `Picture ${i + 1}`;
+            const rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'photo-remove';
+            rm.setAttribute('aria-label', 'Remove picture');
+            rm.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M256-200q-23.53 0-40.26-16.74Q199-233.47 199-257v-483h-13v-60h188v-30h212v30h188v60h-13v483q0 23.53-16.74 40.26Q716.53-200 693-200H256Zm103-100h60v-336h-60v336Zm182 0h60v-336h-60v336Z"/></svg>';
+            rm.addEventListener('click', () => {
+                pendingPhotos.splice(i, 1);
+                renderPendingPhotos();
+            });
+            wrap.appendChild(img);
+            wrap.appendChild(rm);
+            if (donePhotoGrid) donePhotoGrid.appendChild(wrap);
+        });
+    }
 
     function openDonePopup(taskText) {
         if (!donePopup) return;
         pendingDoneTask = taskText;
-        pendingPhoto = null;
+        pendingPhotos = [];
         doneTaskText.textContent = `"${taskText}"?`;
         donePhotoOptions.style.display = 'none';
-        donePhotoPreview.style.display = 'none';
-        donePhotoImg.src = '';
         doneEquipment.value = '';
         doneComments.value = '';
         doneTime.value = '';
         doneCost.value = '';
+        renderPendingPhotos();
         donePopup.style.display = 'flex';
     }
 
     function closeDonePopup() {
         if (donePopup) donePopup.style.display = 'none';
         pendingDoneTask = null;
-        pendingPhoto = null;
+        pendingPhotos = [];
     }
 
     if (donePictureBtn) {
@@ -130,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             donePhotoOptions.style.display = 'none';
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
+            fileInput.multiple = true;
             if (btn.dataset.source === 'camera') {
                 fileInput.accept = 'image/*';
                 fileInput.setAttribute('capture', 'environment');
@@ -139,25 +162,20 @@ document.addEventListener('DOMContentLoaded', () => {
             fileInput.style.display = 'none';
             document.body.appendChild(fileInput);
             fileInput.addEventListener('change', () => {
-                const file = fileInput.files && fileInput.files[0];
+                const files = fileInput.files ? Array.from(fileInput.files) : [];
                 fileInput.remove();
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                    pendingPhoto = reader.result;
-                    donePhotoImg.src = pendingPhoto;
-                    donePhotoPreview.style.display = 'flex';
-                };
-                reader.readAsDataURL(file);
+                if (files.length === 0) return;
+                const readers = files.map((file) => new Promise((resolve) => {
+                    const r = new FileReader();
+                    r.onload = () => resolve(r.result);
+                    r.readAsDataURL(file);
+                }));
+                Promise.all(readers).then((results) => {
+                    pendingPhotos = pendingPhotos.concat(results);
+                    renderPendingPhotos();
+                });
             });
             fileInput.click();
-        });
-    }
-    if (donePhotoRemove) {
-        donePhotoRemove.addEventListener('click', () => {
-            pendingPhoto = null;
-            donePhotoPreview.style.display = 'none';
-            donePhotoImg.src = '';
         });
     }
 
@@ -181,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             comments: doneComments.value.trim(),
             time: doneTime.value.trim(),
             cost: doneCost.value.trim(),
-            photo: pendingPhoto || ''
+            photos: pendingPhotos
         });
         saveDoneTasks();
         const doneBtn = todoList.querySelector(`.done-btn[data-task="${pendingDoneTask}"]`);

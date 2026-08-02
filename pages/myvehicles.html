@@ -45,7 +45,7 @@
             <div class="photo-box" id="photo-box">
                 <h3>Vehicle Photos</h3>
                 
-                <button class="view-button" onclick="window.location.href='coming-soon.html?target=myvehicle-photos.html'">
+                <button class="view-button" id="view-all-photos">
                     View all photos
                 </button>
                 
@@ -65,6 +65,10 @@
                         </button>
                     </div>
                 </div>
+
+                <button class="view-button add-photos-outline" id="add-photo-btn">
+                    Add photos
+                </button>
             </div>
 
             <!-- Planned maintenance (vehicle version) -->
@@ -170,6 +174,11 @@
         <!-- Full-screen photo modal (shared) -->
         <div class="photo-modal" id="photo-modal">
             <div class="photo-modal-content">
+                <button class="modal-back-btn modal-back-overlay" id="close-modal" aria-label="Go back">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                </button>
+
                 <img id="modal-photo" src="" alt="Full screen photo">
                 
                 <div class="modal-arrows">
@@ -185,12 +194,70 @@
                     </button>
                 </div>
 
-                <div class="modal-controls">
-                    <button class="modal-btn add" id="add-photo-btn">+</button>
-                    <button class="modal-btn" id="close-modal">×</button>
+                <p class="modal-photo-caption">Car photo gallery</p>
+            </div>
+        </div>
+
+        <!-- Photo gallery modal -->
+        <div class="photo-modal" id="gallery-modal">
+            <div class="gallery-modal-content">
+                <div class="modal-header">
+                    <button class="modal-back-btn" id="gallery-close" aria-label="Go back">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        Back
+                    </button>
+                    <h3>All photos</h3>
+                    <div class="modal-header-actions">
+                        <button class="modal-back-btn" id="gallery-edit-photo">Edit photos</button>
+                        <button class="modal-back-btn" id="gallery-add-photo">Add photos</button>
+                    </div>
+                </div>
+                <div class="gallery-scroll-pad">
+                    <div class="gallery-grid" id="gallery-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add photos modal -->
+        <div id="add-photos-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Add photos</h3>
+
+                <div class="done-fields">
+                    <label>Pictures</label>
+                    <div class="done-pictures">
+                        <p class="done-no-photos" id="ap-no-photos">No pictures added</p>
+                        <div class="done-photo-grid" id="ap-photo-grid"></div>
+                        <button type="button" class="photo-picker-btn" id="ap-picture-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg>
+                            Add pictures
+                        </button>
+                        <div class="photo-picker-options" id="ap-photo-options">
+                            <button type="button" data-source="camera">Take picture</button>
+                            <button type="button" data-source="library">Select from library</button>
+                            <button type="button" data-source="documents">Select from documents</button>
+                        </div>
+                    </div>
                 </div>
 
-                <p class="modal-photo-caption">Living room with garden view – summer 2025</p>
+                <div class="popup-buttons">
+                    <button id="ap-cancel" class="popup-btn cancel">Cancel</button>
+                    <button id="ap-save" class="popup-btn confirm">Save</button>
+                </div>
+            </div>
+        </div>
+        <!-- Edit photo text modal -->
+        <div id="ap-edit-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Edit photo</h3>
+                <div class="done-fields">
+                    <label>Photo text</label>
+                    <input type="text" id="ap-edit-text" placeholder="Photo text...">
+                </div>
+                <div class="popup-buttons">
+                    <button id="ap-edit-cancel" class="popup-btn cancel">Cancel</button>
+                    <button id="ap-edit-save" class="popup-btn confirm">Save</button>
+                </div>
             </div>
         </div>
     </main>
@@ -198,6 +265,17 @@
     
     
     
+    <script>
+        window.GALLERY_IMAGES = [
+            'https://picsum.photos/id/1015/1200/675',
+            'https://picsum.photos/id/111/1200/675',
+            'https://picsum.photos/id/112/1200/675',
+            'https://picsum.photos/id/113/1200/675',
+            'https://picsum.photos/id/114/1200/675'
+        ];
+        window.GALLERY_STORAGE_KEY = 'floorplan_vehicle_photos';
+    </script>
+    <script src="../script/pages/gallery.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>

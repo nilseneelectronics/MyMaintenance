@@ -83,26 +83,6 @@
             <p id="done-task-text" class="popup-task"></p>
 
             <div class="done-fields">
-                <label>Picture</label>
-                <div class="photo-picker" id="done-photo-picker">
-                    <button type="button" class="photo-picker-btn" id="done-picture-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg>
-                        Add picture
-                    </button>
-                    <div class="photo-picker-options" id="done-photo-options">
-                        <button type="button" data-source="camera">Take picture</button>
-                        <button type="button" data-source="library">Select from library</button>
-                        <button type="button" data-source="documents">Select from documents</button>
-                    </div>
-                    <div class="photo-preview" id="done-photo-preview" style="display:none">
-                        <img id="done-photo-img" alt="Selected photo">
-                        <button type="button" class="photo-remove" id="done-photo-remove">
-                            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M256-200q-23.53 0-40.26-16.74Q199-233.47 199-257v-483h-13v-60h188v-30h212v30h188v60h-13v483q0 23.53-16.74 40.26Q716.53-200 693-200H256Zm103-100h60v-336h-60v336Zm182 0h60v-336h-60v336Z"/></svg>
-                        </button>
-                    </div>
-                    <input type="file" id="done-picture" accept="image/*" hidden>
-                </div>
-
                 <label>Equipment</label>
                 <input type="text" id="done-equipment" placeholder="e.g. HVAC, Car, Roof...">
 
@@ -114,6 +94,21 @@
 
                 <label>Cost</label>
                 <input type="text" id="done-cost" placeholder="e.g. 500 kr">
+
+                <label>Pictures</label>
+                <div class="done-pictures">
+                    <p class="done-no-photos" id="done-no-photos">No pictures added</p>
+                    <div class="done-photo-grid" id="done-photo-grid"></div>
+                    <button type="button" class="photo-picker-btn" id="done-picture-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg>
+                        Add pictures
+                    </button>
+                    <div class="photo-picker-options" id="done-photo-options">
+                        <button type="button" data-source="camera">Take picture</button>
+                        <button type="button" data-source="library">Select from library</button>
+                        <button type="button" data-source="documents">Select from documents</button>
+                    </div>
+                </div>
             </div>
 
             <div class="popup-buttons">

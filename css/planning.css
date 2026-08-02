@@ -129,20 +129,41 @@
 /* --- Done tasks page --- */
 .done-sort-bar {
     display: flex;
-    gap: 10px;
+    gap: 20px;
     margin-bottom: 20px;
 }
 
-.done-sort-select {
+.done-sort-dropdown {
     flex: 1;
-    padding: 10px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.9rem;
-    cursor: pointer;
+    width: auto;
+}
+
+.done-sort-dropdown .dropdown-toggle {
+    justify-content: space-between;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.done-sort-dropdown .dropdown-toggle span {
+    flex: 1;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 12px;
+}
+
+.done-sort-dropdown .dropdown-toggle svg {
+    flex-shrink: 0;
+}
+
+.done-sort-dropdown.open .dropdown-menu {
+    top: 100%;
+    margin-top: -2px;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
 .done-task-item {
@@ -227,6 +248,86 @@
     margin: -20px 0 12px;
 }
 
+/* --- Pictures field (done tasks) --- */
+.done-pictures {
+    position: relative;
+    text-align: left;
+}
+
+.done-no-photos {
+    margin: 0 0 8px;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.done-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.done-photo-thumb {
+    position: relative;
+    display: block;
+}
+
+.done-photo-thumb img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    display: block;
+}
+
+.done-photo-thumb img.done-photo-clickable {
+    cursor: zoom-in;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.done-photo-thumb img.done-photo-clickable:hover {
+    transform: scale(1.05);
+    border-color: var(--accent-primary);
+}
+
+.done-photo-thumb .photo-remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 34px;
+    height: 34px;
+    background: var(--delete-red);
+    border: 2px solid #FFFFFF;
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.done-photo-thumb .photo-remove:hover {
+    transform: scale(1.15);
+    background: #cc0000;
+}
+
+.ap-photo-text {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.8rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+}
+
+.ap-photo-text:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
 .dtm-photo {
     justify-content: center;
     margin-bottom: 20px;
@@ -237,6 +338,100 @@
     max-height: 220px;
     border-radius: 12px;
     border: 2px solid var(--border-color);
+}
+
+/* --- Full-screen photo modal (done tasks) --- */
+.photo-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 10001;
+    align-items: center;
+    justify-content: center;
+}
+
+.photo-modal.active {
+    display: flex;
+}
+
+.photo-modal-content {
+    position: relative;
+    max-width: 1200px;
+    width: 90%;
+    margin-top: 150px;
+}
+
+.photo-modal-content img {
+    width: 100%;
+    display: block;
+    border-radius: 20px;
+}
+
+.modal-arrows {
+    position: absolute;
+    top: 50%;
+    left: 20px;
+    right: 20px;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+}
+
+.modal-arrow {
+    background: rgba(0,0,0,0.65);
+    color: white;
+    border: none;
+    width: 74px;
+    height: 74px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.25s ease;
+}
+
+.modal-arrow:hover {
+    transform: scale(1.15);
+}
+
+.modal-controls {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    display: flex;
+    gap: 18px;
+}
+
+.modal-btn {
+    background: rgba(0,0,0,0.65);
+    color: white;
+    border: none;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.25s ease;
+    font-size: 46px;
+    line-height: 1;
+}
+
+.modal-btn:hover {
+    transform: scale(1.15);
+}
+
+.modal-photo-caption {
+    text-align: center;
+    font-size: 1.1em;
+    color: #ddd;
+    margin-top: 30px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* --- Photo picker (mark as done) --- */
@@ -322,17 +517,17 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    border: 2px solid var(--delete-red);
+    border: 2px solid #FFFFFF;
     border-radius: 50%;
-    background: transparent;
-    color: var(--delete-red);
+    background: var(--delete-red);
+    color: #FFFFFF;
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color 0.3s, transform 0.2s;
 }
 
 .photo-remove:hover {
-    background: var(--delete-red);
-    color: #FFFFFF;
+    background: #cc0000;
+    transform: scale(1.1);
 }
 
 .done-fields {
@@ -376,6 +571,13 @@
     resize: vertical;
     max-height: 220px;
     min-height: 90px;
+}
+
+.done-fields input[readonly],
+.done-fields textarea[readonly] {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+    cursor: default;
 }
 
 .add-todo {
@@ -489,6 +691,13 @@
     background: var(--accent-secondary);
     border: 2px solid var(--accent-secondary);
     font-weight: bold;
+}
+
+.dtm-delete-btn {
+    width: 100%;
+    flex: none;
+    margin-top: 24px;
+    display: none;
 }
 
 /* =======================================
