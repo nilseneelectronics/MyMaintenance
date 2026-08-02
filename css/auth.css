@@ -3,10 +3,43 @@
 /* =======================================
    Authentication Styles (Login/Signup)
    ======================================= */
-.auth-container {
+.auth-page-wrap {
     position: relative;
     width: 75%;
     margin: calc(var(--navbar-height) + var(--sidebar-height) + 30px) auto 20px;
+}
+
+.auth-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 24px;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.auth-back-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.auth-back-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.auth-container {
+    position: relative;
+    width: 100%;
+    margin: 0;
     background-color: var(--bg-primary);
     border: 2px solid var(--accent-primary);
     border-radius: 30px;

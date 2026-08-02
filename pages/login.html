@@ -34,21 +34,26 @@
                     <path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="rotate(90 12 12)"/>
                 </svg>
             </button>
-            <button id="goback">Go Back</button>
         </div>
     </header>
 
     <aside class="sidebar">
         <ul>
-            <li><a href="https://example.com/link1">Dummy Text 1</a></li>
-            <li><a href="https://example.com/link2">Dummy Text 2</a></li>
-            <li><a href="https://example.com/link3">Dummy Text 3</a></li>
-            <li><a href="https://example.com/link4">Dummy Text 4</a></li>
-            <li><a href="about.html">Dummy Text 5</a></li>
+            <li><a href="homeowners.html">Homeowners</a></li>
+            <li><a href="landlords.html">Landlords</a></li>
+            <li><a href="contractors.html">Contractors</a></li>
+            <li><a href="tools.html">Tools</a></li>
+            <li><a href="about.html">About Us</a></li>
         </ul>
     </aside>
 
-    <div class="auth-container" id="auth-container">
+    <div class="auth-page-wrap">
+        <button class="auth-back-btn" onclick="history.back()" aria-label="Go back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+        </button>
+
+        <div class="auth-container" id="auth-container">
         <div class="form-panel sign-in-panel">
             <form id="signin-form">
                 <h1>Sign in</h1>
@@ -97,6 +102,7 @@
                 </div>
             </div>
         </div>
+    </div>
     </div>
     <div class="terms">
         <a href="link-to-page1.html" class="terms-link">Terms of use</a>
