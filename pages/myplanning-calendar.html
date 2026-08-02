@@ -38,9 +38,10 @@
         .year-month { border: 1.5px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-primary); }
         .year-month h3 { margin: 0 0 8px; font-size: 1rem; text-align: center; }
         .year-month table { width: 100%; border-collapse: collapse; }
-        .year-month th { font-size: 0.65rem; padding: 2px 0; color: var(--text-secondary); font-weight: 500; }
-        .year-month td { text-align: center; padding: 2px 0; font-size: 0.72rem; position: relative; cursor: pointer; }
-        .year-month .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; }
+        .year-month th { font-size: 0.7rem; padding: 2px 0; color: var(--text-secondary); font-weight: 500; }
+        .year-month td { text-align: center; padding: 2px 0; font-size: 0.8rem; position: relative; cursor: pointer; }
+        .year-month .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; font-size: 0.8rem; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+        .year-month td:hover .date-circle { background: var(--hover-bg); border-color: var(--accent-primary); color: var(--accent-primary); }
         .year-month .today .date-circle { background: var(--accent-primary); color: #fff; }
         .year-month td.has-event::after { content: ''; display: block; width: 10px; height: 2px; background: var(--accent-primary); border-radius: 2px; margin: 0 auto; margin-top: 2px; }
         .year-month td.today.has-event::after { background: #fff; }
@@ -57,17 +58,17 @@
         .month-view .date-circle { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; font-size: 0.85rem; color: var(--text-primary); margin: 0 auto 4px; transition: border-color 0.15s, background 0.15s; }
         .month-view .today .date-circle { background: var(--accent-primary); color: #fff; border-color: var(--accent-primary); }
         .month-view .past .date-circle { opacity: 0.35; }
-        .month-view .event-line { display: block; font-size: 0.65rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 3px; padding: 2px 6px; margin: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .month-view .event-line { display: block; font-size: 0.8rem; color: var(--accent-secondary); background: rgba(32,178,170,0.1); border-radius: 4px; padding: 3px 7px; margin: 2px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
         .month-view td:not(.empty) .date-circle { border-color: var(--border-color); }
         .month-view td:not(.empty):hover { border-radius: 8px; background: var(--hover-bg); outline: 2px solid var(--accent-primary); outline-offset: -2px; }
 
         /* Day view */
-        .day-view { max-width: 600px; margin: 0 auto; }
+        .day-view { max-width: 720px; margin: 0 auto; }
         .day-event { padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); cursor: pointer; transition: border-color 0.15s; }
         .day-event:hover { border-color: var(--accent-primary); }
-        .day-event .ev-time { font-size: 0.8rem; color: var(--accent-primary); font-weight: 500; display: block; margin-top: 4px; }
-        .day-event .ev-location { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
-        .day-event .ev-desc { font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+        .day-event .ev-time { font-size: 0.9rem; color: var(--accent-primary); font-weight: 500; display: block; margin-top: 4px; }
+        .day-event .ev-location { font-size: 0.95rem; color: var(--text-secondary); margin-top: 4px; }
+        .day-event .ev-desc { font-size: 0.95rem; color: var(--text-secondary); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
         .day-empty { text-align: center; color: var(--text-secondary); padding: 40px; }
         .add-event-bottom { display: block; width: 100%; padding: 12px; border: 1.5px dashed var(--border-color); border-radius: 10px; background: transparent; color: var(--accent-primary); font-family: 'Poppins', sans-serif; font-size: 0.95rem; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
         .add-event-bottom:hover { background: rgba(32,178,170,0.05); border-color: var(--accent-primary); }
@@ -82,15 +83,15 @@
 
         /* Ads */
         .ads-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color); }
-        .ads-section h3 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); margin: 0 0 16px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .ad-card { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); cursor: pointer; transition: all 0.2s; }
+        .ads-section h3 { font-size: 1rem; font-weight: 500; color: var(--text-secondary); margin: 0 0 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ad-card { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1.5px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; background: var(--bg-primary); cursor: pointer; transition: all 0.2s; }
         .ad-card:hover { border-color: var(--accent-primary); }
-        .ad-icon { width: 48px; height: 48px; border-radius: 10px; background: rgba(32,178,170,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .ad-icon svg { width: 26px; height: 26px; fill: var(--accent-primary); }
+        .ad-icon { width: 52px; height: 52px; border-radius: 10px; background: rgba(32,178,170,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ad-icon svg { width: 28px; height: 28px; fill: var(--accent-primary); }
         .ad-info { flex: 1; }
-        .ad-info strong { display: block; font-size: 0.95rem; margin-bottom: 2px; }
-        .ad-info span { font-size: 0.8rem; color: var(--text-secondary); }
-        .ad-badge { font-size: 0.65rem; background: var(--accent-primary); color: #fff; padding: 2px 8px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
+        .ad-info strong { display: block; font-size: 1.1rem; margin-bottom: 3px; }
+        .ad-info span { font-size: 0.95rem; color: var(--text-secondary); }
+        .ad-badge { font-size: 0.8rem; background: var(--accent-primary); color: #fff; padding: 3px 10px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
 
         @media (max-width: 768px) {
             .year-grid { grid-template-columns: repeat(2, 1fr); }
@@ -124,35 +125,35 @@
         <div class="event-modal-card">
             <h3 id="ev-modal-title">Add event</h3>
             <div class="event-modal-field">
-                <label>Name</label>
+                <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
-                    <label>Start date</label>
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Start date</label>
                     <input type="date" id="ev-start-date" onclick="this.showPicker()">
                 </div>
                 <div class="event-modal-field">
-                    <label>Finish date</label>
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Finish date</label>
                     <input type="date" id="ev-finish-date" onclick="this.showPicker()">
                 </div>
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
-                    <label>Start time</label>
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Start time</label>
                     <input type="time" id="ev-start-time" onclick="this.showPicker()">
                 </div>
                 <div class="event-modal-field">
-                    <label>Finish time</label>
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Finish time</label>
                     <input type="time" id="ev-finish-time" onclick="this.showPicker()">
                 </div>
             </div>
             <div class="event-modal-field">
-                <label>Location</label>
+                <label><svg class="field-icon" viewBox="0 -960 960 960"><path d="m554-577-57-57-145 144q-6 6-9 13.5t-3 15.5v21q0 8 6 14t14 6h21q8 0 15.5-3t13.5-9l144-145Zm29-29 28-28q5-5 5-10.5t-5-10.5l-36-36q-5-5-10.5-5t-10.5 5l-28 28 57 57ZM480-186q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm-28 74q-14-5-25-15-65-60-115-117t-83.5-110.5q-33.5-53.5-51-103T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 45-17.5 94.5t-51 103Q698-301 648-244T533-127q-11 10-25 15t-28 5q-14 0-28-5Zm28-448Z"/></svg>Location</label>
                 <input type="text" id="ev-location" placeholder="Location">
             </div>
             <div class="event-modal-field">
-                <label>Description</label>
+                <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>Description</label>
                 <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
             </div>
             <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
@@ -379,8 +380,7 @@
             html += `<span class="date-circle">${d}</span>`;
             const events = getEvents(viewYear, viewMonth, d);
             events.forEach(e => {
-                const t = e.startTime ? (e.finishTime ? `${e.startTime}-${e.finishTime}` : e.startTime) : '';
-                html += `<span class="event-line">${e.name}${t ? ' \u2022 '+t : ''}</span>`;
+                html += `<span class="event-line">${e.name}</span>`;
             });
             html += '</td>';
             if (((startDay + d - 1) % 7) === 6 && d < daysInMonth) html += '</tr><tr>';

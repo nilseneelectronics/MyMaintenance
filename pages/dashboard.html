@@ -77,7 +77,7 @@
             </div>
             <div class="dash-box planning-box no-scale">
                 <h3>Planning</h3>
-                <p>No plans yet</p>
+                <div id="dash-upcoming"></div>
                 <div class="calendar-mimic" id="dash-calendar"></div>
                 <div class="button-group">
                     <button class="add-button" id="dash-add-event">Add event</button>
@@ -210,6 +210,7 @@
             saveEvents();
             closeModal();
             renderCalendar();
+            renderUpcoming();
         });
         if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
@@ -224,6 +225,33 @@
         function pad(n) { return String(n).padStart(2,'0'); }
         function dateKey(year, month, day) { return `${year}-${pad(month+1)}-${pad(day)}`; }
         function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
+
+        function renderUpcoming() {
+            const box = document.getElementById('dash-upcoming');
+            if (!box) return;
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            const upcoming = [];
+            for (const key of Object.keys(EVENTS)) {
+                if (key < todayKey) continue;
+                for (const ev of EVENTS[key]) upcoming.push({ key, ev });
+            }
+            upcoming.sort((a, b) => (a.key + (a.ev.startTime||'')) < (b.key + (b.ev.startTime||'')) ? -1 : 1);
+            const next = upcoming.slice(0, 3);
+            if (next.length === 0) {
+                box.innerHTML = '<p class="dash-upcoming-empty">No plans yet</p>';
+                return;
+            }
+            box.innerHTML = next.map(({ key, ev }) => {
+                const [y, m, d] = key.split('-');
+                const dt = new Date(y, m-1, d);
+                const label = `${DAYS[(dt.getDay()+6)%7]} ${d} ${MONTHS[m-1].slice(0,3)}`;
+                const time = ev.startTime ? `<span class="dash-upcoming-time">${ev.startTime}</span>` : '';
+                const locName = ev.location || 'No location specified';
+                const loc = `<span class="dash-upcoming-loc"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa"><path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm-24 78q-12-4-22-12-118-94-176-183.5T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 86-58 175.5T526-235q-10 8-22 12t-24 4q-12 0-24-4Zm24-297q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM240-80q-17 0-28.5-11.5T200-120q0-17 11.5-28.5T240-160h480q17 0 28.5 11.5T760-120q0 17-11.5 28.5T720-80H240Zm240-520Z"/></svg>${locName}</span>`;
+                return `<div class="dash-upcoming-item" data-key="${key}"><strong class="dash-upcoming-name">${ev.name}</strong>${loc}<span class="dash-upcoming-meta">${time}<span class="dash-upcoming-date">${label}</span></span></div>`;
+            }).join('');
+        }
 
         function getMonthData(year, month) {
             const first = new Date(year, month, 1);
@@ -272,6 +300,14 @@
             }
         });
 
+        const upcomingBox = document.getElementById('dash-upcoming');
+        if (upcomingBox) {
+            upcomingBox.addEventListener('click', (e) => {
+                const item = e.target.closest('.dash-upcoming-item[data-key]');
+                if (item) window.location.href = 'myplanning-calendar.html?date=' + item.dataset.key;
+            });
+        }
+
         const dashAddBtn = document.getElementById('dash-add-event');
         if (dashAddBtn) {
             dashAddBtn.addEventListener('click', () => {
@@ -282,6 +318,7 @@
         }
 
         renderCalendar();
+        renderUpcoming();
     });
     </script>
     <script src="../script/app-config.js"></script>

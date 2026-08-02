@@ -7,6 +7,8 @@ window.MyMaintenanceConfig = {
         'myvehicles.html',
         'mydocuments.html',
         'myplanning.html',
+        'myplanning-calendar.html',
+        'myplanning-events.html',
         'mytools.html',
         'myprofile.html'
     ],
@@ -24,6 +26,8 @@ window.MyMaintenanceConfig = {
         'myvehicles.html',
         'mydocuments.html',
         'myplanning.html',
+        'myplanning-calendar.html',
+        'myplanning-events.html',
         'mytools.html',
         'myprofile.html',
         'tool-floorplan.html',
