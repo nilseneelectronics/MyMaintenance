@@ -711,7 +711,7 @@
 }
 
 .tools-box, .profile-box {
-    color: #FFFFFF !important;
+    color: var(--text-primary);
 }
 
 .tools-box h3, .profile-box h3 {

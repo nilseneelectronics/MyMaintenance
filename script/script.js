@@ -138,6 +138,7 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'myplanning.html',
     'myplanning-calendar.html',
     'myplanning-events.html',
+    'myplanning-done.html',
     'mytools.html',
     'myprofile.html',
     'coming-soon.html',

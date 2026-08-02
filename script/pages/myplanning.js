@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <svg xmlns="http://www.w3.org/2000/svg" height="26" viewBox="0 -960 960 960" width="26" fill="currentColor"><path d="M261-120q-24.75 0-42.37-17.63Q201-155.25 201-180v-570h-11q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h158q0-13 8.63-21.5 8.62-8.5 21.37-8.5h204q12.75 0 21.38 8.62Q612-822.75 612-810h158q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-11v570q0 24.75-17.62 42.37Q723.75-120 699-120H261Zm438-630H261v570h438v-570ZM418.5-274.63q8.5-8.62 8.5-21.37v-339q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v339q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63Zm166 0q8.5-8.62 8.5-21.37v-339q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v339q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63ZM261-750v570-570Z"/></svg>
             </button>
             <span>${text}</span>
-            <label class="switch">
-                <input type="checkbox">
-                <span class="slider"></span>
-            </label>
+            <button class="done-btn" data-task="${text}" aria-label="Mark as done">
+                <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="m382-308 350-350q11-11 27.5-11t28.5 11q12 12 12 28.5T788-601L410-222q-12 12-28 12t-28-12L182-394q-12-12-12-28.5t12-28.5q11-11 27.5-11t28.5 11l154 142Z"/></svg>
+                Mark as done
+            </button>
         `;
         return li;
     }
@@ -58,6 +58,145 @@ document.addEventListener('DOMContentLoaded', () => {
             deletePopup.style.display = 'none';
         };
     });
+
+    // === MARK AS DONE ===
+    const DONE_STORAGE_KEY = 'floorplan_done_tasks';
+    function loadDoneTasks() {
+        try {
+            const saved = localStorage.getItem(DONE_STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch (_) {}
+        return [];
+    }
+    function saveDoneTasks() {
+        localStorage.setItem(DONE_STORAGE_KEY, JSON.stringify(doneTasks));
+    }
+    let doneTasks = loadDoneTasks();
+
+    function todayKey() {
+        const n = new Date();
+        return `${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}`;
+    }
+
+    const donePopup = document.getElementById('done-popup');
+    const doneTaskText = document.getElementById('done-task-text');
+    const donePictureBtn = document.getElementById('done-picture-btn');
+    const donePhotoOptions = document.getElementById('done-photo-options');
+    const donePhotoPreview = document.getElementById('done-photo-preview');
+    const donePhotoImg = document.getElementById('done-photo-img');
+    const donePhotoRemove = document.getElementById('done-photo-remove');
+    const doneEquipment = document.getElementById('done-equipment');
+    const doneComments = document.getElementById('done-comments');
+    const doneTime = document.getElementById('done-time');
+    const doneCost = document.getElementById('done-cost');
+    const doneCancel = document.getElementById('done-cancel');
+    const doneConfirm = document.getElementById('done-confirm');
+    const viewDoneBtn = document.getElementById('view-done-btn');
+
+    let pendingDoneTask = null;
+    let pendingPhoto = null;
+
+    function openDonePopup(taskText) {
+        if (!donePopup) return;
+        pendingDoneTask = taskText;
+        pendingPhoto = null;
+        doneTaskText.textContent = `"${taskText}"?`;
+        donePhotoOptions.style.display = 'none';
+        donePhotoPreview.style.display = 'none';
+        donePhotoImg.src = '';
+        doneEquipment.value = '';
+        doneComments.value = '';
+        doneTime.value = '';
+        doneCost.value = '';
+        donePopup.style.display = 'flex';
+    }
+
+    function closeDonePopup() {
+        if (donePopup) donePopup.style.display = 'none';
+        pendingDoneTask = null;
+        pendingPhoto = null;
+    }
+
+    if (donePictureBtn) {
+        donePictureBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            donePhotoOptions.style.display = donePhotoOptions.style.display === 'grid' ? 'none' : 'grid';
+        });
+    }
+    if (donePhotoOptions) {
+        donePhotoOptions.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-source]');
+            if (!btn) return;
+            donePhotoOptions.style.display = 'none';
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            if (btn.dataset.source === 'camera') {
+                fileInput.accept = 'image/*';
+                fileInput.setAttribute('capture', 'environment');
+            } else if (btn.dataset.source === 'library') {
+                fileInput.accept = 'image/*';
+            }
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files && fileInput.files[0];
+                fileInput.remove();
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    pendingPhoto = reader.result;
+                    donePhotoImg.src = pendingPhoto;
+                    donePhotoPreview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            });
+            fileInput.click();
+        });
+    }
+    if (donePhotoRemove) {
+        donePhotoRemove.addEventListener('click', () => {
+            pendingPhoto = null;
+            donePhotoPreview.style.display = 'none';
+            donePhotoImg.src = '';
+        });
+    }
+
+    todoList.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+        const doneBtn = target.closest('.done-btn');
+        if (!doneBtn) return;
+        const taskText = doneBtn.getAttribute('data-task') || '';
+        openDonePopup(taskText);
+    });
+
+    if (doneCancel) doneCancel.addEventListener('click', closeDonePopup);
+    if (doneConfirm) doneConfirm.addEventListener('click', () => {
+        if (!pendingDoneTask) return;
+        doneTasks.push({
+            id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            text: pendingDoneTask,
+            doneAt: todayKey(),
+            equipment: doneEquipment.value.trim(),
+            comments: doneComments.value.trim(),
+            time: doneTime.value.trim(),
+            cost: doneCost.value.trim(),
+            photo: pendingPhoto || ''
+        });
+        saveDoneTasks();
+        const doneBtn = todoList.querySelector(`.done-btn[data-task="${pendingDoneTask}"]`);
+        if (doneBtn) {
+            const item = doneBtn.closest('li');
+            if (item) item.remove();
+        }
+        closeDonePopup();
+    });
+
+    if (viewDoneBtn) {
+        viewDoneBtn.addEventListener('click', () => {
+            window.location.href = 'myplanning-done.html';
+        });
+    }
 
     function loadExampleTasks() {
         const examples = [

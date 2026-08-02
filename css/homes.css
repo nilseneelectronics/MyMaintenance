@@ -57,7 +57,7 @@
 
 .address-selector .dropdown-menu button {
     background: none;
-    color: #FFFFFF;
+    color: var(--text-primary);
     padding: 16px 30px;
     font-size: 1.15em;
     text-align: left;
@@ -66,7 +66,7 @@
 }
 
 .address-selector .dropdown-menu button:hover {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: var(--hover-bg);
 }
 
 .address-selector .dropdown-menu button:last-child {
@@ -274,7 +274,7 @@
 
 .planned-box .box-item-link,
 .docs-box .box-item-link {
-    color: #FFFFFF;
+    color: var(--text-primary);
     text-decoration: none;
     display: block;
     padding: 8px 20px;
@@ -291,7 +291,7 @@
 
 .planned-box .box-item-link:hover,
 .docs-box .box-item-link:hover {
-    color: #AFEEEE;
+    color: var(--accent-primary);
 }
 
 .photo-modal {

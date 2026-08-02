@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Done Tasks - MyMaintenance</title>
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/planning.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <div class="planning-content" style="margin-bottom:30px;">
+            <div style="position:relative;">
+                <button onclick="history.back()" style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;padding:10px 28px;border:2px solid var(--border-color);border-radius:25px;background:var(--bg-primary);cursor:pointer;color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:1rem;font-weight:600;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+                <h1 style="margin:0;text-align:center;">Done Tasks</h1>
+            </div>
+        </div>
+
+        <div class="planning-content">
+            <div class="upcoming-box">
+                <div class="done-sort-bar">
+                    <select id="done-sort-by" class="done-sort-select">
+                        <option value="date">Sort by: Date</option>
+                        <option value="equipment">Sort by: Equipment</option>
+                    </select>
+                    <select id="done-sort-order" class="done-sort-select">
+                        <option value="desc">Newest first</option>
+                        <option value="asc">Oldest first</option>
+                    </select>
+                </div>
+                <div id="done-tasks-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TASK DETAIL MODAL -->
+    <div id="done-task-modal" class="popup-overlay">
+        <div class="popup-content">
+            <h3 id="dtm-title">Task</h3>
+            <p id="dtm-text" class="popup-task"></p>
+            <p class="dtm-date" id="dtm-date"></p>
+
+            <div class="done-fields">
+                <label>Equipment</label>
+                <input type="text" id="dtm-equipment" placeholder="e.g. HVAC, Car, Roof...">
+
+                <label>Comments</label>
+                <textarea id="dtm-comments" rows="2" placeholder="Any comments..."></textarea>
+
+                <label>Time used</label>
+                <input type="text" id="dtm-time" placeholder="e.g. 2 hours">
+
+                <label>Cost</label>
+                <input type="text" id="dtm-cost" placeholder="e.g. 500 kr">
+            </div>
+
+            <div class="dtm-photo" id="dtm-photo" style="display:none;">
+                <img id="dtm-photo-img" alt="Task photo">
+            </div>
+
+            <div class="popup-buttons">
+                <button id="dtm-cancel" class="popup-btn cancel">Close</button>
+                <button id="dtm-save" class="popup-btn confirm">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const STORAGE_KEY = 'floorplan_done_tasks';
+        function loadDoneTasks() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (_) {}
+            return [];
+        }
+        function saveDoneTasks() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(doneTasks));
+        }
+        let doneTasks = loadDoneTasks();
+
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+        function pad(n) { return String(n).padStart(2,'0'); }
+
+        function formatDate(key) {
+            const [y, m, d] = key.split('-');
+            const dt = new Date(y, m-1, d);
+            return `${DAYS[(dt.getDay()+6)%7]} ${d} ${MONTHS[m-1].slice(0,3)} ${y}`;
+        }
+
+        const listBox = document.getElementById('done-tasks-list');
+        const sortBySel = document.getElementById('done-sort-by');
+        const sortOrderSel = document.getElementById('done-sort-order');
+
+        function sortedTasks() {
+            const tasks = [...doneTasks];
+            const order = sortOrderSel.value;
+            if (sortBySel.value === 'equipment') {
+                tasks.sort((a, b) => {
+                    const eqA = (a.equipment || '').toLowerCase();
+                    const eqB = (b.equipment || '').toLowerCase();
+                    if (eqA === eqB) return (a.doneAt < b.doneAt ? -1 : 1);
+                    return eqA < eqB ? -1 : 1;
+                });
+                if (order === 'desc') tasks.reverse();
+            } else {
+                tasks.sort((a, b) => (a.doneAt < b.doneAt ? -1 : 1));
+                if (order === 'desc') tasks.reverse();
+            }
+            return tasks;
+        }
+
+        function renderList() {
+            const tasks = sortedTasks();
+            if (tasks.length === 0) {
+                listBox.innerHTML = '<p class="dash-upcoming-empty">No done tasks yet</p>';
+                return;
+            }
+            listBox.innerHTML = tasks.map((t) => {
+                const eq = t.equipment
+                    ? `<span class="done-equipment">${t.equipment}</span>`
+                    : `<span class="done-equipment done-equipment-none">No equipment</span>`;
+                const photo = t.photo
+                    ? '<span class="done-has-photo"><svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg></span>'
+                    : '';
+                const detailBits = [];
+                if (t.comments) detailBits.push(t.comments);
+                if (t.time) detailBits.push(`Time: ${t.time}`);
+                if (t.cost) detailBits.push(`Cost: ${t.cost}`);
+                const summary = detailBits.length
+                    ? `<span class="done-summary">${detailBits.join(' &middot; ')}</span>`
+                    : '';
+                return `<div class="done-task-item" data-id="${t.id}">
+                            <span class="done-check"><svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="m382-308 350-350q11-11 27.5-11t28.5 11q12 12 12 28.5T788-601L410-222q-12 12-28 12t-28-12L182-394q-12-12-12-28.5t12-28.5q11-11 27.5-11t28.5 11l154 142Z"/></svg></span>
+                            <div class="done-task-main">
+                                <strong class="done-task-name">${t.text}</strong>
+                                <span class="done-date">${formatDate(t.doneAt)}</span>
+                                ${eq}
+                                ${summary}
+                            </div>
+                            ${photo}
+                        </div>`;
+            }).join('');
+        }
+
+        listBox.addEventListener('click', (e) => {
+            const item = e.target.closest('.done-task-item[data-id]');
+            if (item) openDetail(item.dataset.id);
+        });
+
+        // === DETAIL MODAL ===
+        const modal = document.getElementById('done-task-modal');
+        const dtmText = document.getElementById('dtm-text');
+        const dtmDate = document.getElementById('dtm-date');
+        const dtmEquipment = document.getElementById('dtm-equipment');
+        const dtmComments = document.getElementById('dtm-comments');
+        const dtmTime = document.getElementById('dtm-time');
+        const dtmCost = document.getElementById('dtm-cost');
+        const dtmPhoto = document.getElementById('dtm-photo');
+        const dtmPhotoImg = document.getElementById('dtm-photo-img');
+        const dtmCancel = document.getElementById('dtm-cancel');
+        const dtmSave = document.getElementById('dtm-save');
+
+        let currentId = null;
+
+        function openDetail(id) {
+            const t = doneTasks.find((x) => x.id === id);
+            if (!t) return;
+            currentId = id;
+            dtmText.textContent = `"${t.text}"`;
+            dtmDate.textContent = `Done: ${formatDate(t.doneAt)}`;
+            dtmEquipment.value = t.equipment || '';
+            dtmComments.value = t.comments || '';
+            dtmTime.value = t.time || '';
+            dtmCost.value = t.cost || '';
+            if (t.photo) {
+                dtmPhotoImg.src = t.photo;
+                dtmPhoto.style.display = 'flex';
+            } else {
+                dtmPhoto.style.display = 'none';
+                dtmPhotoImg.src = '';
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeDetail() {
+            modal.style.display = 'none';
+            currentId = null;
+        }
+
+        if (dtmCancel) dtmCancel.addEventListener('click', closeDetail);
+        if (dtmSave) dtmSave.addEventListener('click', () => {
+            if (!currentId) return;
+            const t = doneTasks.find((x) => x.id === currentId);
+            if (!t) return;
+            t.equipment = dtmEquipment.value.trim();
+            t.comments = dtmComments.value.trim();
+            t.time = dtmTime.value.trim();
+            t.cost = dtmCost.value.trim();
+            saveDoneTasks();
+            closeDetail();
+            renderList();
+        });
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeDetail(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+        if (sortBySel) sortBySel.addEventListener('change', renderList);
+        if (sortOrderSel) sortOrderSel.addEventListener('change', renderList);
+
+        renderList();
+    });
+    </script>
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+</body>
+</html>
