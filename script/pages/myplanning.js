@@ -80,6 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const donePopup = document.getElementById('done-popup');
     const doneTaskText = document.getElementById('done-task-text');
+    const assetDropdown = document.getElementById('done-asset-dropdown');
+    const assetToggle = document.getElementById('done-asset-toggle');
+    const assetMenu = document.getElementById('done-asset-menu');
+    const assetValueEl = assetDropdown ? assetDropdown.querySelector('.asset-value') : null;
+    const doneAssetOther = document.getElementById('done-asset-other');
+    let selectedAssetValue = '';
     const donePictureBtn = document.getElementById('done-picture-btn');
     const donePhotoOptions = document.getElementById('done-photo-options');
     const doneNoPhotos = document.getElementById('done-no-photos');
@@ -125,6 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingPhotos = [];
         doneTaskText.textContent = `"${taskText}"?`;
         donePhotoOptions.style.display = 'none';
+        selectedAssetValue = '';
+        if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
+        if (assetDropdown) assetDropdown.classList.remove('open');
+        if (assetMenu) assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+        if (doneAssetOther) {
+            doneAssetOther.value = '';
+            doneAssetOther.style.display = 'none';
+        }
         doneEquipment.value = '';
         doneComments.value = '';
         doneTime.value = '';
@@ -138,6 +152,35 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingDoneTask = null;
         pendingPhotos = [];
     }
+
+    if (assetToggle) {
+        assetToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (assetDropdown) assetDropdown.classList.toggle('open');
+        });
+    }
+
+    if (assetMenu) {
+        assetMenu.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-value]');
+            if (!btn) return;
+            selectedAssetValue = btn.dataset.value;
+            if (assetValueEl) assetValueEl.textContent = btn.textContent;
+            assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if (assetDropdown) assetDropdown.classList.remove('open');
+            if (doneAssetOther) {
+                doneAssetOther.style.display = selectedAssetValue === '__other__' ? '' : 'none';
+                if (selectedAssetValue === '__other__') doneAssetOther.focus();
+            }
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (assetDropdown && !assetDropdown.contains(e.target)) {
+            assetDropdown.classList.remove('open');
+        }
+    });
 
     if (donePictureBtn) {
         donePictureBtn.addEventListener('click', (e) => {
@@ -189,12 +232,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (doneCancel) doneCancel.addEventListener('click', closeDonePopup);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && donePopup && donePopup.style.display === 'flex') {
+            closeDonePopup();
+        }
+    });
     if (doneConfirm) doneConfirm.addEventListener('click', () => {
         if (!pendingDoneTask) return;
         doneTasks.push({
             id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
             text: pendingDoneTask,
             doneAt: todayKey(),
+            asset: selectedAssetValue === '__other__'
+                ? (doneAssetOther ? doneAssetOther.value.trim() : '')
+                : selectedAssetValue,
             equipment: doneEquipment.value.trim(),
             comments: doneComments.value.trim(),
             time: doneTime.value.trim(),

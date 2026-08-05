@@ -140,6 +140,7 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'myplanning-events.html',
     'myplanning-done.html',
     'mytools.html',
+    'mytools 2.html',
     'myprofile.html',
     'coming-soon.html',
     'tool-floorplan.html'
@@ -199,7 +200,7 @@ const COMMON_LAYOUT = {
                 <li><a href="myvehicles.html">MyVehicles</a></li>
                 <li><a href="mydocuments.html">MyDocuments</a></li>
                 <li><a href="myplanning.html">MyPlanning</a></li>
-                <li><a href="mytools.html">MyTools</a></li>
+                <li><a href="mytools 2.html">MyTools</a></li>
                 <li><a href="myprofile.html">MyProfile</a></li>
             </ul>
         </aside>
@@ -229,7 +230,7 @@ function setActiveSidebarLink() {
     const isToolPage = /^tool-/.test(current);
     document.querySelectorAll('.sidebar a').forEach(a => {
         const href = a.getAttribute('href');
-        a.classList.toggle('active', href === current || (isToolPage && href === 'mytools.html'));
+        a.classList.toggle('active', href === current || (isToolPage && (href === 'mytools.html' || href === 'mytools 2.html')));
     });
 }
 

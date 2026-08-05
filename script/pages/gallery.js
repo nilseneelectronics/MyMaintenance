@@ -51,17 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentIndex = 0;
     let galleryEditMode = false;
     let fullscreenFromGallery = false;
+    let fullscreenEditMode = false;
     let editingPhotoIndex = null;
 
     const mainImg = document.getElementById('main-home-photo');
     const modal = document.getElementById('photo-modal');
     const modalImg = document.getElementById('modal-photo');
-    const modalCaption = document.querySelector('.modal-photo-caption');
+    const modalCaption = document.getElementById('modal-photo-caption');
+    const photoTextInput = document.getElementById('modal-photo-text');
     const prevArrow = document.getElementById('prev-arrow');
     const nextArrow = document.getElementById('next-arrow');
     const closeModalButton = document.getElementById('close-modal');
     const modalPrev = document.getElementById('modal-prev');
     const modalNext = document.getElementById('modal-next');
+    const modalEditButton = document.getElementById('modal-edit');
+    const modalDeleteButton = document.getElementById('modal-delete');
+
+    const deletePopup = document.getElementById('delete-photo-popup');
+    const dpCancel = document.getElementById('dp-cancel');
+    const dpDelete = document.getElementById('dp-delete');
+
     const viewAllButton = document.getElementById('view-all-photos');
     const galleryModal = document.getElementById('gallery-modal');
     const galleryGrid = document.getElementById('gallery-grid');
@@ -82,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const apEditText = document.getElementById('ap-edit-text');
     const apEditCancel = document.getElementById('ap-edit-cancel');
     const apEditSave = document.getElementById('ap-edit-save');
+    const apEditDelete = document.getElementById('ap-edit-delete');
 
     let pendingPhotos = [];
 
@@ -91,9 +101,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateCaption() {
         if (!modalCaption) return;
-        const text = getPhoto(currentIndex).text;
-        modalCaption.textContent = text || '';
-        modalCaption.style.display = text ? 'block' : 'none';
+        modalCaption.textContent = getPhoto(currentIndex).text || '';
+    }
+
+    function enterFullscreenEdit() {
+        fullscreenEditMode = true;
+        if (photoTextInput) {
+            photoTextInput.value = getPhoto(currentIndex).text || '';
+            photoTextInput.style.display = '';
+        }
+        if (modalCaption) modalCaption.style.display = 'none';
+        if (modalEditButton) modalEditButton.textContent = 'Save';
+        if (modalDeleteButton) modalDeleteButton.style.display = 'inline-flex';
+    }
+
+    function exitFullscreenEdit() {
+        fullscreenEditMode = false;
+        if (photoTextInput) photoTextInput.style.display = 'none';
+        if (modalCaption) modalCaption.style.display = '';
+        if (modalEditButton) modalEditButton.textContent = 'Edit';
+        if (modalDeleteButton) modalDeleteButton.style.display = 'none';
+        updateCaption();
+    }
+
+    function saveFullscreenEdit() {
+        const text = photoTextInput ? photoTextInput.value.trim() : '';
+        persistPhoto(currentIndex, text);
+        exitFullscreenEdit();
+    }
+
+    function showModalPhoto(index) {
+        currentIndex = (index + photos.length) % photos.length;
+        if (modalImg) modalImg.src = photos[currentIndex].src;
+        updateCaption();
+        if (fullscreenEditMode && photoTextInput && photos.length) photoTextInput.value = photos[currentIndex].text || '';
     }
 
     function setPhoto(index) {
@@ -103,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openFullscreen(index, fromGallery) {
         fullscreenFromGallery = !!fromGallery;
+        fullscreenEditMode = false;
         currentIndex = (index + photos.length) % photos.length;
         if (modalImg) modalImg.src = photos[currentIndex].src;
         updateCaption();
@@ -110,6 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function closeFullscreen() {
+        if (fullscreenEditMode) {
+            exitFullscreenEdit();
+            if (modal) modal.classList.remove('active');
+            if (galleryModal) galleryModal.classList.remove('active');
+            fullscreenFromGallery = false;
+            return;
+        }
         if (modal) modal.classList.remove('active');
         fullscreenFromGallery = false;
     }
@@ -161,6 +210,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (galleryModal) galleryModal.classList.remove('active');
     }
 
+    function persistPhoto(i, text) {
+        if (i == null || !photos[i]) return;
+        const photo = photos[i];
+        const isDefault = defaultPhotos.some((p) => p.src === photo.src);
+        if (isDefault) {
+            overrides[photo.src] = Object.assign({}, overrides[photo.src], { text: text });
+            saveOverrides();
+        } else {
+            const si = storedPhotos.findIndex((p) => p.src === photo.src);
+            if (si >= 0) {
+                storedPhotos[si].text = text;
+                saveStoredPhotos();
+            }
+        }
+        photos = buildPhotos();
+        renderGallery();
+    }
+
     function deletePhoto(i) {
         const photo = photos[i];
         const isDefault = defaultPhotos.some((p) => p.src === photo.src);
@@ -176,6 +243,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         photos = buildPhotos();
         renderGallery();
+        if (modal && modal.classList.contains('active')) {
+            if (photos.length === 0) {
+                if (modal) modal.classList.remove('active');
+                if (galleryModal) galleryModal.classList.remove('active');
+                fullscreenFromGallery = false;
+                fullscreenEditMode = false;
+            } else {
+                currentIndex = Math.min(currentIndex, photos.length - 1);
+                showModalPhoto(currentIndex);
+            }
+        }
     }
 
     function openEditPhoto(i) {
@@ -191,22 +269,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveEditPhoto() {
         if (editingPhotoIndex == null) return;
-        const photo = photos[editingPhotoIndex];
         const text = apEditText ? apEditText.value.trim() : '';
-        const isDefault = defaultPhotos.some((p) => p.src === photo.src);
-        if (isDefault) {
-            overrides[photo.src] = { text: text };
-            saveOverrides();
-        } else {
-            const si = storedPhotos.findIndex((p) => p.src === photo.src);
-            if (si >= 0) {
-                storedPhotos[si].text = text;
-                saveStoredPhotos();
-            }
-        }
-        photos = buildPhotos();
+        persistPhoto(editingPhotoIndex, text);
         closeEditPhoto();
         renderGallery();
+        if (modal && modal.classList.contains('active')) updateCaption();
     }
 
     function renderPendingPhotos() {
@@ -282,15 +349,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeModalButton) closeModalButton.addEventListener('click', closeFullscreen);
 
     if (modalPrev) modalPrev.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + photos.length) % photos.length;
-        if (modalImg) modalImg.src = photos[currentIndex].src;
-        updateCaption();
+        showModalPhoto(currentIndex - 1);
     });
 
     if (modalNext) modalNext.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % photos.length;
-        if (modalImg) modalImg.src = photos[currentIndex].src;
-        updateCaption();
+        showModalPhoto(currentIndex + 1);
+    });
+
+    if (modalEditButton) modalEditButton.addEventListener('click', () => {
+        if (fullscreenEditMode) {
+            saveFullscreenEdit();
+        } else {
+            enterFullscreenEdit();
+        }
+    });
+
+    if (modalDeleteButton) modalDeleteButton.addEventListener('click', () => {
+        if (deletePopup) deletePopup.style.display = 'flex';
+    });
+
+    if (dpCancel) dpCancel.addEventListener('click', () => {
+        if (deletePopup) deletePopup.style.display = 'none';
+    });
+
+    if (dpDelete) dpDelete.addEventListener('click', () => {
+        if (deletePopup) deletePopup.style.display = 'none';
+        const idx = currentIndex;
+        exitFullscreenEdit();
+        deletePhoto(idx);
+    });
+
+    if (modalImg) modalImg.addEventListener('click', (e) => {
+        const rect = modalImg.getBoundingClientRect();
+        if (e.clientX < rect.left + rect.width / 2) {
+            showModalPhoto(currentIndex - 1);
+        } else {
+            showModalPhoto(currentIndex + 1);
+        }
     });
 
     if (viewAllButton) viewAllButton.addEventListener('click', openGallery);
@@ -303,9 +398,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (galleryModal) galleryModal.addEventListener('click', (e) => { if (e.target === galleryModal) closeGallery(); });
     if (addPopup) addPopup.addEventListener('click', (e) => { if (e.target === addPopup) closeAddPhotos(); });
     if (editPopup) editPopup.addEventListener('click', (e) => { if (e.target === editPopup) closeEditPhoto(); });
+    if (deletePopup) deletePopup.addEventListener('click', (e) => { if (e.target === deletePopup) { deletePopup.style.display = 'none'; } });
 
     if (apEditCancel) apEditCancel.addEventListener('click', closeEditPhoto);
     if (apEditSave) apEditSave.addEventListener('click', saveEditPhoto);
+    if (apEditDelete) apEditDelete.addEventListener('click', () => {
+        if (editingPhotoIndex == null) return;
+        const idx = editingPhotoIndex;
+        closeEditPhoto();
+        deletePhoto(idx);
+    });
 
     if (apPictureBtn) {
         apPictureBtn.addEventListener('click', (e) => {
@@ -361,18 +463,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('keydown', (event) => {
-        if (modal && modal.classList.contains('active')) {
-            if (event.key === 'Escape') closeFullscreen();
-            if (event.key === 'ArrowLeft') {
-                currentIndex = (currentIndex - 1 + photos.length) % photos.length;
-                if (modalImg) modalImg.src = photos[currentIndex].src;
-                updateCaption();
+        if (deletePopup && deletePopup.style.display === 'flex') {
+            if (event.key === 'Escape') deletePopup.style.display = 'none';
+        } else if (modal && modal.classList.contains('active')) {
+            if (event.key === 'Escape') {
+                if (fullscreenEditMode) exitFullscreenEdit();
+                else closeFullscreen();
             }
-            if (event.key === 'ArrowRight') {
-                currentIndex = (currentIndex + 1) % photos.length;
-                if (modalImg) modalImg.src = photos[currentIndex].src;
-                updateCaption();
-            }
+            if (event.key === 'Enter' && fullscreenEditMode) saveFullscreenEdit();
+            if (event.key === 'ArrowLeft') showModalPhoto(currentIndex - 1);
+            if (event.key === 'ArrowRight') showModalPhoto(currentIndex + 1);
         } else if (galleryModal && galleryModal.classList.contains('active')) {
             if (event.key === 'Escape') closeGallery();
         } else if (editPopup && editPopup.style.display === 'flex') {

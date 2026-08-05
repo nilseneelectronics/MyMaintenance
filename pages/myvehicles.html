@@ -179,22 +179,30 @@
                     Back
                 </button>
 
-                <img id="modal-photo" src="" alt="Full screen photo">
-                
-                <div class="modal-arrows">
-                    <button class="modal-arrow" id="modal-prev">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <button class="modal-arrow" id="modal-next">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
+                <div class="modal-top-actions">
+                    <button class="modal-back-btn delete" id="modal-delete" style="display:none" aria-label="Delete photo">Delete</button>
+                    <button class="modal-back-btn" id="modal-edit" aria-label="Edit photo">Edit</button>
                 </div>
 
-                <p class="modal-photo-caption">Car photo gallery</p>
+                <div class="photo-modal-view">
+                    <img id="modal-photo" src="" alt="Full screen photo">
+
+                    <div class="modal-arrows">
+                        <button class="modal-arrow" id="modal-prev">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="modal-arrow" id="modal-next">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="modal-photo-caption" id="modal-photo-caption">Car photo gallery</p>
+                <input type="text" class="modal-photo-text" id="modal-photo-text" placeholder="Photo text..." style="display:none" aria-label="Photo text">
             </div>
         </div>
 
@@ -255,8 +263,22 @@
                     <input type="text" id="ap-edit-text" placeholder="Photo text...">
                 </div>
                 <div class="popup-buttons">
+                    <button id="ap-edit-delete" class="popup-btn delete">Delete</button>
                     <button id="ap-edit-cancel" class="popup-btn cancel">Cancel</button>
                     <button id="ap-edit-save" class="popup-btn confirm">Save</button>
+                </div>
+            </div>
+        </div>
+        <!-- Delete photo confirmation -->
+        <div id="delete-photo-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Delete photo?</h3>
+                <div class="done-fields">
+                    <label>This picture will be removed permanently.</label>
+                </div>
+                <div class="popup-buttons">
+                    <button id="dp-cancel" class="popup-btn cancel">Cancel</button>
+                    <button id="dp-delete" class="popup-btn delete">Delete</button>
                 </div>
             </div>
         </div>

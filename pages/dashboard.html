@@ -36,43 +36,11 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3>Latest Documents</h3>
                 </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
+<div id="doc-recent"></div>
 
                 <div class="button-group">
-                    <button class="add-button">Add Documents</button>
-                    <button class="view-button">View all documents</button>
+                    <button class="add-button" id="doc-add-btn">Add Documents</button>
+                    <button class="view-button" onclick="window.location.href='mydocuments.html'">View all documents</button>
                 </div>
             </div>
             <div class="dash-box planning-box no-scale">
@@ -321,6 +289,74 @@
         renderUpcoming();
     });
     </script>
+    <div id="doc-add-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Add document</h3>
+            <div class="done-fields">
+                <label>File</label>
+                <div class="doc-file-picker">
+                    <button type="button" class="photo-picker-btn" id="doc-pick-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
+                        Add document
+                    </button>
+                    <span class="doc-file-name" id="doc-file-name">No file selected</span>
+                </div>
+                <input type="file" id="doc-file" style="display:none">
+
+                <label>Name</label>
+                <input type="text" id="doc-name" placeholder="Document name...">
+
+                <label>Connected Asset</label>
+                <div class="asset-dropdown" id="doc-asset-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-asset-toggle">
+                        <span class="asset-value">-- Select an asset --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-asset-menu">
+                        <li class="asset-optgroup">Addresses</li>
+                        <li><button type="button" data-value="Address 1, Street 123, 5000 City">Address 1, Street 123, 5000 City</button></li>
+                        <li><button type="button" data-value="Address 2 - Cabin, Mountain Road 45, 6000 City">Address 2 - Cabin, Mountain Road 45, 6000 City</button></li>
+                        <li class="asset-optgroup">Vehicles</li>
+                        <li><button type="button" data-value="Car 1 - Tesla Model Y">Car 1 - Tesla Model Y</button></li>
+                        <li><button type="button" data-value="Car 2 - Volvo XC90">Car 2 - Volvo XC90</button></li>
+                        <li><button type="button" data-value="Boat - Bayliner 255">Boat - Bayliner 255</button></li>
+                        <li class="asset-optgroup"></li>
+                        <li><button type="button" data-value="__other__">Other</button></li>
+                    </ul>
+                </div>
+                <input type="text" id="doc-asset-other" placeholder="Specify asset..." style="display:none">
+
+                <label>Date performed</label>
+                <div class="doc-datepicker">
+                    <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd/mm/yyyy" autocomplete="off">
+                    <div class="doc-calendar" id="doc-cal-performed"></div>
+                </div>
+
+                <label>Date uploaded</label>
+                <input type="text" class="doc-date-field" id="doc-uploaded" readonly>
+
+                <label>Size</label>
+                <input type="text" id="doc-size" readonly>
+            </div>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-save">Save</button>
+            </div>
+        </div>
+    </div>
+    <div id="doc-old-date-popup" class="popup-overlay">
+        <div class="popup-content">
+            <p class="doc-confirm-msg">The date is old (before 1900). Is the correct date selected?</p>
+            <p class="doc-confirm-date" id="doc-old-date-text"></p>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-old-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-old-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+    <script src="../script/pages/mydocuments.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>

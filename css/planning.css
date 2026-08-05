@@ -368,6 +368,10 @@
     border-radius: 20px;
 }
 
+.photo-modal-view {
+    position: relative;
+}
+
 .modal-arrows {
     position: absolute;
     top: 50%;
@@ -376,6 +380,8 @@
     transform: translateY(-50%);
     display: flex;
     justify-content: space-between;
+    pointer-events: none;
+    z-index: 5;
 }
 
 .modal-arrow {
@@ -390,6 +396,7 @@
     justify-content: center;
     cursor: pointer;
     transition: transform 0.25s ease;
+    pointer-events: auto;
 }
 
 .modal-arrow:hover {
@@ -425,6 +432,9 @@
 }
 
 .modal-photo-caption {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     font-size: 1.1em;
     color: #ddd;
@@ -432,6 +442,8 @@
     max-width: 1000px;
     margin-left: auto;
     margin-right: auto;
+    height: 64px;
+    overflow: visible;
 }
 
 /* --- Photo picker (mark as done) --- */
@@ -552,8 +564,8 @@
 .done-fields input[type="file"] {
     width: 100%;
     padding: 10px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
     font-family: 'Poppins', sans-serif;
     font-size: 0.9rem;
     background: var(--bg-primary);
@@ -578,6 +590,392 @@
     background: var(--bg-secondary);
     border-color: var(--border-color);
     cursor: default;
+}
+
+.asset-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.asset-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: border-radius 0.2s ease;
+}
+
+.asset-toggle:focus {
+    outline: none;
+}
+
+.asset-toggle,
+.asset-toggle span,
+.asset-toggle *,
+.asset-menu li button {
+    text-decoration: none;
+}
+
+.asset-toggle:hover,
+.asset-toggle:active,
+.asset-toggle:focus,
+.asset-menu li button:hover,
+.asset-menu li button:active {
+    text-decoration: none;
+}
+
+.asset-toggle svg {
+    margin-left: 10px;
+    transition: transform 0.3s ease;
+}
+
+.asset-dropdown.open .asset-toggle {
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.asset-dropdown.open .asset-toggle svg {
+    transform: rotate(180deg);
+}
+
+.asset-menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-primary);
+    border: none;
+    border-radius: 0 0 25px 25px;
+    max-height: 0;
+    overflow: hidden;
+    z-index: 100;
+    transition: max-height 0.3s ease;
+    box-sizing: border-box;
+}
+
+.asset-dropdown.open .asset-menu {
+    border: 2px solid var(--accent-primary);
+    border-top: none;
+    max-height: 480px;
+}
+
+.asset-menu li button {
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.asset-menu li button:hover {
+    background-color: var(--hover-bg);
+}
+
+.asset-menu li button.selected {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.asset-optgroup {
+    padding: 6px 14px;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-primary);
+    background: var(--bg-secondary);
+    pointer-events: none;
+}
+
+/* Document popup: date field + custom calendar match the theme */
+.doc-datepicker {
+    position: relative;
+    width: 100%;
+}
+
+.doc-date-field {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    text-align: center;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.doc-date-field[readonly] {
+    cursor: default;
+}
+
+.doc-date-field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.doc-date-field.invalid,
+.done-fields input[type="text"].doc-date-field.invalid {
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.doc-date-field.invalid::placeholder,
+.done-fields input[type="text"].doc-date-field.invalid::placeholder {
+    color: #e74c3c;
+}
+
+.doc-calendar {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 100%;
+    min-width: 250px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 16px;
+    padding: 10px;
+    box-sizing: border-box;
+    z-index: 300;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+}
+
+.doc-calendar.open {
+    display: block;
+}
+
+.doc-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 0 4px;
+}
+
+.doc-cal-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--accent-primary);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.doc-cal-nav:hover {
+    background: var(--accent-primary);
+    color: #FFFFFF;
+}
+
+.doc-cal-nav svg {
+    width: 18px;
+    height: 18px;
+}
+
+.doc-cal-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.doc-cal-year-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 2px solid transparent;
+    border-radius: 25px;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.doc-cal-year-toggle:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.doc-cal-year-toggle svg {
+    width: 14px;
+    height: 14px;
+}
+
+.doc-cal-year-panel {
+    max-height: 260px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 10px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-primary) transparent;
+}
+
+.doc-cal-year-btn {
+    padding: 8px 0;
+    border: 2px solid transparent;
+    border-radius: 25px;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.doc-cal-year-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.doc-cal-year-btn.current {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.doc-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+    justify-items: center;
+}
+
+.doc-cal-dow {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 4px 0;
+}
+
+.doc-cal-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.75rem;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.doc-cal-day:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.doc-cal-day.today {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #FFFFFF;
+}
+
+.doc-cal-day.selected {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.doc-cal-day.blank {
+    visibility: hidden;
+}
+
+.doc-cal-day.future {
+    opacity: 0.35;
+}
+
+.doc-file-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.doc-file-name {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-file-picker .photo-picker-btn.error {
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.doc-file-picker .doc-file-name.error {
+    color: #e74c3c;
+}
+
+@keyframes doc-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+}
+
+.doc-file-picker .photo-picker-btn.shake {
+    animation: doc-shake 0.4s ease;
+}
+
+.doc-confirm-msg {
+    margin: 0 0 6px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+.doc-confirm-date {
+    margin: 0 0 18px;
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-align: center;
 }
 
 .add-todo {
@@ -803,8 +1201,8 @@
 .event-modal-field textarea {
     width: 100%;
     padding: 10px 14px;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
     font-family: 'Poppins', sans-serif;
     font-size: 0.9rem;
     background: var(--bg-secondary);

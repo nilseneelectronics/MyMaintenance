@@ -14,6 +14,7 @@ window.MyMaintenanceAuth = {
                 'mydocuments.html',
                 'myplanning.html',
                 'mytools.html',
+                'mytools 2.html',
                 'myprofile.html'
             ],
             publicOnlyPages: ['login.html']

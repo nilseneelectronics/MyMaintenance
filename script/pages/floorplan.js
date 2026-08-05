@@ -541,11 +541,11 @@ function confirmCancel() {
 }
 
 function goBack() {
-  if (!isDirty) { location.href = 'mytools.html'; return; }
+  if (!isDirty) { location.href = 'mytools 2.html'; return; }
   showConfirmModal(
     'You have unsaved changes. Would you like to save before leaving?',
-    { label: 'Save', cb: () => { doSave(planFileName || 'floorplan'); isDirty = false; location.href = 'mytools.html'; } },
-    { label: "Don't Save", cb: () => { isDirty = false; location.href = 'mytools.html'; } },
+    { label: 'Save', cb: () => { doSave(planFileName || 'floorplan'); isDirty = false; location.href = 'mytools 2.html'; } },
+    { label: "Don't Save", cb: () => { isDirty = false; location.href = 'mytools 2.html'; } },
     { label: 'Cancel', cb: null }
   );
 }

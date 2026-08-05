@@ -11,6 +11,7 @@ window.MyMaintenanceConfig = {
         'myplanning-events.html',
         'myplanning-done.html',
         'mytools.html',
+        'mytools 2.html',
         'myprofile.html'
     ],
     publicOnlyPages: ['login.html'],
@@ -31,6 +32,7 @@ window.MyMaintenanceConfig = {
         'myplanning-events.html',
         'myplanning-done.html',
         'mytools.html',
+        'mytools 2.html',
         'myprofile.html',
         'tool-floorplan.html',
         'coming-soon.html'
