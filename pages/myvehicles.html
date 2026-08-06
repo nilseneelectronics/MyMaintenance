@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyVehicles - MyMaintenance</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
         <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
@@ -76,12 +77,16 @@
                 <a href="planned-maintenance.html" class="box-overlay-link"></a>
                 
                 <h3>Planned maintenance</h3>
-                <a href="planned-oil-change.html" class="box-item-link">Oil change – 15 March 2026</a>
-                <a href="planned-tire-rotation.html" class="box-item-link">Tire rotation – 2 April 2026</a>
+                <div class="asset-planned-list" id="asset-planned-list"></div>
                 
-                <button class="view-button" onclick="event.stopImmediatePropagation(); window.location.href='coming-soon.html?target=request-quote.html'">
-                    Request a quote
-                </button>
+                <div class="box-actions">
+                    <button class="view-button" id="asset-add-maintenance">
+                        Add maintenance
+                    </button>
+                    <button class="view-button" onclick="event.stopImmediatePropagation(); window.location.href='coming-soon.html?target=request-quote.html'">
+                        Request a quote
+                    </button>
+                </div>
             </div>
 
             <!-- Registered documentation (vehicle version) -->
@@ -89,11 +94,25 @@
                 <a href="registered-documents.html" class="box-overlay-link"></a>
                 
                 <h3>Registered documentation</h3>
-                <a href="document-registration-2024.html" class="box-item-link">Registration certificate 2024</a>
-                <a href="document-insurance.html" class="box-item-link">Insurance documents</a>
+                <div class="asset-docs-list" id="asset-docs-list"></div>
+                
+                <div class="box-actions">
+                    <button class="view-button" id="asset-show-all-docs">Show all</button>
+                    <button class="view-button" id="asset-add-document">Add document</button>
+                </div>
             </div>
 
-            <!-- Vehicle Diagrams (side-view of car – non-square container) -->
+            <!-- Vehicle information -->
+            <div class="asset-info-box" id="asset-info-box">
+                <div class="asset-info-header">
+                    <h3 id="asset-info-title">Vehicle Information</h3>
+                    <button class="view-button" id="asset-edit-home">Edit</button>
+                </div>
+                <div class="asset-info-grid" id="asset-info-grid"></div>
+                <div class="asset-info-actions" id="asset-info-actions"></div>
+            </div>
+
+            <!-- Vehicle Diagrams (side-view of car â€“ non-square container) -->
             <div class="floorplan-box" id="floorplan-box">
                 <h3>Vehicle Diagrams</h3>
                 
@@ -282,8 +301,190 @@
                 </div>
             </div>
         </div>
+
+        <!-- Register vehicle popup -->
+        <div id="register-vehicle-popup" class="popup-overlay">
+            <div class="popup-content home-reg-content">
+                <h3 id="rv-title">Register a vehicle</h3>
+                <p class="reg-hint">Fields marked with * are required. The rest can be registered later.</p>
+                <div class="done-fields">
+                    <label>Name *</label>
+                    <input type="text" id="rv-name" placeholder="e.g. My Car">
+
+                    <label>Type</label>
+                    <div class="asset-dropdown" id="rv-type-dropdown">
+                        <button type="button" class="asset-toggle" id="rv-type-toggle">
+                            <span class="asset-value" id="rv-type-value">-- Select --</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="rv-type-menu">
+                            <li><button type="button" data-value="Car">Car</button></li>
+                            <li><button type="button" data-value="Boat">Boat</button></li>
+                            <li><button type="button" data-value="Other">Other</button></li>
+                        </ul>
+                    </div>
+                    <input type="text" id="rv-type-other" placeholder="Specify type..." style="display:none">
+
+                    <label id="rv-registration-label">Registration *</label>
+                    <input type="text" id="rv-registration" placeholder="e.g. AB12345">
+
+                    <label id="rv-vin-label" style="display:none">VIN</label>
+                    <input type="text" id="rv-vin" placeholder="e.g. W0L0..." style="display:none">
+
+                    <label>Make</label>
+                    <input type="text" id="rv-make" placeholder="e.g. Tesla">
+
+                    <label>Model</label>
+                    <input type="text" id="rv-model" placeholder="e.g. Model Y">
+
+                    <label>Year</label>
+                    <input type="number" id="rv-year" placeholder="e.g. 2021">
+
+                    <label id="rv-meter-label">Odometer (km)</label>
+                    <input type="number" id="rv-meter" placeholder="e.g. 15000">
+
+                    <label>Fuel Type</label>
+                    <input type="text" id="rv-fuel" placeholder="e.g. Electric">
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn cancel" id="rv-cancel">Cancel</button>
+                    <button class="popup-btn confirm" id="rv-confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
     </main>
-    
+
+    <div class="event-modal-overlay" id="event-modal">
+        <div class="event-modal-card">
+            <h3 id="ev-modal-title">Add event</h3>
+            <div class="event-modal-field">
+                <label>Name</label>
+                <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-field">
+                <label class="event-modal-check">
+                    <input type="checkbox" id="ev-planned">
+                    <span>Planned Maintenance Event?</span>
+                </label>
+            </div>
+            <div class="event-modal-field" id="ev-asset-wrap" style="display:none;">
+                <label>Connected asset</label>
+                <div class="asset-dropdown" id="ev-asset-dropdown">
+                    <button type="button" class="asset-toggle" id="ev-asset-toggle">
+                        <span class="asset-value">-- Select an asset --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="ev-asset-menu"></ul>
+                </div>
+                <input type="text" id="ev-asset-other" placeholder="Specify asset..." style="display:none">
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Start date</label>
+                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label>Finish date</label>
+                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label>Start time</label>
+                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label>Finish time</label>
+                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-field">
+                <label>Location</label>
+                <input type="text" id="ev-location" placeholder="Location">
+            </div>
+            <div class="event-modal-field">
+                <label>Description</label>
+                <textarea id="ev-desc" rows="2" placeholder="Full description..."></textarea>
+            </div>
+            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="doc-add-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Add document</h3>
+            <div class="done-fields">
+                <label>File</label>
+                <div class="doc-file-picker">
+                    <button type="button" class="photo-picker-btn" id="doc-pick-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
+                        Add document
+                    </button>
+                    <span class="doc-file-name" id="doc-file-name">No file selected</span>
+                </div>
+                <input type="file" id="doc-file" style="display:none">
+
+                <label>Name</label>
+                <input type="text" id="doc-name" placeholder="Document name...">
+
+                <label>Connected Asset</label>
+                <div class="asset-dropdown" id="doc-asset-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-asset-toggle">
+                        <span class="asset-value">-- Select an asset --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-asset-menu">
+                        <li class="asset-optgroup">Addresses</li>
+                        <li><button type="button" data-value="Address 1, Street 123, 5000 City">Address 1, Street 123, 5000 City</button></li>
+                        <li><button type="button" data-value="Address 2 - Cabin, Mountain Road 45, 6000 City">Address 2 - Cabin, Mountain Road 45, 6000 City</button></li>
+                        <li class="asset-optgroup">Vehicles</li>
+                        <li><button type="button" data-value="Car 1 - Tesla Model Y">Car 1 - Tesla Model Y</button></li>
+                        <li><button type="button" data-value="Car 2 - Volvo XC90">Car 2 - Volvo XC90</button></li>
+                        <li><button type="button" data-value="Boat - Bayliner 255">Boat - Bayliner 255</button></li>
+                        <li class="asset-optgroup"></li>
+                        <li><button type="button" data-value="__other__">Other</button></li>
+                    </ul>
+                </div>
+                <input type="text" id="doc-asset-other" placeholder="Specify asset..." style="display:none">
+
+                <label>Date performed</label>
+                <div class="doc-datepicker">
+                    <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd/mm/yyyy" autocomplete="off">
+                    <div class="doc-calendar" id="doc-cal-performed"></div>
+                </div>
+
+                <label>Date uploaded</label>
+                <input type="text" class="doc-date-field" id="doc-uploaded" readonly>
+
+                <label>Size</label>
+                <input type="text" id="doc-size" readonly>
+            </div>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-save">Save</button>
+            </div>
+        </div>
+    </div>
+    <div id="doc-old-date-popup" class="popup-overlay">
+        <div class="popup-content">
+            <p class="doc-confirm-msg">The date is old (before 1900). Is the correct date selected?</p>
+            <p class="doc-confirm-date" id="doc-old-date-text"></p>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-old-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-old-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+    <button id="doc-add-btn" style="display:none;"></button>
     
     
     
@@ -297,7 +498,13 @@
         ];
         window.GALLERY_STORAGE_KEY = 'floorplan_vehicle_photos';
     </script>
+    <script src="../script/modules/events.js"></script>
+    <script src="../script/modules/assets.js"></script>
+    <script src="../script/modules/event-modal.js"></script>
+    <script src="../script/modules/vehicle-register.js"></script>
     <script src="../script/pages/gallery.js"></script>
+    <script src="../script/pages/mydocuments.js"></script>
+    <script src="../script/pages/asset-boxes.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
