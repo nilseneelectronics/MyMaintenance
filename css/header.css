@@ -85,6 +85,8 @@ body:not(.logged-in).shrunk #sidebar-toggle {
     transition: transform 0.3s ease;
     width: 28px;
     height: 28px;
+    transform-origin: center;
+    transform-box: fill-box;
 }
 
 body:not(.logged-in).shrunk #sidebar-toggle svg {

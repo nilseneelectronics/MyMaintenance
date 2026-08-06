@@ -2,8 +2,10 @@
 
 .hero {
   position: relative;
-  height: 70vh;
-  min-height: 480px;
+  width: calc(100vw / var(--ui-zoom));
+  margin-left: calc((100% - 100vw / var(--ui-zoom)) / 2);
+  margin-right: calc((100% - 100vw / var(--ui-zoom)) / 2);
+  height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17,7 +19,7 @@
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(5, 20, 28, 0.7), rgba(5, 20, 28, 0.3));
+  background: rgba(0, 0, 0, 0.5);
   z-index: 1;
 }
 
@@ -31,7 +33,7 @@
 }
 
 .hero-content h1 {
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: clamp(3rem, 6vw, 4.5rem);
   font-weight: 700;
   margin: 0 0 10px;
   line-height: 1.1;
@@ -39,12 +41,12 @@
 }
 
 .hero-sub {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   opacity: 0.9;
   margin: 0 0 32px;
 }
 
 .hero-content .btn {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   padding: 12px 36px;
 }

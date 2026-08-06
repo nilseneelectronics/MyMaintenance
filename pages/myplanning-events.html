@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Events - MyMaintenance</title>
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/planning.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <div class="planning-content" style="margin-bottom:30px;">
+            <div style="position:relative;">
+                <button onclick="history.back()" style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;padding:10px 28px;border:2px solid var(--border-color);border-radius:25px;background:var(--bg-primary);cursor:pointer;color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:1rem;font-weight:600;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+                <h1 style="margin:0;text-align:center;">All Events</h1>
+            </div>
+        </div>
+
+        <div class="planning-content">
+            <div class="upcoming-box">
+                <h3>Upcoming events</h3>
+                <div id="all-events-list"></div>
+                <div class="button-group">
+                    <button class="add-button" id="all-add-event">Add event</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="event-modal-overlay" id="event-modal">
+        <div class="event-modal-card">
+            <h3>Add event</h3>
+            <div class="event-modal-field">
+                <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>Name</label>
+                <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Start date</label>
+                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Finish date</label>
+                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-row">
+                <div class="event-modal-field">
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Start time</label>
+                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
+                </div>
+                <div class="event-modal-field">
+                    <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Finish time</label>
+                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
+                </div>
+            </div>
+            <div class="event-modal-field">
+                <label><svg class="field-icon" viewBox="0 -960 960 960"><path d="m554-577-57-57-145 144q-6 6-9 13.5t-3 15.5v21q0 8 6 14t14 6h21q8 0 15.5-3t13.5-9l144-145Zm29-29 28-28q5-5 5-10.5t-5-10.5l-36-36q-5-5-10.5-5t-10.5 5l-28 28 57 57ZM480-186q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm-28 74q-14-5-25-15-65-60-115-117t-83.5-110.5q-33.5-53.5-51-103T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 45-17.5 94.5t-51 103Q698-301 648-244T533-127q-11 10-25 15t-28 5q-14 0-28-5Zm28-448Z"/></svg>Location</label>
+                <input type="text" id="ev-location" placeholder="Location">
+            </div>
+            <div class="event-modal-field">
+                <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>Description</label>
+                <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
+            </div>
+            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const STORAGE_KEY = 'floorplan_calendar_events';
+        function loadEvents() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (_) {}
+            return { "2026-08-17": [{ name:"Going home", startDate:"2026-08-17", finishDate:"2026-08-17", startTime:"14:00", finishTime:"16:00", location:"Cabin", description:"Pack up and head back to the city" }] };
+        }
+        function saveEvents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
+        }
+        let EVENTS = loadEvents();
+
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+        function pad(n) { return String(n).padStart(2,'0'); }
+
+        const box = document.getElementById('all-events-list');
+
+        function renderList() {
+            const all = [];
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            for (const key of Object.keys(EVENTS)) {
+                if (key < todayKey) continue;
+                for (const ev of EVENTS[key]) all.push({ key, ev });
+            }
+            all.sort((a, b) => (a.key + (a.ev.startTime||'')) < (b.key + (b.ev.startTime||'')) ? -1 : 1);
+
+            if (all.length === 0) {
+                box.innerHTML = '<p class="dash-upcoming-empty">No upcoming events</p>';
+                return;
+            }
+
+            box.innerHTML = all.map(({ key, ev }) => {
+                const [y, m, d] = key.split('-');
+                const dt = new Date(y, m-1, d);
+                const label = `${DAYS[(dt.getDay()+6)%7]} ${d} ${MONTHS[m-1].slice(0,3)}`;
+                const time = ev.startTime ? `<span class="dash-upcoming-time">${ev.startTime}</span>` : '';
+                const locName = ev.location || 'No location specified';
+                const loc = `<span class="dash-upcoming-loc"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa"><path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm-24 78q-12-4-22-12-118-94-176-183.5T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 86-58 175.5T526-235q-10 8-22 12t-24 4q-12 0-24-4Zm24-297q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM240-80q-17 0-28.5-11.5T200-120q0-17 11.5-28.5T240-160h480q17 0 28.5 11.5T760-120q0 17-11.5 28.5T720-80H240Zm240-520Z"/></svg>${locName}</span>`;
+                return `<div class="dash-upcoming-item" data-key="${key}"><strong class="dash-upcoming-name">${ev.name}</strong>${loc}<span class="dash-upcoming-meta">${time}<span class="dash-upcoming-date">${label}</span></span></div>`;
+            }).join('');
+        }
+
+        box.addEventListener('click', (e) => {
+            const item = e.target.closest('.dash-upcoming-item[data-key]');
+            if (item) window.location.href = 'myplanning-calendar.html?date=' + item.dataset.key;
+        });
+
+        // === MODAL ===
+        const modal = document.getElementById('event-modal');
+        const evName = document.getElementById('ev-name');
+        const evStartDate = document.getElementById('ev-start-date');
+        const evFinishDate = document.getElementById('ev-finish-date');
+        const evStartTime = document.getElementById('ev-start-time');
+        const evFinishTime = document.getElementById('ev-finish-time');
+        const evLocation = document.getElementById('ev-location');
+        const evDesc = document.getElementById('ev-desc');
+        const evCancel = document.getElementById('ev-cancel');
+        const evAdd = document.getElementById('ev-add');
+
+        function openModal(key) {
+            if (!modal) return;
+            modal.classList.add('open');
+            evName.value = '';
+            evStartDate.value = key;
+            evFinishDate.value = key;
+            const now = new Date();
+            const mins = now.getMinutes();
+            const rounded = new Date(now);
+            rounded.setMinutes(Math.ceil(mins / 15) * 15, 0, 0);
+            const h = String(rounded.getHours()).padStart(2,'0');
+            const m = String(rounded.getMinutes()).padStart(2,'0');
+            const later = new Date(rounded.getTime() + 60*60*1000);
+            const h2 = String(later.getHours()).padStart(2,'0');
+            const m2 = String(later.getMinutes()).padStart(2,'0');
+            evStartTime.value = `${h}:${m}`;
+            evFinishTime.value = `${h2}:${m2}`;
+            evLocation.value = '';
+            evDesc.value = '';
+            evName.focus();
+        }
+        function closeModal() {
+            if (modal) modal.classList.remove('open');
+        }
+
+        if (evCancel) evCancel.addEventListener('click', closeModal);
+        if (evAdd) evAdd.addEventListener('click', () => {
+            const name = evName.value.trim();
+            const startDate = evStartDate.value;
+            const finishDate = evFinishDate.value;
+            const startTime = evStartTime.value;
+            const finishTime = evFinishTime.value;
+            const location = evLocation.value.trim();
+            const description = evDesc.value.trim();
+            if (!name || !startDate) return;
+            if (!EVENTS[startDate]) EVENTS[startDate] = [];
+            EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
+            saveEvents();
+            closeModal();
+            renderList();
+        });
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+        const allAddBtn = document.getElementById('all-add-event');
+        if (allAddBtn) {
+            allAddBtn.addEventListener('click', () => {
+                const now = new Date();
+                const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+                openModal(key);
+            });
+        }
+
+        renderList();
+    });
+    </script>
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+</body>
+</html>

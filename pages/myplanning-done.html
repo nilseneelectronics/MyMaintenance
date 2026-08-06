@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Done Tasks - MyMaintenance</title>
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/planning.css">
+    <link rel="stylesheet" href="../css/documents.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <div class="planning-content" style="margin-bottom:30px;">
+            <div style="position:relative;">
+                <button onclick="history.back()" style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;padding:10px 28px;border:2px solid var(--border-color);border-radius:25px;background:var(--bg-primary);cursor:pointer;color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:1rem;font-weight:600;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+                <h1 style="margin:0;text-align:center;">Done Tasks</h1>
+            </div>
+        </div>
+
+        <div class="planning-content">
+            <div class="upcoming-box">
+                <div class="done-sort-bar">
+                    <div class="custom-dropdown done-sort-dropdown" data-key="sort-by">
+                        <button type="button" class="dropdown-toggle">
+                            <span>Date</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><button data-value="date">Date</button></li>
+                            <li><button data-value="equipment">Equipment</button></li>
+                        </ul>
+                    </div>
+                    <div class="custom-dropdown done-sort-dropdown" data-key="sort-order">
+                        <button type="button" class="dropdown-toggle">
+                            <span>Newest first</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><button data-value="desc">Newest first</button></li>
+                            <li><button data-value="asc">Oldest first</button></li>
+                        </ul>
+                    </div>
+                </div>
+                <div id="done-tasks-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TASK DETAIL MODAL -->
+    <div id="done-task-modal" class="popup-overlay">
+        <div class="popup-content">
+            <h3 id="dtm-title">Task</h3>
+            <p id="dtm-text" class="popup-task"></p>
+            <p class="dtm-date" id="dtm-date"></p>
+
+            <div class="done-fields">
+                <label>Equipment</label>
+                <input type="text" id="dtm-equipment" placeholder="e.g. HVAC, Car, Roof...">
+
+                <label>Comments</label>
+                <textarea id="dtm-comments" rows="2" placeholder="Any comments..."></textarea>
+
+                <label>Time used</label>
+                <input type="text" id="dtm-time" placeholder="e.g. 2 hours">
+
+                <label>Cost</label>
+                <input type="text" id="dtm-cost" placeholder="e.g. 500 kr">
+
+                <label>Pictures</label>
+                <div class="done-pictures">
+                    <p class="done-no-photos" id="dtm-no-photos">No pictures added</p>
+                    <div class="done-photo-grid" id="dtm-photo-grid"></div>
+                    <div id="dtm-edit-photo" style="display:none;">
+                        <button type="button" class="photo-picker-btn" id="dtm-picture-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg>
+                            Add pictures
+                        </button>
+                        <div class="photo-picker-options" id="dtm-photo-options">
+                            <button type="button" data-source="camera">Take picture</button>
+                            <button type="button" data-source="library">Select from library</button>
+                            <button type="button" data-source="documents">Select from documents</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="popup-buttons" id="dtm-view-buttons">
+                <button id="dtm-close" class="popup-btn cancel">Close</button>
+                <button id="dtm-edit" class="popup-btn confirm">Edit</button>
+            </div>
+            <div class="popup-buttons" id="dtm-edit-buttons" style="display:none;">
+                <button id="dtm-cancel" class="popup-btn cancel">Cancel</button>
+                <button id="dtm-save" class="popup-btn confirm">Save</button>
+            </div>
+            <button id="dtm-delete" class="popup-btn delete dtm-delete-btn">Delete task</button>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRM POPUP -->
+    <div id="dtm-delete-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Delete task</h3>
+            <p id="dtm-delete-text" class="popup-task"></p>
+            <div class="popup-buttons">
+                <button id="dtm-delete-cancel" class="popup-btn cancel">Cancel</button>
+                <button id="dtm-delete-confirm" class="popup-btn delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL-SCREEN PHOTO MODAL -->
+    <div class="photo-modal" id="done-photo-modal">
+        <div class="photo-modal-content">
+            <img id="done-modal-photo" src="" alt="Full screen photo">
+
+            <div class="modal-arrows">
+                <button class="modal-arrow" id="done-modal-prev">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="modal-arrow" id="done-modal-next">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-controls">
+                <button class="modal-btn" id="done-modal-close">×</button>
+            </div>
+
+            <p class="modal-photo-caption" id="done-modal-caption"></p>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const STORAGE_KEY = 'floorplan_done_tasks';
+        function loadDoneTasks() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) return JSON.parse(saved);
+            } catch (_) {}
+            return [];
+        }
+        function saveDoneTasks() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(doneTasks));
+        }
+        let doneTasks = loadDoneTasks();
+
+        const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+        function pad(n) { return String(n).padStart(2,'0'); }
+
+        function formatDate(key) {
+            const [y, m, d] = key.split('-');
+            const dt = new Date(y, m-1, d);
+            return `${DAYS[(dt.getDay()+6)%7]} ${d} ${MONTHS[m-1].slice(0,3)} ${y}`;
+        }
+
+        const listBox = document.getElementById('done-tasks-list');
+        const sortByDropdown = document.querySelector('.done-sort-dropdown[data-key="sort-by"]');
+        const sortOrderDropdown = document.querySelector('.done-sort-dropdown[data-key="sort-order"]');
+
+        function dropdownValue(dd) {
+            if (!dd) return '';
+            const selected = dd.querySelector('.dropdown-menu button.selected');
+            const btn = selected || dd.querySelector('.dropdown-menu button');
+            return btn ? btn.dataset.value : '';
+        }
+
+        function sortedTasks() {
+            const tasks = [...doneTasks];
+            const order = dropdownValue(sortOrderDropdown);
+            if (dropdownValue(sortByDropdown) === 'equipment') {
+                tasks.sort((a, b) => {
+                    const eqA = (a.equipment || '').toLowerCase();
+                    const eqB = (b.equipment || '').toLowerCase();
+                    if (eqA === eqB) return (a.doneAt < b.doneAt ? -1 : 1);
+                    return eqA < eqB ? -1 : 1;
+                });
+                if (order === 'desc') tasks.reverse();
+            } else {
+                tasks.sort((a, b) => (a.doneAt < b.doneAt ? -1 : 1));
+                if (order === 'desc') tasks.reverse();
+            }
+            return tasks;
+        }
+
+        function renderList() {
+            const tasks = sortedTasks();
+            if (tasks.length === 0) {
+                listBox.innerHTML = '<p class="dash-upcoming-empty">No done tasks yet</p>';
+                return;
+            }
+            listBox.innerHTML = tasks.map((t) => {
+                const eq = t.equipment
+                    ? `<span class="done-equipment">${t.equipment}</span>`
+                    : `<span class="done-equipment done-equipment-none">No equipment</span>`;
+                const hasPhotos = (Array.isArray(t.photos) && t.photos.length) || !!t.photo;
+                const photo = hasPhotos
+                    ? '<span class="done-has-photo"><svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M453-280h60v-166l89 89 42-42-161-161-161 161 42 42 89-89v166Zm-299 0q-24.75 0-42.37-17.63Q94-315.25 94-340v-440q0-24.75 17.63-42.38Q129.25-840 154-840h139l56-60h220l56 60h182q24.75 0 42.38 17.62Q867-804.75 867-780v440q0 24.75-17.62 42.37Q831.75-280 807-280H154Zm0-60h653v-440H154v440Z"/></svg></span>'
+                    : '';
+                const detailBits = [];
+                if (t.comments) detailBits.push(t.comments);
+                if (t.time) detailBits.push(`Time: ${t.time}`);
+                if (t.cost) detailBits.push(`Cost: ${t.cost}`);
+                const summary = detailBits.length
+                    ? `<span class="done-summary">${detailBits.join(' &middot; ')}</span>`
+                    : '';
+                return `<div class="done-task-item" data-id="${t.id}">
+                            <span class="done-check"><svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="m382-308 350-350q11-11 27.5-11t28.5 11q12 12 12 28.5T788-601L410-222q-12 12-28 12t-28-12L182-394q-12-12-12-28.5t12-28.5q11-11 27.5-11t28.5 11l154 142Z"/></svg></span>
+                            <div class="done-task-main">
+                                <strong class="done-task-name">${t.text}</strong>
+                                <span class="done-date">${formatDate(t.doneAt)}</span>
+                                ${eq}
+                                ${summary}
+                            </div>
+                            ${photo}
+                        </div>`;
+            }).join('');
+        }
+
+        listBox.addEventListener('click', (e) => {
+            const item = e.target.closest('.done-task-item[data-id]');
+            if (item) openDetail(item.dataset.id);
+        });
+
+        // === DETAIL MODAL ===
+        const modal = document.getElementById('done-task-modal');
+        const dtmText = document.getElementById('dtm-text');
+        const dtmDate = document.getElementById('dtm-date');
+        const dtmEquipment = document.getElementById('dtm-equipment');
+        const dtmComments = document.getElementById('dtm-comments');
+        const dtmTime = document.getElementById('dtm-time');
+        const dtmCost = document.getElementById('dtm-cost');
+        const dtmNoPhotos = document.getElementById('dtm-no-photos');
+        const dtmPhotoGrid = document.getElementById('dtm-photo-grid');
+        const dtmEditPhoto = document.getElementById('dtm-edit-photo');
+        const dtmPictureBtn = document.getElementById('dtm-picture-btn');
+        const dtmPhotoOptions = document.getElementById('dtm-photo-options');
+        const dtmViewButtons = document.getElementById('dtm-view-buttons');
+        const dtmEditButtons = document.getElementById('dtm-edit-buttons');
+        const dtmClose = document.getElementById('dtm-close');
+        const dtmEdit = document.getElementById('dtm-edit');
+        const dtmCancel = document.getElementById('dtm-cancel');
+        const dtmSave = document.getElementById('dtm-save');
+        const dtmDelete = document.getElementById('dtm-delete');
+        const dtmDeletePopup = document.getElementById('dtm-delete-popup');
+        const dtmDeleteText = document.getElementById('dtm-delete-text');
+        const dtmDeleteCancel = document.getElementById('dtm-delete-cancel');
+        const dtmDeleteConfirm = document.getElementById('dtm-delete-confirm');
+
+        let currentId = null;
+        let currentPhotos = [];
+        let editing = false;
+
+        function getTaskPhotos(t) {
+            if (Array.isArray(t.photos)) return t.photos;
+            if (t.photo) return [t.photo];
+            return [];
+        }
+
+        function renderDetailPhotos() {
+            if (dtmPhotoGrid) dtmPhotoGrid.innerHTML = '';
+            if (dtmNoPhotos) dtmNoPhotos.style.display = currentPhotos.length ? 'none' : 'block';
+            currentPhotos.forEach((src, i) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'done-photo-thumb';
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = `Picture ${i + 1}`;
+                img.dataset.index = i;
+                img.classList.add('done-photo-clickable');
+                if (!editing) {
+                    img.addEventListener('click', () => openPhotoModal(i));
+                }
+                wrap.appendChild(img);
+                if (editing) {
+                    const rm = document.createElement('button');
+                    rm.type = 'button';
+                    rm.className = 'photo-remove';
+                    rm.setAttribute('aria-label', 'Remove picture');
+                    rm.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M256-200q-23.53 0-40.26-16.74Q199-233.47 199-257v-483h-13v-60h188v-30h212v30h188v60h-13v483q0 23.53-16.74 40.26Q716.53-200 693-200H256Zm103-100h60v-336h-60v336Zm182 0h60v-336h-60v336Z"/></svg>';
+                    rm.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        currentPhotos.splice(i, 1);
+                        renderDetailPhotos();
+                    });
+                    wrap.appendChild(rm);
+                }
+                if (dtmPhotoGrid) dtmPhotoGrid.appendChild(wrap);
+            });
+        }
+
+        // === FULL-SCREEN PHOTO MODAL ===
+        const photoModal = document.getElementById('done-photo-modal');
+        const photoModalImg = document.getElementById('done-modal-photo');
+        const photoModalCaption = document.getElementById('done-modal-caption');
+        const photoModalPrev = document.getElementById('done-modal-prev');
+        const photoModalNext = document.getElementById('done-modal-next');
+        const photoModalClose = document.getElementById('done-modal-close');
+
+        let photoIndex = 0;
+
+        function showModalPhoto() {
+            if (!currentPhotos.length) return;
+            photoModalImg.src = currentPhotos[photoIndex];
+            photoModalCaption.textContent = `Picture ${photoIndex + 1} of ${currentPhotos.length}`;
+        }
+
+        function openPhotoModal(index) {
+            if (!currentPhotos.length || !photoModal) return;
+            photoIndex = index;
+            showModalPhoto();
+            photoModal.classList.add('active');
+        }
+
+        function closePhotoModal() {
+            if (photoModal) photoModal.classList.remove('active');
+        }
+
+        if (photoModalClose) photoModalClose.addEventListener('click', closePhotoModal);
+        if (photoModal) photoModal.addEventListener('click', (e) => { if (e.target === photoModal) closePhotoModal(); });
+        if (photoModalPrev) photoModalPrev.addEventListener('click', () => {
+            if (!currentPhotos.length) return;
+            photoIndex = (photoIndex - 1 + currentPhotos.length) % currentPhotos.length;
+            showModalPhoto();
+        });
+        if (photoModalNext) photoModalNext.addEventListener('click', () => {
+            if (!currentPhotos.length) return;
+            photoIndex = (photoIndex + 1) % currentPhotos.length;
+            showModalPhoto();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (!photoModal || !photoModal.classList.contains('active')) return;
+            if (e.key === 'Escape') closePhotoModal();
+            if (e.key === 'ArrowLeft' && photoModalPrev) photoModalPrev.click();
+            if (e.key === 'ArrowRight' && photoModalNext) photoModalNext.click();
+        });
+
+        function setViewMode(view) {
+            editing = !view;
+            dtmEquipment.readOnly = view;
+            dtmComments.readOnly = view;
+            dtmTime.readOnly = view;
+            dtmCost.readOnly = view;
+            dtmEditPhoto.style.display = view ? 'none' : 'block';
+            dtmViewButtons.style.display = view ? 'flex' : 'none';
+            dtmEditButtons.style.display = view ? 'none' : 'flex';
+            dtmDelete.style.display = view ? 'none' : 'block';
+            renderDetailPhotos();
+        }
+
+        function openDetail(id) {
+            const t = doneTasks.find((x) => x.id === id);
+            if (!t) return;
+            currentId = id;
+            dtmText.textContent = `"${t.text}"`;
+            dtmDate.textContent = `Done: ${formatDate(t.doneAt)}`;
+            dtmEquipment.value = t.equipment || '';
+            dtmComments.value = t.comments || '';
+            dtmTime.value = t.time || '';
+            dtmCost.value = t.cost || '';
+            currentPhotos = getTaskPhotos(t);
+            setViewMode(true);
+            modal.style.display = 'flex';
+        }
+
+        function closeDetail() {
+            modal.style.display = 'none';
+            currentId = null;
+            currentPhotos = [];
+        }
+
+        if (dtmClose) dtmClose.addEventListener('click', closeDetail);
+        if (dtmEdit) dtmEdit.addEventListener('click', () => setViewMode(false));
+        if (dtmDelete) dtmDelete.addEventListener('click', () => {
+            if (!currentId) return;
+            const t = doneTasks.find((x) => x.id === currentId);
+            if (!t) return;
+            dtmDeleteText.textContent = `"${t.text}"?`;
+            dtmDeletePopup.style.display = 'flex';
+        });
+        if (dtmDeleteCancel) dtmDeleteCancel.addEventListener('click', () => {
+            dtmDeletePopup.style.display = 'none';
+        });
+        if (dtmDeleteConfirm) dtmDeleteConfirm.addEventListener('click', () => {
+            if (!currentId) return;
+            doneTasks = doneTasks.filter((x) => x.id !== currentId);
+            saveDoneTasks();
+            dtmDeletePopup.style.display = 'none';
+            closeDetail();
+            renderList();
+        });
+        if (dtmDeletePopup) dtmDeletePopup.addEventListener('click', (e) => { if (e.target === dtmDeletePopup) dtmDeletePopup.style.display = 'none'; });
+        if (dtmCancel) dtmCancel.addEventListener('click', () => {
+            const t = doneTasks.find((x) => x.id === currentId);
+            if (t) {
+                currentPhotos = getTaskPhotos(t);
+                dtmEquipment.value = t.equipment || '';
+                dtmComments.value = t.comments || '';
+                dtmTime.value = t.time || '';
+                dtmCost.value = t.cost || '';
+            }
+            setViewMode(true);
+        });
+        if (dtmSave) dtmSave.addEventListener('click', () => {
+            if (!currentId) return;
+            const t = doneTasks.find((x) => x.id === currentId);
+            if (!t) return;
+            t.equipment = dtmEquipment.value.trim();
+            t.comments = dtmComments.value.trim();
+            t.time = dtmTime.value.trim();
+            t.cost = dtmCost.value.trim();
+            t.photos = currentPhotos;
+            saveDoneTasks();
+            setViewMode(true);
+            renderList();
+        });
+        if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeDetail(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetail(); });
+
+        if (dtmPictureBtn) {
+            dtmPictureBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dtmPhotoOptions.style.display = dtmPhotoOptions.style.display === 'grid' ? 'none' : 'grid';
+            });
+        }
+        if (dtmPhotoOptions) {
+            dtmPhotoOptions.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-source]');
+                if (!btn) return;
+                dtmPhotoOptions.style.display = 'none';
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.multiple = true;
+                if (btn.dataset.source === 'camera') {
+                    fileInput.accept = 'image/*';
+                    fileInput.setAttribute('capture', 'environment');
+                } else if (btn.dataset.source === 'library') {
+                    fileInput.accept = 'image/*';
+                }
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+                fileInput.addEventListener('change', () => {
+                    const files = fileInput.files ? Array.from(fileInput.files) : [];
+                    fileInput.remove();
+                    if (files.length === 0) return;
+                    const readers = files.map((file) => new Promise((resolve) => {
+                        const r = new FileReader();
+                        r.onload = () => resolve(r.result);
+                        r.readAsDataURL(file);
+                    }));
+                    Promise.all(readers).then((results) => {
+                        currentPhotos = currentPhotos.concat(results);
+                        renderDetailPhotos();
+                    });
+                });
+                fileInput.click();
+            });
+        }
+
+        const sortDropdowns = document.querySelectorAll('.done-sort-dropdown');
+        sortDropdowns.forEach((dd) => {
+            dd.querySelectorAll('.dropdown-menu button').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    dd.querySelectorAll('.dropdown-menu button').forEach((b) => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    renderList();
+                });
+            });
+        });
+
+        renderList();
+    });
+    </script>
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+</body>
+</html>

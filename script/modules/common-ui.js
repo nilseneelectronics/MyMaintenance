@@ -1,6 +1,7 @@
 window.MyMaintenanceCommonUi = {
     initCommonUiInteractions() {
         document.querySelectorAll('.collapse-toggle').forEach((toggle) => {
+            if (toggle.closest('#doc-groups')) return;
             const subgroup = toggle.closest('.subgroup');
             const content = subgroup ? subgroup.querySelector('.subgroup-content') : null;
             const icon = toggle.querySelector('svg');

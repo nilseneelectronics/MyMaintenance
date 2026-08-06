@@ -36,48 +36,16 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3>Latest Documents</h3>
                 </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
-                <div class="doc-row">
-                    <div style="display: flex; align-items: center;">
-                        <svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        <span class="doc-name">Name</span>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <span class="doc-date">Doc Date</span>
-                        <span class="added-date">Added Date</span>
-                        <span class="size">Size</span>
-                    </div>
-                </div>
+<div id="doc-recent"></div>
 
                 <div class="button-group">
-                    <button class="add-button">Add Documents</button>
-                    <button class="view-button">View all documents</button>
+                    <button class="add-button" id="doc-add-btn">Add Documents</button>
+                    <button class="view-button" onclick="window.location.href='mydocuments.html'">View all documents</button>
                 </div>
             </div>
             <div class="dash-box planning-box no-scale">
                 <h3>Planning</h3>
-                <p>No plans yet</p>
+                <div id="dash-upcoming"></div>
                 <div class="calendar-mimic" id="dash-calendar"></div>
                 <div class="button-group">
                     <button class="add-button" id="dash-add-event">Add event</button>
@@ -210,6 +178,7 @@
             saveEvents();
             closeModal();
             renderCalendar();
+            renderUpcoming();
         });
         if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
@@ -224,6 +193,33 @@
         function pad(n) { return String(n).padStart(2,'0'); }
         function dateKey(year, month, day) { return `${year}-${pad(month+1)}-${pad(day)}`; }
         function hasEvents(year, month, day) { return EVENTS[dateKey(year, month, day)] && EVENTS[dateKey(year, month, day)].length > 0; }
+
+        function renderUpcoming() {
+            const box = document.getElementById('dash-upcoming');
+            if (!box) return;
+            const now = new Date();
+            const todayKey = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+            const upcoming = [];
+            for (const key of Object.keys(EVENTS)) {
+                if (key < todayKey) continue;
+                for (const ev of EVENTS[key]) upcoming.push({ key, ev });
+            }
+            upcoming.sort((a, b) => (a.key + (a.ev.startTime||'')) < (b.key + (b.ev.startTime||'')) ? -1 : 1);
+            const next = upcoming.slice(0, 3);
+            if (next.length === 0) {
+                box.innerHTML = '<p class="dash-upcoming-empty">No plans yet</p>';
+                return;
+            }
+            box.innerHTML = next.map(({ key, ev }) => {
+                const [y, m, d] = key.split('-');
+                const dt = new Date(y, m-1, d);
+                const label = `${DAYS[(dt.getDay()+6)%7]} ${d} ${MONTHS[m-1].slice(0,3)}`;
+                const time = ev.startTime ? `<span class="dash-upcoming-time">${ev.startTime}</span>` : '';
+                const locName = ev.location || 'No location specified';
+                const loc = `<span class="dash-upcoming-loc"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa"><path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm-24 78q-12-4-22-12-118-94-176-183.5T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 86-58 175.5T526-235q-10 8-22 12t-24 4q-12 0-24-4Zm24-297q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM240-80q-17 0-28.5-11.5T200-120q0-17 11.5-28.5T240-160h480q17 0 28.5 11.5T760-120q0 17-11.5 28.5T720-80H240Zm240-520Z"/></svg>${locName}</span>`;
+                return `<div class="dash-upcoming-item" data-key="${key}"><strong class="dash-upcoming-name">${ev.name}</strong>${loc}<span class="dash-upcoming-meta">${time}<span class="dash-upcoming-date">${label}</span></span></div>`;
+            }).join('');
+        }
 
         function getMonthData(year, month) {
             const first = new Date(year, month, 1);
@@ -272,6 +268,14 @@
             }
         });
 
+        const upcomingBox = document.getElementById('dash-upcoming');
+        if (upcomingBox) {
+            upcomingBox.addEventListener('click', (e) => {
+                const item = e.target.closest('.dash-upcoming-item[data-key]');
+                if (item) window.location.href = 'myplanning-calendar.html?date=' + item.dataset.key;
+            });
+        }
+
         const dashAddBtn = document.getElementById('dash-add-event');
         if (dashAddBtn) {
             dashAddBtn.addEventListener('click', () => {
@@ -282,8 +286,77 @@
         }
 
         renderCalendar();
+        renderUpcoming();
     });
     </script>
+    <div id="doc-add-popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3>Add document</h3>
+            <div class="done-fields">
+                <label>File</label>
+                <div class="doc-file-picker">
+                    <button type="button" class="photo-picker-btn" id="doc-pick-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
+                        Add document
+                    </button>
+                    <span class="doc-file-name" id="doc-file-name">No file selected</span>
+                </div>
+                <input type="file" id="doc-file" style="display:none">
+
+                <label>Name</label>
+                <input type="text" id="doc-name" placeholder="Document name...">
+
+                <label>Connected Asset</label>
+                <div class="asset-dropdown" id="doc-asset-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-asset-toggle">
+                        <span class="asset-value">-- Select an asset --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-asset-menu">
+                        <li class="asset-optgroup">Addresses</li>
+                        <li><button type="button" data-value="Address 1, Street 123, 5000 City">Address 1, Street 123, 5000 City</button></li>
+                        <li><button type="button" data-value="Address 2 - Cabin, Mountain Road 45, 6000 City">Address 2 - Cabin, Mountain Road 45, 6000 City</button></li>
+                        <li class="asset-optgroup">Vehicles</li>
+                        <li><button type="button" data-value="Car 1 - Tesla Model Y">Car 1 - Tesla Model Y</button></li>
+                        <li><button type="button" data-value="Car 2 - Volvo XC90">Car 2 - Volvo XC90</button></li>
+                        <li><button type="button" data-value="Boat - Bayliner 255">Boat - Bayliner 255</button></li>
+                        <li class="asset-optgroup"></li>
+                        <li><button type="button" data-value="__other__">Other</button></li>
+                    </ul>
+                </div>
+                <input type="text" id="doc-asset-other" placeholder="Specify asset..." style="display:none">
+
+                <label>Date performed</label>
+                <div class="doc-datepicker">
+                    <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd/mm/yyyy" autocomplete="off">
+                    <div class="doc-calendar" id="doc-cal-performed"></div>
+                </div>
+
+                <label>Date uploaded</label>
+                <input type="text" class="doc-date-field" id="doc-uploaded" readonly>
+
+                <label>Size</label>
+                <input type="text" id="doc-size" readonly>
+            </div>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-save">Save</button>
+            </div>
+        </div>
+    </div>
+    <div id="doc-old-date-popup" class="popup-overlay">
+        <div class="popup-content">
+            <p class="doc-confirm-msg">The date is old (before 1900). Is the correct date selected?</p>
+            <p class="doc-confirm-date" id="doc-old-date-text"></p>
+            <div class="popup-buttons">
+                <button type="button" class="popup-btn cancel" id="doc-old-cancel">Cancel</button>
+                <button type="button" class="popup-btn confirm" id="doc-old-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+    <script src="../script/pages/mydocuments.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>

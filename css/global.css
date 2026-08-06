@@ -55,6 +55,9 @@ body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 a {
@@ -69,12 +72,14 @@ main {
     padding-top: var(--main-padding-top);
     transition: margin-top 0.3s ease;
     min-height: 800px;
+    width: 100%;
     max-width: 100%;
     margin-left: auto;
     margin-right: auto;
     text-align: center;
     position: relative;
     z-index: 1;
+    flex: 1 0 auto;
 }
 
 main .grid-container {
@@ -87,6 +92,10 @@ main .grid-container {
 main h1 {
     margin-bottom: 30px;
     font-size: 2em;
+}
+
+.marketing-page main h1 {
+    font-size: 2.6em;
 }
 
 .sidebar-open main {
