@@ -74,17 +74,61 @@ document.addEventListener('DOMContentLoaded', () => {
         if ([a, b, c].some((n) => isNaN(n))) return null;
         let day = a, month = b, year = c;
         if (year < 100) year += 2000;
-        if (year < 1000 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+        if (year < 1000 || year > 2099 || month < 1 || month > 12 || day < 1 || day > 31) return null;
         const dt = new Date(year, month - 1, day);
         if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) return null;
         return dt;
     }
 
     function isClearlyInvalid(str) {
-        const digits = String(str || '').replace(/\D/g, '');
-        if (digits.length !== 8) return false;
-        const dt = parseDateStr(str);
-        if (!dt || dt.getTime() > Date.now()) return true;
+        const s = String(str || '').trim();
+        if (!s) return false;
+        const digits = s.replace(/\D/g, '');
+        if (!digits.length) return false;
+        const parts = s.split(/[/.\-]/);
+
+        const dayStr = parts[0].replace(/\D/g, '');
+        if (dayStr.length === 1) {
+            if (dayStr !== '0' && parseInt(dayStr, 10) > 3) return true;
+        } else if (dayStr.length === 2) {
+            const day = parseInt(dayStr, 10);
+            if (day < 1 || day > 31) return true;
+        }
+        let dayNum = dayStr.length ? parseInt(dayStr, 10) : NaN;
+
+        let monNum = NaN;
+        if (parts.length >= 2) {
+            const monStr = parts[1].replace(/\D/g, '');
+            if (monStr.length === 1) {
+                if (parseInt(monStr, 10) > 1) return true;
+            } else if (monStr.length === 2) {
+                const mon = parseInt(monStr, 10);
+                if (mon < 1 || mon > 12) return true;
+            }
+            if (monStr.length) monNum = parseInt(monStr, 10);
+        }
+
+        if (parts.length >= 3) {
+            const yDigits = String(parts[2]).replace(/\D/g, '');
+            if (yDigits.length) {
+                const maxYear = new Date().getFullYear();
+                const prefix = yDigits.slice(0, 4);
+                const minY = parseInt(prefix + '0'.repeat(4 - prefix.length), 10);
+                const maxY = parseInt(prefix + '9'.repeat(4 - prefix.length), 10);
+                if (minY > maxYear || maxY < 1000) return true;
+            }
+        }
+
+        if (dayNum >= 1 && dayNum <= 31 && monNum >= 1 && monNum <= 12) {
+            const yearPart = parts.length >= 3 ? Number(parts[2]) : NaN;
+            const y = !isNaN(yearPart) && yearPart > 0 ? (yearPart < 100 ? yearPart + 2000 : yearPart) : 2024;
+            if (dayNum > new Date(y, monNum, 0).getDate()) return true;
+        }
+
+        if (digits.length === 8) {
+            const dt = parseDateStr(s);
+            if (!dt || dt.getTime() > Date.now()) return true;
+        }
         return false;
     }
 
