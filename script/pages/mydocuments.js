@@ -28,18 +28,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let docSort = 'uploaded';
     let docReverse = false;
 
+    function seedDocs() {
+        return [
+            { id: 'd_seed_1', name: 'Electrical certificate 2024', asset: 'Address 1, Street 123, 5000 City', performed: '2024-03-01', uploaded: '2026-07-20', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'electrical-certificate-2024.pdf' },
+            { id: 'd_seed_2', name: 'Insurance documents', asset: 'Address 1, Street 123, 5000 City', performed: '2026-01-01', uploaded: '2026-06-15', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'insurance-documents.pdf' },
+            { id: 'd_seed_3', name: 'Registration certificate 2024', asset: 'Car 1 - Tesla Model Y', performed: '2024-05-10', uploaded: '2026-07-01', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'registration-certificate-2024.pdf' },
+            { id: 'd_seed_4', name: 'Car insurance documents', asset: 'Car 1 - Tesla Model Y', performed: '2026-02-01', uploaded: '2026-05-30', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'car-insurance-documents.pdf' },
+            { id: 'd_seed_5', name: 'Boat insurance', asset: 'Boat - Bayliner 255', performed: '2026-04-01', uploaded: '2026-04-10', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'boat-insurance.pdf' }
+        ];
+    }
+
     function load() {
         try {
             const raw = localStorage.getItem(KEY);
-            if (raw) return JSON.parse(raw);
+            if (raw !== null) return JSON.parse(raw);
         } catch (e) {}
-        return [];
+        return seedDocs();
     }
 
     let items = load();
 
     function store() {
         localStorage.setItem(KEY, JSON.stringify(items));
+        window.dispatchEvent(new CustomEvent('mydocs:changed'));
     }
 
     function formatSize(bytes) {
@@ -651,6 +662,35 @@ document.addEventListener('DOMContentLoaded', () => {
         return row;
     }
 
+    function headerRowHtml() {
+        return '<div class="doc-row doc-header-row">'
+            + '<div class="doc-row-left">'
+            + '<span class="doc-cell doc-cell-icon"></span>'
+            + '<span class="doc-cell doc-cell-name doc-col-label">Document</span>'
+            + '</div>'
+            + '<div class="doc-row-right">'
+            + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
+            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+            + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
+            + '</div>'
+            + '</div>';
+    }
+
+    function rowHtml(it) {
+        const info = fileTypeInfo(it);
+        return '<div class="doc-row doc-row-open" data-doc-id="' + escapeHtml(it.id) + '">'
+            + '<div class="doc-row-left">'
+            + docIcon()
+            + '<span class="doc-cell doc-cell-name">' + escapeHtml(it.name) + '</span>'
+            + '</div>'
+            + '<div class="doc-row-right">'
+            + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
+            + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
+            + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+            + '</div>'
+            + '</div>';
+    }
+
     function sortBefore(a, b) {
         switch (docSort) {
             case 'alpha':
@@ -921,4 +961,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initDocSort();
     render();
+
+    window.MyMaintenanceDocs = {
+        getItems: function () { return items.slice(); },
+        openPreview: openPreview,
+        render: render,
+        headerRowHtml: headerRowHtml,
+        rowHtml: rowHtml
+    };
 });

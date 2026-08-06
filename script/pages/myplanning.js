@@ -282,22 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadExampleTasks();
 
     // === EVENTS ===
-    const STORAGE_KEY = 'floorplan_calendar_events';
-    function loadEvents() {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) return JSON.parse(saved);
-        } catch (_) {}
-        return { "2026-08-17": [{ name:"Going home", startDate:"2026-08-17", finishDate:"2026-08-17", startTime:"14:00", finishTime:"16:00", location:"Cabin", description:"Pack up and head back to the city" }] };
-    }
-    function saveEvents() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
-    }
-    let EVENTS = loadEvents();
+    let EVENTS = window.MyMaintenanceEvents.load();
 
     // === UPCOMING EVENTS ===
-    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
     function renderUpcoming() {
         const box = document.getElementById('upcoming-events');
@@ -314,84 +301,47 @@ document.addEventListener('DOMContentLoaded', () => {
             box.innerHTML = '<p class="dash-upcoming-empty">No plans yet</p>';
             return;
         }
-        box.innerHTML = upcoming.map(({ key, ev }) => {
-            const [y, m, d] = key.split('-');
-            const dt = new Date(y, m-1, d);
-            const label = `${DAYS_SHORT[(dt.getDay()+6)%7]} ${d} ${MONTHS_SHORT[m-1]}`;
-            const time = ev.startTime ? `<span class="dash-upcoming-time">${ev.startTime}</span>` : '';
-            const locName = ev.location || 'No location specified';
-            const loc = `<span class="dash-upcoming-loc"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa"><path d="M480-301q99-80 149.5-154T680-594q0-90-56-148t-144-58q-88 0-144 58t-56 148q0 65 50.5 139T480-301Zm-24 78q-12-4-22-12-118-94-176-183.5T200-594q0-125 78-205.5T480-880q124 0 202 80.5T760-594q0 86-58 175.5T526-235q-10 8-22 12t-24 4q-12 0-24-4Zm24-297q33 0 56.5-23.5T560-600q0-33-23.5-56.5T480-680q-33 0-56.5 23.5T400-600q0 33 23.5 56.5T480-520ZM240-80q-17 0-28.5-11.5T200-120q0-17 11.5-28.5T240-160h480q17 0 28.5 11.5T760-120q0 17-11.5 28.5T720-80H240Zm240-520Z"/></svg>${locName}</span>`;
-            return `<div class="dash-upcoming-item" data-key="${key}"><strong class="dash-upcoming-name">${ev.name}</strong>${loc}<span class="dash-upcoming-meta">${time}<span class="dash-upcoming-date">${label}</span></span></div>`;
-        }).join('');
+        box.innerHTML = window.MyMaintenanceEvents.eventHeaderRowHtml({ name: 'Event', asset: 'Location', date: 'Date' })
+            + upcoming.map(({ key, ev }) => window.MyMaintenanceEvents.eventRowHtml(key, ev)).join('');
     }
 
     const upcomingBox = document.getElementById('upcoming-events');
     if (upcomingBox) {
         upcomingBox.addEventListener('click', (e) => {
-            const item = e.target.closest('.dash-upcoming-item[data-key]');
+            const item = e.target.closest('.ev-row-open[data-key]');
             if (item) window.location.href = 'myplanning-calendar.html?date=' + item.dataset.key;
         });
     }
 
-    // === MODAL ===
-    const modal = document.getElementById('event-modal');
-    const evName = document.getElementById('ev-name');
-    const evStartDate = document.getElementById('ev-start-date');
-    const evFinishDate = document.getElementById('ev-finish-date');
-    const evStartTime = document.getElementById('ev-start-time');
-    const evFinishTime = document.getElementById('ev-finish-time');
-    const evLocation = document.getElementById('ev-location');
-    const evDesc = document.getElementById('ev-desc');
-    const evCancel = document.getElementById('ev-cancel');
-    const evAdd = document.getElementById('ev-add');
-
-    function openModal(key) {
-        if (!modal) return;
-        modal.classList.add('open');
-        evName.value = '';
-        evStartDate.value = key;
-        evFinishDate.value = key;
-        const now = new Date();
-        const mins = now.getMinutes();
-        const rounded = new Date(now);
-        rounded.setMinutes(Math.ceil(mins / 15) * 15, 0, 0);
-        const h = String(rounded.getHours()).padStart(2,'0');
-        const m = String(rounded.getMinutes()).padStart(2,'0');
-        const later = new Date(rounded.getTime() + 60*60*1000);
-        const h2 = String(later.getHours()).padStart(2,'0');
-        const m2 = String(later.getMinutes()).padStart(2,'0');
-        evStartTime.value = `${h}:${m}`;
-        evFinishTime.value = `${h2}:${m2}`;
-        evLocation.value = '';
-        evDesc.value = '';
-        evName.focus();
+    // === PLANNED MAINTENANCE ===
+    function renderPlanned() {
+        const box = document.getElementById('plan-planned');
+        if (!box) return;
+        const next = window.MyMaintenanceEvents.plannedMaintenance(3);
+        if (next.length === 0) {
+            box.innerHTML = '<p class="dash-upcoming-empty">No maintenance planned</p>';
+            return;
+        }
+        box.innerHTML = window.MyMaintenanceEvents.eventHeaderRowHtml({ name: 'Maintenance', asset: 'Asset', date: 'Date' })
+            + next.map(({ key, ev }) => window.MyMaintenanceEvents.eventRowHtml(key, ev)).join('');
     }
 
-    function closeModal() {
-        if (!modal) return;
-        modal.classList.remove('open');
+    const planPlannedBox = document.getElementById('plan-planned');
+    if (planPlannedBox) {
+        planPlannedBox.addEventListener('click', (e) => {
+            const item = e.target.closest('.ev-row-open[data-key]');
+            if (item) window.location.href = 'myplanning-calendar.html?date=' + item.dataset.key;
+        });
     }
 
-    if (evCancel) evCancel.addEventListener('click', closeModal);
-    if (evAdd) evAdd.addEventListener('click', () => {
-        const name = evName.value.trim();
-        const startDate = evStartDate.value;
-        const finishDate = evFinishDate.value;
-        const startTime = evStartTime.value;
-        const finishTime = evFinishTime.value;
-        const location = evLocation.value.trim();
-        const description = evDesc.value.trim();
-        if (!name || !startDate) return;
-        if (!EVENTS[startDate]) EVENTS[startDate] = [];
-        EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description });
-        saveEvents();
-        closeModal();
-        renderCalendar();
-        renderUpcoming();
-    });
-    if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-    if (evName) evName.addEventListener('keydown', (e) => { if (e.key === 'Enter' && evAdd) evAdd.click(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    const planPlannedAdd = document.getElementById('plan-planned-add');
+    if (planPlannedAdd) {
+        planPlannedAdd.addEventListener('click', () => {
+            if (window.MyMaintenanceEventModal) {
+                window.MyMaintenanceEventModal.open(window.MyMaintenanceEvents.todayKey(), { plannedMaintenance: true });
+            }
+        });
+    }
 
     // === CALENDAR ===
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -482,16 +432,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const planAddBtn = document.getElementById('plan-add-event');
-    if (planAddBtn) {
-        planAddBtn.addEventListener('click', () => {
+    const upcomingAddBtn = document.getElementById('upcoming-add-event');
+    [planAddBtn, upcomingAddBtn].forEach(function (btn) {
+        if (!btn) return;
+        btn.addEventListener('click', () => {
             const now = new Date();
             const key = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-            openModal(key);
+            if (window.MyMaintenanceEventModal) window.MyMaintenanceEventModal.open(key);
         });
-    }
+    });
+
+    window.addEventListener('myevents:changed', () => {
+        EVENTS = window.MyMaintenanceEvents.load();
+        renderCalendar();
+        renderUpcoming();
+        renderPlanned();
+    });
 
     renderCalendar();
     renderUpcoming();
+    renderPlanned();
     prevBtn.addEventListener('click', () => { calOffset--; renderCalendar(); });
     nextBtn.addEventListener('click', () => { calOffset++; renderCalendar(); });
 });

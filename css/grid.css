@@ -440,6 +440,51 @@
     transform: none;
 }
 
+#dash-homes {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+#dash-vehicles {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+#dash-homes .ev-row,
+#dash-vehicles .ev-row {
+    gap: 8px;
+}
+
+#dash-homes .ev-row-left,
+#dash-vehicles .ev-row-left {
+    gap: 10px;
+    flex: 1 1 auto;
+}
+
+#dash-homes .ev-cell-name,
+#dash-vehicles .ev-cell-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 1rem;
+}
+
+#dash-homes .ev-cell-asset,
+#dash-vehicles .ev-cell-asset {
+    width: auto;
+    min-width: 80px;
+    text-align: right;
+    font-size: 0.9rem;
+}
+
+#dash-homes .ev-header-row .ev-cell-name,
+#dash-homes .ev-header-row .ev-cell-asset,
+#dash-vehicles .ev-header-row .ev-cell-name,
+#dash-vehicles .ev-header-row .ev-cell-asset {
+    font-size: 0.8rem;
+}
+
 .documents-box h3, .planning-box h3, .documents-box p, .planning-box p {
     text-align: left;
 }
@@ -447,7 +492,6 @@
 #dash-upcoming, #upcoming-events, #all-events-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
     margin-bottom: 16px;
 }
 
@@ -456,66 +500,119 @@
     margin-bottom: 0;
 }
 
-.dash-upcoming-item {
+/* Docs-style event rows (planned maintenance / upcoming events) */
+.ev-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.ev-row-open {
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin-bottom: 2px;
+}
+
+.ev-row-open:hover {
+    background: var(--hover-bg);
+}
+
+.ev-row-left {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 25px;
-    padding: 10px 14px;
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.ev-row-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.ev-cell {
+    flex: none;
+    white-space: nowrap;
+}
+
+.ev-cell-name {
+    min-width: 200px;
+    flex: 0 1 auto;
     text-align: left;
-    cursor: pointer;
-}
-
-.dash-upcoming-item:hover {
-    border-color: var(--accent-primary);
-}
-
-.dash-upcoming-name {
-    flex: 0 0 260px;
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: 500;
+    font-size: 0.9rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.dash-upcoming-loc {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.95rem;
-    color: var(--text-primary);
+.ev-cell-asset {
+    width: 190px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.dash-upcoming-loc svg {
-    flex-shrink: 0;
+.ev-cell-date {
+    width: 150px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
 }
 
-.dash-upcoming-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 14px;
-    flex-shrink: 0;
-}
-
-.dash-upcoming-time {
-    font-size: 0.95rem;
+.ev-cell-time {
+    width: 90px;
+    text-align: center;
+    font-size: 0.82rem;
     color: var(--accent-primary);
     font-weight: 500;
+    white-space: nowrap;
 }
 
-.dash-upcoming-date {
-    font-size: 0.95rem;
+.ev-cell-icon {
+    width: 18px;
+    flex: none;
+}
+
+.ev-calendar-icon {
+    display: block;
+}
+
+.ev-col-label {
     color: var(--text-secondary);
+    font-weight: 600;
 }
 
-.documents-box, .planning-box {
+.ev-header-row {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    cursor: default;
+}
+
+.ev-header-row .ev-cell-name {
+    font-weight: 600;
+}
+
+.documents-box, .planning-box, .planned-maintenance-box {
     grid-column: span 2;
 }
 

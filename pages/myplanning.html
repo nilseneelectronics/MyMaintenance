@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyPlanning - MyMaintenance</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
         <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
@@ -29,9 +30,12 @@
                 
                 <div id="upcoming-events"></div>
                 
-                <button class="view-button" onclick="window.location.href='myplanning-events.html'">
-                    Show all
-                </button>
+                <div class="button-group upcoming-actions">
+                    <button class="add-button" id="upcoming-add-event">Add event</button>
+                    <button class="view-button" onclick="window.location.href='myplanning-events.html'">
+                        Show all
+                    </button>
+                </div>
             </div>
 
             <!-- Calendar -->
@@ -50,6 +54,18 @@
                 <div class="button-group">
                     <button class="add-button" id="plan-add-event">Add event</button>
                     <button class="view-button" onclick="window.location.href='myplanning-calendar.html'">View full calendar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLANNED MAINTENANCE -->
+        <div class="planning-content">
+            <div class="upcoming-box planned-maintenance-box">
+                <h3>Planned Maintenance</h3>
+                <div id="plan-planned"></div>
+                <div class="button-group upcoming-actions">
+                    <button class="add-button" id="plan-planned-add">Add maintenance</button>
+                    <button class="view-button" onclick="window.location.href='myplanning-events.html'">View all</button>
                 </div>
             </div>
         </div>
@@ -142,10 +158,29 @@
 
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
-            <h3>Add event</h3>
+            <h3 id="ev-modal-title">Add event</h3>
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
+            </div>
+            <div class="event-modal-field">
+                <label class="event-modal-check">
+                    <input type="checkbox" id="ev-planned">
+                    <span>Planned Maintenance Event?</span>
+                </label>
+            </div>
+            <div class="event-modal-field" id="ev-asset-wrap" style="display:none;">
+                <label>Connected asset</label>
+                <div class="asset-dropdown" id="ev-asset-dropdown">
+                    <button type="button" class="asset-toggle" id="ev-asset-toggle">
+                        <span class="asset-value">-- Select an asset --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="ev-asset-menu"></ul>
+                </div>
+                <input type="text" id="ev-asset-other" placeholder="Specify asset..." style="display:none">
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
@@ -173,7 +208,7 @@
             </div>
             <div class="event-modal-field">
                 <label>Description</label>
-                <textarea id="ev-desc" rows="3" placeholder="Full description..."></textarea>
+                <textarea id="ev-desc" rows="2" placeholder="Full description..."></textarea>
             </div>
             <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
                 <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
@@ -199,6 +234,9 @@
     
     
     
+    <script src="../script/modules/events.js"></script>
+    <script src="../script/modules/assets.js"></script>
+    <script src="../script/modules/event-modal.js"></script>
     <script src="../script/pages/myplanning.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
