@@ -270,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadExampleTasks() {
         const examples = [
             'Build fence around garden',
-            'Change oil in Tesla Model Y',
+            'Annual service check on Tesla Model Y',
             'Inspect boat hull before summer'
         ];
 

@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const oldDateText = document.getElementById('doc-old-date-text');
     const oldDateConfirm = document.getElementById('doc-old-confirm');
     const oldDateCancel = document.getElementById('doc-old-cancel');
+    const privacyRadios = document.querySelectorAll('input[name="doc-privacy"]');
+    const privacyInfo = document.getElementById('doc-privacy-info');
+    const privacyWrap = document.querySelector('.doc-info-wrap');
 
     if (!addBtn || !popup) return;
 
@@ -30,11 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function seedDocs() {
         return [
-            { id: 'd_seed_1', name: 'Electrical certificate 2024', asset: 'Address 1, Street 123, 5000 City', performed: '2024-03-01', uploaded: '2026-07-20', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'electrical-certificate-2024.pdf' },
-            { id: 'd_seed_2', name: 'Insurance documents', asset: 'Address 1, Street 123, 5000 City', performed: '2026-01-01', uploaded: '2026-06-15', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'insurance-documents.pdf' },
-            { id: 'd_seed_3', name: 'Registration certificate 2024', asset: 'Car 1 - Tesla Model Y', performed: '2024-05-10', uploaded: '2026-07-01', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'registration-certificate-2024.pdf' },
-            { id: 'd_seed_4', name: 'Car insurance documents', asset: 'Car 1 - Tesla Model Y', performed: '2026-02-01', uploaded: '2026-05-30', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'car-insurance-documents.pdf' },
-            { id: 'd_seed_5', name: 'Boat insurance', asset: 'Boat - Bayliner 255', performed: '2026-04-01', uploaded: '2026-04-10', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'boat-insurance.pdf' }
+            { id: 'd_seed_1', name: 'Example', asset: 'Address 1, Street 123, 5000 City', performed: '2026-01-01', uploaded: '2026-01-01', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'example.pdf', privacy: 'private' }
         ];
     }
 
@@ -46,11 +45,172 @@ document.addEventListener('DOMContentLoaded', () => {
         return seedDocs();
     }
 
-    let items = load();
+    let items = load().map(function (it) {
+        if (!it.privacy) it.privacy = 'private';
+        return it;
+    });
 
     function store() {
         localStorage.setItem(KEY, JSON.stringify(items));
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
+    }
+
+    const searchInput = document.getElementById('doc-search');
+    const docListHead = document.getElementById('doc-list-head');
+    let searchQuery = '';
+    let searchTimer = null;
+
+    function normalizeForSearch(s) {
+        return String(s || '').toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function searchFields(it) {
+        const info = fileTypeInfo(it);
+        return [
+            { key: 'name', text: normalizeForSearch(it.name), weight: 100 },
+            { key: 'asset', text: normalizeForSearch(it.asset), weight: 90 },
+            { key: 'fileName', text: normalizeForSearch(it.fileName), weight: 40 },
+            { key: 'type', text: normalizeForSearch(info.label), weight: 20 },
+            { key: 'performed', text: normalizeForSearch(formatDateLabel(it.performed)), weight: 15 },
+            { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
+            { key: 'datesD', text: dateDigits(it), weight: 120 },
+            { key: 'size', text: normalizeForSearch(formatSize(it.size)), weight: 10 }
+        ];
+    }
+
+    function dateInfo(it) {
+        const out = [];
+        ['performed', 'uploaded'].forEach(function (k) {
+            const iso = it[k];
+            if (!iso) return;
+            const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return;
+            out.push({ d: +m[3], m: +m[2], y: +m[1], iso: iso });
+        });
+        return out;
+    }
+
+    function dateDigits(it) {
+        return dateInfo(it).map(function (d) {
+            return String(d.d).padStart(2, '0') + String(d.m).padStart(2, '0') + String(d.y);
+        }).join(' ');
+    }
+
+    function fieldTermScore(text, term) {
+        if (!text) return 0;
+        const idx = text.indexOf(term);
+        if (idx === -1) return 0;
+        let s = 1;
+        if (text === term) s += 2;
+        else if (idx === 0) s += 1;
+        const before = text[idx - 1];
+        if (!before || before === ' ' || before === '/' || before === '.' || before === ',' || before === '-') s += 0.5;
+        return s;
+    }
+
+    function docScore(it, terms) {
+        const fields = searchFields(it);
+        let total = 0;
+        let matched = 0;
+        for (let t = 0; t < terms.length; t++) {
+            let best = 0;
+            for (let f = 0; f < fields.length; f++) {
+                const sc = fieldTermScore(fields[f].text, terms[t]);
+                if (sc > 0 && sc * fields[f].weight > best) best = sc * fields[f].weight;
+            }
+            total += best;
+            if (best > 0) matched++;
+        }
+        if (terms.length && matched === terms.length) total += 60;
+        return total;
+    }
+
+    function searchResults(query) {
+        const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+        if (!terms.length) return [];
+        const scored = [];
+        for (let i = 0; i < items.length; i++) {
+            const s = docScore(items[i], terms);
+            if (s > 0) scored.push({ it: items[i], s: s });
+        }
+        scored.sort((a, b) => {
+            if (b.s !== a.s) return b.s - a.s;
+            return sortBefore(a.it, b.it) ? -1 : (sortBefore(b.it, a.it) ? 1 : 0);
+        });
+        return scored;
+    }
+
+    function highlight(text, terms) {
+        const s = String(text || '');
+        if (!terms.length) return escapeHtml(s);
+        const lower = s.toLowerCase();
+        const pats = terms.slice().sort((a, b) => b.length - a.length)
+            .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const re = new RegExp(pats.join('|'), 'g');
+        let out = '';
+        let last = 0;
+        let m;
+        while ((m = re.exec(lower)) !== null) {
+            out += escapeHtml(s.slice(last, m.index));
+            out += '<mark class="doc-mark">' + escapeHtml(m[0]) + '</mark>';
+            last = m.index + m[0].length;
+            if (m.index === re.lastIndex) re.lastIndex++;
+        }
+        out += escapeHtml(s.slice(last));
+        return out;
+    }
+
+    function renderSearch() {
+        const groupsEl = document.getElementById('doc-groups');
+        if (!groupsEl) return;
+        const results = searchResults(searchQuery);
+        const q = searchQuery.trim();
+        if (docListHead) docListHead.style.display = 'none';
+        if (!results.length) {
+            groupsEl.innerHTML = '<p class="doc-empty">No documents match &ldquo;' + escapeHtml(q) + '&rdquo;.</p>';
+            return;
+        }
+        groupsEl.innerHTML = '<div class="doc-search-header">' + results.length + ' result' + (results.length === 1 ? '' : 's')
+            + ' for &ldquo;' + escapeHtml(q) + '&rdquo;</div>';
+        const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+        for (let i = 0; i < results.length; i++) {
+            groupsEl.appendChild(renderRow(results[i].it, terms));
+        }
+    }
+
+    function resetSearch() {
+        searchQuery = '';
+        if (searchInput) searchInput.value = '';
+        if (docListHead) docListHead.style.display = '';
+        render();
+    }
+
+    function updateView() {
+        if (searchQuery && searchQuery.trim()) renderSearch();
+        else render();
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            searchQuery = searchInput.value;
+            clearTimeout(searchTimer);
+            if (searchQuery && searchQuery.trim()) {
+                searchTimer = setTimeout(renderSearch, 90);
+            } else {
+                resetSearch();
+            }
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                searchInput.value = '';
+                searchQuery = '';
+                clearTimeout(searchTimer);
+                resetSearch();
+            } else if (e.key === 'Enter') {
+                searchInput.blur();
+            }
+        });
     }
 
     function formatSize(bytes) {
@@ -185,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!editingId) return;
         items = items.filter(function (i) { return i.id !== editingId; });
         store();
-        render();
+        updateView();
         const ol = document.getElementById('doc-confirm-overlay');
         if (ol) ol.style.display = 'none';
         closePopup();
@@ -215,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
             docAssetOther.style.display = 'none';
         }
         if (cal) cal.classList.remove('open');
+        setPrivacy('private');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Add document';
         popup.style.display = 'flex';
@@ -263,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureDeleteBtn();
         const d = popup.querySelector('.doc-delete-btn');
         if (d) d.style.display = '';
+        setPrivacy(it.privacy);
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
@@ -276,6 +438,33 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', closePopup);
     popup.addEventListener('click', (e) => {
         if (e.target === popup) closePopup();
+    });
+
+    function setPrivacy(value) {
+        const v = value === 'house' ? 'house' : 'private';
+        privacyRadios.forEach(function (r) { r.checked = r.value === v; });
+    }
+
+    function privacyValue() {
+        const sel = document.querySelector('input[name="doc-privacy"]:checked');
+        return sel ? sel.value : 'private';
+    }
+
+    if (privacyInfo) {
+        privacyInfo.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (privacyWrap) privacyWrap.classList.toggle('show');
+        });
+    }
+
+    privacyRadios.forEach(function (r) {
+        r.addEventListener('change', function () {
+            if (r.checked) {
+                privacyRadios.forEach(function (o) { o.checked = o === r; });
+            } else if (!privacyValue()) {
+                r.checked = true;
+            }
+        });
     });
 
     if (pickBtn) {
@@ -494,12 +683,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? (docAssetOther ? docAssetOther.value.trim() : '')
                 : selectedAssetValue;
         const performedDt = parseDateStr(performedInput.value);
+        const privacy = privacyValue();
         const apply = (dataUrl) => {
             if (editingId) {
                 const it = items.find((i) => i.id === editingId);
                 if (it) {
                     it.name = name;
                     it.asset = asset;
+                    it.privacy = privacy;
                     it.performed = performedDt ? toISO(performedDt) : '';
                     if (dataUrl) {
                         it.data = dataUrl;
@@ -515,6 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     id: 'd_' + Date.now(),
                     name: name,
                     asset: asset,
+                    privacy: privacy,
                     performed: performedDt ? toISO(performedDt) : '',
                     uploaded: toISO(new Date()),
                     size: file.size,
@@ -525,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             store();
-            render();
+            updateView();
             closePopup();
         };
         if (file) {
@@ -618,6 +810,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>';
     }
 
+    function privacyTagHtml(it) {
+        const isHouse = it.privacy === 'house';
+        return '<span class="doc-privacy-tag ' + (isHouse ? 'house' : 'private') + '">' + (isHouse ? 'House' : 'Private') + '</span>';
+    }
+
     function renderHeaderRow() {
         const row = document.createElement('div');
         row.className = 'doc-row doc-header-row';
@@ -632,28 +829,31 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Date Uploaded</span>'
             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
+            + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
             + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
         row.appendChild(left);
         row.appendChild(right);
         return row;
     }
 
-    function renderRow(it) {
+    function renderRow(it, terms) {
         const row = document.createElement('div');
         row.className = 'doc-row doc-row-open';
         row.dataset.id = it.id;
         const info = fileTypeInfo(it);
+        const useMark = !!(terms && terms.length);
         const left = document.createElement('div');
         left.className = 'doc-row-left';
         left.innerHTML = docIcon()
-            + '<span class="doc-cell doc-cell-asset">' + escapeHtml(assetLabel(it)) + '</span>'
-            + '<span class="doc-cell doc-cell-name">' + escapeHtml(it.name) + '</span>';
+            + '<span class="doc-cell doc-cell-asset">' + (useMark ? highlight(assetLabel(it), terms) : escapeHtml(assetLabel(it))) + '</span>'
+            + '<span class="doc-cell doc-cell-name">' + (useMark ? highlight(it.name, terms) : escapeHtml(it.name)) + '</span>';
         const right = document.createElement('div');
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
             + '<span class="doc-cell doc-cell-type">' + escapeHtml(info.label) + '</span>'
             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+            + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>';
         row.appendChild(left);
         row.appendChild(right);
@@ -672,6 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
+            + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
             + '</div>'
             + '</div>';
     }
@@ -687,6 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+            + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '</div>'
             + '</div>';
     }
@@ -721,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dd.querySelectorAll('.dropdown-menu button').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     docSort = btn.getAttribute('data-sort') || 'uploaded';
-                    render();
+                    updateView();
                 });
             });
         }
@@ -731,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 docReverse = !docReverse;
                 inv.classList.toggle('active', docReverse);
                 if (dd) dd.classList.toggle('inverted', docReverse);
-                render();
+                updateView();
             });
         }
         const groupsEl = document.getElementById('doc-groups');
@@ -938,6 +1140,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 cf.style.display = 'none';
                 return;
             }
+            if (searchQuery && searchQuery.trim()) {
+                resetSearch();
+                return;
+            }
         }
         if (popup.style.display !== 'flex') return;
         if (e.key === 'Escape') {
@@ -960,7 +1166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initDocSort();
-    render();
+    updateView();
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },

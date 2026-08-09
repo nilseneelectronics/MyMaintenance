@@ -58,6 +58,8 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: calc(100vh / var(--ui-zoom));
+    min-height: calc(100dvh / var(--ui-zoom));
 }
 
 a {
@@ -71,7 +73,7 @@ main {
     margin-top: var(--navbar-height);
     padding-top: var(--main-padding-top);
     transition: margin-top 0.3s ease;
-    min-height: 800px;
+    min-height: 0;
     width: 100%;
     max-width: 100%;
     margin-left: auto;

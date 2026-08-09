@@ -25,12 +25,13 @@
         <div class="grid-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
             <button type="button" class="add-button" id="doc-add-btn">Add documents</button>
             <div class="input-group">
-                <input type="text" placeholder="Search documents...">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" id="doc-search" placeholder="Search documents..." autocomplete="off">
             </div>
         </div>
 
         <div class="grid-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;" id="doc-list-head">
                 <h3>Documents</h3>
                 <div class="doc-sort-controls">
                     <button type="button" id="doc-sort-invert" class="doc-sort-invert" title="Invert sort direction" aria-label="Invert sort direction">
@@ -115,6 +116,28 @@
 
                 <label>Size</label>
                 <input type="text" id="doc-size" readonly>
+
+                <label>Visibility</label>
+                <div class="doc-privacy-row">
+                    <div class="doc-privacy-options">
+                        <label class="doc-check">
+                            <input type="checkbox" name="doc-privacy" value="private" checked>
+                            <span>Private</span>
+                        </label>
+                        <label class="doc-check">
+                            <input type="checkbox" name="doc-privacy" value="house">
+                            <span>House relevant</span>
+                        </label>
+                    </div>
+                    <div class="doc-info-wrap">
+                        <button type="button" class="doc-info-btn" id="doc-privacy-info" aria-label="What does this mean?" title="What does this mean?">i</button>
+                        <div class="doc-tooltip" id="doc-privacy-tip" role="tooltip">
+                            <h4>Visibility</h4>
+                            <p><strong>Private</strong> &ndash; your document. If you sell or transfer ownership, this document stays with you and the new owner cannot see it.</p>
+                            <p><strong>House relevant</strong> &ndash; goes with the home. On a sale, the new owner receives this document and you lose access to it.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="popup-buttons">
                 <button type="button" class="popup-btn cancel" id="doc-cancel">Cancel</button>
