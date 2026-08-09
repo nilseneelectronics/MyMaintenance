@@ -780,7 +780,7 @@
 #register-home-popup .popup-content,
 #register-vehicle-popup .popup-content {
     max-width: 520px;
-    max-height: 92vh;
+    max-height: calc(100vh / var(--ui-zoom) - 40px);
     overflow-y: auto;
     text-align: left;
 }
