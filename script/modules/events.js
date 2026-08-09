@@ -46,7 +46,7 @@
     function defaultData() {
         return {
             '2026-08-17': [{ name: 'Going home', startDate: '2026-08-17', finishDate: '2026-08-17', startTime: '14:00', finishTime: '16:00', location: 'Cabin', description: 'Pack up and head back to the city' }],
-            '2026-08-20': [{ name: 'Oil change', startDate: '2026-08-20', finishDate: '2026-08-20', startTime: '09:00', finishTime: '10:00', location: 'City Auto', description: '', isPlannedMaintenance: true, asset: 'Car 1 - Tesla Model Y' }],
+            '2026-08-20': [{ name: 'Cabin air filter replacement', startDate: '2026-08-20', finishDate: '2026-08-20', startTime: '09:00', finishTime: '10:00', location: 'City Auto', description: '', isPlannedMaintenance: true, asset: 'Car 1 - Tesla Model Y' }],
             '2026-09-15': [{ name: 'Roof inspection', startDate: '2026-09-15', finishDate: '2026-09-15', startTime: '10:00', finishTime: '12:00', location: 'Address 1, Street 123, 5000 City', description: '', isPlannedMaintenance: true, asset: 'Address 1, Street 123, 5000 City' }],
             '2026-10-02': [{ name: 'HVAC filter change', startDate: '2026-10-02', finishDate: '2026-10-02', startTime: '08:00', finishTime: '09:00', location: 'Address 1, Street 123, 5000 City', description: '', isPlannedMaintenance: true, asset: 'Address 1, Street 123, 5000 City' }],
             '2026-10-30': [{ name: 'Winterize boat', startDate: '2026-10-30', finishDate: '2026-10-30', startTime: '10:00', finishTime: '14:00', location: 'Harbour', description: '', isPlannedMaintenance: true, asset: 'Boat - Bayliner 255' }],

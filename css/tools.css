@@ -6,17 +6,17 @@
 
 .tools-grid {
     max-width: 1400px;
-    margin: 0 auto;
+    margin: 0 auto 60px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    gap: 24px;
 }
 
 .tool-box {
     background-color: var(--bg-secondary);
     border: 4px solid var(--accent-primary);
     border-radius: 30px;
-    padding: 35px 25px;
+    padding: 28px 26px;
     text-align: center;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -24,11 +24,13 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 15px;
-    min-height: 230px;
+    gap: 12px;
+    min-height: 220px;
 }
 
 .tool-box svg {
+    width: 92px;
+    height: 92px;
     fill: var(--accent-primary);
     stroke: var(--accent-primary);
 }
@@ -75,12 +77,12 @@
 
 .tool-box .dev-tag {
     display: none;
-    margin-top: 4px;
-    font-size: 0.8em;
+    margin-top: 3px;
+    font-size: 0.75em;
     font-weight: 600;
     color: var(--text-secondary);
     background: var(--hover-bg);
-    padding: 4px 12px;
+    padding: 3px 12px;
     border-radius: 20px;
     letter-spacing: 0.3px;
 }

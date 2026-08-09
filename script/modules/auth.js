@@ -190,7 +190,6 @@ window.MyMaintenanceAuth = {
                     // Keep UX working even when backend is unavailable.
                 }
                 localStorage.removeItem(tokenKey);
-                alert('Signed out!');
                 window.location.href = this.resolvePageUrl('index.html');
             });
         }
@@ -215,6 +214,23 @@ window.MyMaintenanceAuth = {
         if (switchToSignin) {
             switchToSignin.addEventListener('click', () => container.classList.remove('signup-mode'));
         }
+
+        const wireEnterSubmit = (form) => {
+            if (!form) return;
+            form.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+                const t = event.target;
+                if (t && (t.tagName === 'BUTTON' || t.tagName === 'TEXTAREA')) return;
+                event.preventDefault();
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }
+            });
+        };
+        wireEnterSubmit(signinForm);
+        wireEnterSubmit(signupForm);
 
         if (signinForm) {
             signinForm.addEventListener('submit', async (event) => {
