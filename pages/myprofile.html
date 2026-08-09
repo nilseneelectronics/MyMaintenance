@@ -25,58 +25,463 @@
         <div class="profile-box">
             <!-- Profilbilde til venstre, som knapp for opplasting -->
             <div class="profile-image">
-                <label for="profile-upload" class="profile-upload-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" height="150px" viewBox="0 -960 960 960" width="150px" fill="#20b2aa">
-                        <path d="M222-255q63-44 125-67.5T480-346q71 0 133.5 23.5T739-255q44-54 62.5-109T820-480q0-145-97.5-242.5T480-820q-145 0-242.5 97.5T140-480q0 61 19 116t63 109Zm257.81-195q-57.81 0-97.31-39.69-39.5-39.68-39.5-97.5 0-57.81 39.69-97.31 39.68-39.5 97.5-39.5 57.81 0 97.31 39.69 39.5 39.68 39.5 97.5 0 57.81-39.69 97.31-39.68 39.5-97.5 39.5Zm.66 370Q398-80 325-111.5t-127.5-86q-54.5-54.5-86-127.27Q80-397.53 80-480.27 80-563 111.5-635.5q31.5-72.5 86-127t127.27-86q72.76-31.5 155.5-31.5 82.73 0 155.23 31.5 72.5 31.5 127 86t86 127.03q31.5 72.53 31.5 155T848.5-325q-31.5 73-86 127.5t-127.03 86Q562.94-80 480.47-80Zm-.47-60q55 0 107.5-16T691-212q-51-36-104-55t-107-19q-54 0-107 19t-104 55q51 40 103.5 56T480-140Zm0-370q34 0 55.5-21.5T557-587q0-34-21.5-55.5T480-664q-34 0-55.5 21.5T403-587q0 34 21.5 55.5T480-510Zm0-77Zm0 374Z"/>
-                    </svg>
-                    <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+                <label for="profile-upload" class="profile-upload-button" id="profile-avatar-wrap">
+                    <img id="profile-avatar" alt="Profile picture" style="display:none">
+                    <span class="profile-avatar-icon" id="profile-avatar-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="150px" viewBox="0 -960 960 960" width="150px" fill="#20b2aa">
+                            <path d="M222-255q63-44 125-67.5T480-346q71 0 133.5 23.5T739-255q44-54 62.5-109T820-480q0-145-97.5-242.5T480-820q-145 0-242.5 97.5T140-480q0 61 19 116t63 109Zm257.81-195q-57.81 0-97.31-39.69-39.5-39.68-39.5-97.5 0-57.81 39.69-97.31 39.68-39.5 97.5-39.5 57.81 0 97.31 39.69 39.5 39.68 39.5 97.5 0 57.81-39.69 97.31-39.68 39.5-97.5 39.5Zm.66 370Q398-80 325-111.5t-127.5-86q-54.5-54.5-86-127.27Q80-397.53 80-480.27 80-563 111.5-635.5q31.5-72.5 86-127t127.27-86q72.76-31.5 155.5-31.5 82.73 0 155.23 31.5 72.5 31.5 127 86t86 127.03q31.5 72.53 31.5 155T848.5-325q-31.5 73-86 127.5t-127.03 86Q562.94-80 480.47-80Zm-.47-60q55 0 107.5-16T691-212q-51-36-104-55t-107-19q-54 0-107 19t-104 55q51 40 103.5 56T480-140Zm0-370q34 0 55.5-21.5T557-587q0-34-21.5-55.5T480-664q-34 0-55.5 21.5T403-587q0 34 21.5 55.5T480-510Zm0-77Zm0 374Z"/>
+                        </svg>
+                    </span>
+                    <span class="profile-avatar-hover">Change picture</span>
+                    <input type="file" id="profile-upload" accept="image/*" style="display:none">
                 </label>
             </div>
             <!-- Informasjon til høyre for bildet -->
             <div class="profile-info">
-                <p><strong>Name:</strong> [Your Name]</p>
-                <p><strong>Email:</strong> [Your Email]</p>
-                <p><strong>Address:</strong> [Your Address]</p>
+                <p><strong>Name:</strong> <span id="pf-name">[Your Name]</span></p>
+                <p><strong>Email:</strong> <span id="pf-email">[Your Email]</span></p>
+                <p><strong>Phone:</strong> <span id="pf-phone">[Your Phone]</span></p>
+                <p><strong>Address:</strong> <span id="pf-address">[Your Address]</span></p>
             </div>
         </div>
 
         <!-- Kolonne med knapper under profilen -->
         <div class="profile-buttons">
-            <a href="#change-personal" class="profile-button">Change Personal Information</a>
-            <a href="#family-settings" class="profile-button">Family Settings</a>
-            <a href="#connected-homes" class="profile-button">Connected Homes</a>
-            <a href="#connected-vehicles" class="profile-button">Connected Vehicles</a>
+            <button type="button" class="profile-button" id="btn-change-personal">Change Personal Information</button>
+            <button type="button" class="profile-button" id="btn-family-settings">Family Settings</button>
+            <button type="button" class="profile-button" id="btn-connected-homes">Connected Homes</button>
+            <button type="button" class="profile-button" id="btn-connected-vehicles">Connected Vehicles</button>
         </div>
 
         <!-- Security-seksjon -->
         <h2>Security</h2>
         <div class="security-buttons">
-            <a href="#access-control" class="profile-button">Access Control</a>
-            <a href="#view-terms" class="profile-button">View Terms and Conditions</a>
-            <!-- Tilleggsforslag: Change Password -->
-            <a href="#change-password" class="profile-button">Change Password</a>
-            <!-- Tilleggsforslag: Notification Settings -->
-            <a href="#notification-settings" class="profile-button">Notification Settings</a>
-            <!-- Tilleggsforslag: Delete Account (med advarsel) -->
-            <a href="#delete-account" class="profile-button delete-button">Delete Account</a>
+            <button type="button" class="profile-button" id="btn-access-control">Access Control</button>
+            <button type="button" class="profile-button" id="btn-view-terms">View Terms and Conditions</button>
+            <button type="button" class="profile-button" id="btn-change-password">Change Password</button>
+            <button type="button" class="profile-button" id="btn-notification-settings">Notification Settings</button>
+            <button type="button" class="profile-button delete-button" id="btn-delete-account">Delete Account</button>
         </div>
 
-        <!-- Tilleggsforslag: Subscription-seksjon (hvis relevant) -->
-        <h2>Subscription</h2>
-        <div class="subscription-buttons">
-            <a href="#manage-subscription" class="profile-button">Manage Subscription</a>
-            <a href="#payment-methods" class="profile-button">Payment Methods</a>
+        <!-- Edit personal information -->
+        <div id="profile-edit-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Edit Personal Information</h3>
+                <div class="done-fields">
+                    <label>Profile Picture</label>
+                    <div class="profile-picture-picker">
+                        <span class="profile-avatar-preview" id="pe-avatar-preview"></span>
+                        <div class="profile-picture-actions">
+                            <button type="button" class="view-button" id="pe-avatar-btn">Add picture</button>
+                            <button type="button" class="view-button delete-button" id="pe-avatar-delete">Delete picture</button>
+                        </div>
+                        <input type="file" id="pe-avatar-file" accept="image/*" style="display:none">
+                    </div>
+
+                    <label for="pe-name">Full Name *</label>
+                    <input type="text" id="pe-name" placeholder="e.g. John Doe">
+
+                    <label for="pe-email">Email *</label>
+                    <input type="email" id="pe-email" placeholder="e.g. john@example.com">
+
+                    <label for="pe-phone">Phone</label>
+                    <input type="text" id="pe-phone" placeholder="e.g. +47 123 45 678">
+
+                    <label for="pe-address">Address</label>
+                    <input type="text" id="pe-address" placeholder="e.g. Street 123">
+
+                    <div class="reg-row profile-reg-row">
+                        <div class="reg-col">
+                            <label for="pe-zip">Zip Code</label>
+                            <input type="text" id="pe-zip" placeholder="e.g. 5000">
+                        </div>
+                        <div class="reg-col">
+                            <label for="pe-city">City</label>
+                            <input type="text" id="pe-city" placeholder="e.g. City">
+                        </div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="pe-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="pe-save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- New profile picture confirmation -->
+        <div id="avatar-confirm-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>New Profile Picture</h3>
+                <p class="profile-popup-hint">Is this the picture you want to use?</p>
+                <div class="avatar-confirm-preview">
+                    <img id="avatar-confirm-img" alt="Picture preview">
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="avatar-confirm-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="avatar-confirm-ok">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Family settings -->
+        <div id="family-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Family Settings</h3>
+                <p class="profile-popup-hint">Members of your family and what they can access.</p>
+                <div class="profile-list" id="family-list"></div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="fam-close">Close</button>
+                    <button type="button" class="popup-btn confirm" id="fam-invite">Invite member</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Access control -->
+        <div id="access-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Access Control</h3>
+                <p class="profile-popup-hint">Manage who can access your account data.</p>
+                <div class="profile-list" id="access-list"></div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="access-close">Close</button>
+                    <button type="button" class="popup-btn confirm" id="access-invite">Invite member</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invite member -->
+        <div id="invite-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Invite to your family</h3>
+                <div class="done-fields">
+                    <label for="inv-name">Name *</label>
+                    <input type="text" id="inv-name" placeholder="e.g. Jane Doe">
+
+                    <label for="inv-email">Email *</label>
+                    <input type="email" id="inv-email" placeholder="e.g. jane@example.com">
+
+                    <label>Role</label>
+                    <div class="asset-dropdown" id="inv-role-dropdown">
+                        <button type="button" class="asset-toggle" id="inv-role-toggle">
+                            <span class="asset-value" id="inv-role-value">Member</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="inv-role-menu">
+                            <li><button type="button" data-value="Member">Member</button></li>
+                            <li><button type="button" data-value="Viewer">Viewer</button></li>
+                        </ul>
+                    </div>
+
+                    <p class="profile-popup-hint">Invited people must confirm the invitation before they appear as members.</p>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="inv-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="inv-send">Send invite</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage member access -->
+        <div id="member-access-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Manage access</h3>
+                <p class="profile-popup-hint" id="ma-name"></p>
+                <div class="done-fields">
+                    <label>Role</label>
+                    <div class="asset-dropdown" id="ma-role-dropdown">
+                        <button type="button" class="asset-toggle" id="ma-role-toggle">
+                            <span class="asset-value" id="ma-role-value">Member</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="ma-role-menu">
+                            <li><button type="button" data-value="Owner">Owner</button></li>
+                            <li><button type="button" data-value="Member">Member</button></li>
+                            <li><button type="button" data-value="Viewer">Viewer</button></li>
+                        </ul>
+                    </div>
+                    <p class="profile-popup-hint">Choose what this member can reach and manage.</p>
+                    <div class="profile-toggles" id="ma-toggles"></div>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn delete" id="ma-remove">Remove member</button>
+                    <button type="button" class="popup-btn cancel" id="ma-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="ma-save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connected homes -->
+        <div id="homes-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Connected Homes</h3>
+                <p class="profile-popup-hint">Select a home to change its information, transfer ownership or remove it.</p>
+                <div class="profile-list" id="homes-list"></div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn confirm" id="homes-close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connected vehicles -->
+        <div id="vehicles-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Connected Vehicles</h3>
+                <p class="profile-popup-hint">Select a vehicle or boat to change its information, transfer ownership or remove it.</p>
+                <div class="profile-list" id="vehicles-list"></div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn confirm" id="vehicles-close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer ownership -->
+        <div id="transfer-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Transfer ownership</h3>
+                <p class="profile-popup-hint" id="transfer-item-name"></p>
+                <div class="done-fields">
+                    <label>Transfer to family member</label>
+                    <div class="asset-dropdown" id="transfer-recipient-dropdown">
+                        <button type="button" class="asset-toggle" id="transfer-recipient-toggle">
+                            <span class="asset-value" id="transfer-recipient-value">-- Select a family member --</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="transfer-recipient-menu"></ul>
+                    </div>
+
+                    <label>Or invite someone new</label>
+                    <input type="email" id="transfer-email" placeholder="Email address">
+
+                    <p class="profile-popup-hint">An invitation is sent to this address and ownership transfers once they join.</p>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="transfer-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="transfer-save">Transfer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generic confirmation -->
+        <div id="confirm-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Are you sure?</h3>
+                <p class="popup-task" id="confirm-message"></p>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="confirm-cancel">Cancel</button>
+                    <button type="button" class="popup-btn delete" id="confirm-ok">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change password -->
+        <div id="password-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Change Password</h3>
+                <div class="done-fields">
+                    <label for="pw-current">Current password</label>
+                    <input type="password" id="pw-current" placeholder="Current password" autocomplete="current-password">
+
+                    <label for="pw-new">New password</label>
+                    <input type="password" id="pw-new" placeholder="At least 8 characters" autocomplete="new-password">
+
+                    <label for="pw-confirm">Confirm new password</label>
+                    <input type="password" id="pw-confirm" placeholder="Repeat new password" autocomplete="new-password">
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="pw-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="pw-save">Update Password</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notification settings -->
+        <div id="notification-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Notification Settings</h3>
+                <p class="profile-popup-hint">Choose which events should send you notifications.</p>
+                <div class="profile-toggles" id="ntf-toggles"></div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="ntf-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="ntf-save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terms and conditions -->
+        <div id="terms-popup" class="popup-overlay">
+            <div class="popup-content profile-popup-wide">
+                <h3>Terms and Conditions</h3>
+                <div class="terms-scroll">
+                    <p><strong>1. Acceptance of Terms</strong></p>
+                    <p>By using MyMaintenance you agree to be bound by these terms. If you do not agree, please do not use the service.</p>
+                    <p><strong>2. Your Data</strong></p>
+                    <p>You retain the rights to the information you store. In a preview build, data is kept locally in your browser only.</p>
+                    <p><strong>3. Acceptable Use</strong></p>
+                    <p>You agree not to misuse the service, to harvest data, or to interfere with its operation.</p>
+                    <p><strong>4. Family Sharing</strong></p>
+                    <p>Members you invite only gain access to the areas you grant them. You are responsible for the access you configure.</p>
+                    <p><strong>5. Changes</strong></p>
+                    <p>We may update these terms from time to time. Continued use after changes means you accept the revised terms.</p>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn confirm" id="terms-close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete account -->
+        <div id="delete-account-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Delete Account</h3>
+                <p class="popup-task">This permanently removes your profile, family members and settings. This action cannot be undone.</p>
+                <div class="done-fields">
+                    <label class="profile-check">
+                        <input type="checkbox" id="da-confirm">
+                        <span>I understand that my account and data will be permanently deleted.</span>
+                    </label>
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="da-cancel">Cancel</button>
+                    <button type="button" class="popup-btn delete" id="da-delete">Delete My Account</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register / edit home -->
+        <div id="register-home-popup" class="popup-overlay">
+            <div class="popup-content home-reg-content">
+                <h3 id="rh-title">Register a home</h3>
+                <p class="reg-hint">Fields marked with * are required. The rest can be registered later.</p>
+                <div class="done-fields">
+                    <label>Name *</label>
+                    <input type="text" id="rh-name" placeholder="e.g. My Home">
+
+                    <label>Country</label>
+                    <input type="text" id="rh-country" placeholder="e.g. Norway">
+
+                    <label>Address *</label>
+                    <input type="text" id="rh-address" placeholder="Street and number">
+
+                    <div class="reg-row">
+                        <div class="reg-col">
+                            <label>Zip</label>
+                            <input type="text" id="rh-zip" placeholder="e.g. 5000">
+                        </div>
+                        <div class="reg-col">
+                            <label>City</label>
+                            <input type="text" id="rh-city" placeholder="e.g. Bergen">
+                        </div>
+                    </div>
+
+                    <label>Build Year</label>
+                    <input type="number" id="rh-build-year" placeholder="e.g. 1998">
+
+                    <label>House Type</label>
+                    <div class="asset-dropdown" id="rh-house-type-dropdown">
+                        <button type="button" class="asset-toggle" id="rh-house-type-toggle">
+                            <span class="asset-value" id="rh-house-type-value">-- Select --</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="rh-house-type-menu">
+                            <li><button type="button" data-value="House">House</button></li>
+                            <li><button type="button" data-value="Apartment">Apartment</button></li>
+                            <li><button type="button" data-value="Cabin">Cabin</button></li>
+                            <li><button type="button" data-value="Other">Other</button></li>
+                        </ul>
+                    </div>
+                    <input type="text" id="rh-house-type-other" placeholder="Specify type..." style="display:none">
+
+                    <label>Floors</label>
+                    <input type="number" id="rh-floors" placeholder="e.g. 2">
+
+                    <div class="reg-row">
+                        <div class="reg-col">
+                            <label>Internal size (m&sup2;)</label>
+                            <input type="number" id="rh-internal" placeholder="e.g. 180">
+                        </div>
+                        <div class="reg-col">
+                            <label>External size (m&sup2;)</label>
+                            <input type="number" id="rh-external" placeholder="e.g. 220">
+                        </div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn cancel" id="rh-cancel">Cancel</button>
+                    <button class="popup-btn confirm" id="rh-confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register / edit vehicle -->
+        <div id="register-vehicle-popup" class="popup-overlay">
+            <div class="popup-content home-reg-content">
+                <h3 id="rv-title">Register a vehicle</h3>
+                <p class="reg-hint">Fields marked with * are required. The rest can be registered later.</p>
+                <div class="done-fields">
+                    <label>Name *</label>
+                    <input type="text" id="rv-name" placeholder="e.g. My Car">
+
+                    <label>Type</label>
+                    <div class="asset-dropdown" id="rv-type-dropdown">
+                        <button type="button" class="asset-toggle" id="rv-type-toggle">
+                            <span class="asset-value" id="rv-type-value">-- Select --</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <ul class="asset-menu" id="rv-type-menu">
+                            <li><button type="button" data-value="Car">Car</button></li>
+                            <li><button type="button" data-value="Boat">Boat</button></li>
+                            <li><button type="button" data-value="Other">Other</button></li>
+                        </ul>
+                    </div>
+                    <input type="text" id="rv-type-other" placeholder="Specify type..." style="display:none">
+
+                    <label id="rv-registration-label">Registration *</label>
+                    <input type="text" id="rv-registration" placeholder="e.g. AB12345">
+
+                    <label id="rv-vin-label" style="display:none">VIN</label>
+                    <input type="text" id="rv-vin" placeholder="e.g. W0L0..." style="display:none">
+
+                    <label>Make</label>
+                    <input type="text" id="rv-make" placeholder="e.g. Tesla">
+
+                    <label>Model</label>
+                    <input type="text" id="rv-model" placeholder="e.g. Model Y">
+
+                    <label>Year</label>
+                    <input type="number" id="rv-year" placeholder="e.g. 2021">
+
+                    <label id="rv-meter-label">Odometer (km)</label>
+                    <input type="number" id="rv-meter" placeholder="e.g. 15000">
+
+                    <label>Fuel Type</label>
+                    <input type="text" id="rv-fuel" placeholder="e.g. Electric">
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn cancel" id="rv-cancel">Cancel</button>
+                    <button class="popup-btn confirm" id="rv-confirm">Confirm</button>
+                </div>
+            </div>
         </div>
     </main>
     
-    
-    
-    
     <script src="../script/app-config.js"></script>
+    <script src="../script/modules/assets.js"></script>
+    <script src="../script/modules/home-register.js"></script>
+    <script src="../script/modules/vehicle-register.js"></script>
+    <script src="../script/modules/profile-data.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/pages/myprofile.js"></script>
     <script src="../script/script.js"></script>
 </body>
 </html>
-
-

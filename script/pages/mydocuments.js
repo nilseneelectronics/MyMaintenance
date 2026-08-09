@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetSearch() {
         searchQuery = '';
         if (searchInput) searchInput.value = '';
-        if (docListHead) docListHead.style.display = '';
+        if (docListHead) docListHead.style.display = 'flex';
         render();
     }
 

@@ -574,6 +574,8 @@
 .done-fields label:first-child { margin-top: 0; }
 
 .done-fields input[type="text"],
+.done-fields input[type="email"],
+.done-fields input[type="password"],
 .done-fields textarea,
 .done-fields input[type="file"] {
     width: 100%;
@@ -588,6 +590,8 @@
 }
 
 .done-fields input[type="text"]:focus,
+.done-fields input[type="email"]:focus,
+.done-fields input[type="password"]:focus,
 .done-fields textarea:focus {
     outline: none;
     border-color: var(--accent-primary);
@@ -1027,6 +1031,7 @@
     z-index: 10000;
     align-items: center;
     justify-content: center;
+    overflow-y: auto;
 }
 
 .popup-content {
@@ -1038,6 +1043,7 @@
     width: 90%;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    margin: auto;
 }
 
 .popup-content h3 {

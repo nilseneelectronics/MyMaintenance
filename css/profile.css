@@ -3,6 +3,13 @@
 /* =======================================
    Profile Page Styles
    ======================================= */
+/* The main element normally creates a stacking context (z-index: 1) which would cap
+   the popups below the header/sidebar. Disable it on the profile page so popups float above. */
+.main-profile {
+    position: static;
+    z-index: auto;
+}
+
 .profile-box {
     display: flex;
     align-items: center;
@@ -23,25 +30,63 @@
 
 .profile-info {
     flex: 1;
+    min-width: 0;
 }
 
 .profile-info p {
     margin: 10px 0;
     font-size: 1.2em;
     color: var(--text-primary);
+    overflow-wrap: anywhere;
 }
 
 .profile-upload-button {
     cursor: pointer;
     display: inline-block;
     transition: opacity 0.3s;
+    vertical-align: middle;
+    position: relative;
 }
 
 .profile-upload-button:hover {
-    opacity: 0.8;
+    opacity: 1;
 }
 
-.profile-buttons, .security-buttons, .subscription-buttons {
+.profile-avatar-hover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    color: transparent;
+    font-size: 1em;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    text-align: center;
+    padding: 10px;
+    box-sizing: border-box;
+    pointer-events: none;
+    transition: background 0.3s, color 0.3s;
+}
+
+.profile-upload-button:hover .profile-avatar-hover {
+    background: rgba(0, 0, 0, 0.55);
+    color: #FFFFFF;
+}
+
+.profile-upload-button img {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 12px;
+    vertical-align: middle;
+}
+
+.profile-buttons, .security-buttons {
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -55,4 +100,394 @@
     font-size: 1.8em;
     margin: 30px 0 20px;
     text-align: center;
+}
+
+/* =======================================
+   Profile Popups
+   ======================================= */
+.popup-content.profile-popup-wide {
+    max-width: 720px;
+    max-height: calc(100vh / var(--ui-zoom) - 40px);
+    overflow-y: auto;
+}
+
+.profile-popup-hint {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    text-align: center;
+    margin: 6px 0 14px;
+}
+
+.profile-picture-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.profile-picture-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 240px;
+}
+
+.profile-picture-actions .view-button {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 0;
+}
+
+.profile-picture-actions .view-button.delete-button {
+    background: transparent;
+    border-color: var(--delete-red);
+    color: var(--delete-red);
+}
+
+.profile-picture-actions .view-button.delete-button:hover {
+    background: var(--delete-red);
+    border-color: var(--delete-red);
+    color: #FFFFFF;
+}
+
+.profile-avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.8em;
+    flex: 0 0 auto;
+    overflow: hidden;
+    border: 3px solid var(--accent-primary);
+}
+
+.profile-avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-reg-row {
+    grid-template-columns: 1fr 2fr;
+}
+
+.avatar-confirm-preview {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 3px solid var(--accent-primary);
+    background: var(--bg-primary);
+    margin: 0 auto 22px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-confirm-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-mini {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex: 0 0 auto;
+    overflow: hidden;
+    font-size: 1em;
+}
+
+.profile-avatar-mini img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-mini.profile-avatar-lg {
+    width: 64px;
+    height: 64px;
+    font-size: 1.2em;
+}
+
+/* =======================================
+   Profile list rows
+   ======================================= */
+.profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 460px;
+    overflow-y: auto;
+    padding: 2px;
+    margin-bottom: 22px;
+    text-align: left;
+}
+
+.profile-list-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.profile-list-row:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 10px rgba(32, 178, 170, 0.15);
+}
+
+.profile-row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-row-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-wrap: anywhere;
+}
+
+.profile-row-sub {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+}
+
+.role-badge {
+    font-size: 0.68em;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.role-badge.owner {
+    background: var(--accent-primary);
+    color: #FFFFFF;
+}
+
+.role-badge.member {
+    background: var(--hover-bg);
+    color: var(--accent-secondary);
+    border: 1px solid var(--accent-primary);
+}
+
+.role-badge.viewer {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.role-badge.invited {
+    background: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.profile-row-actions {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.profile-row-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 2px solid var(--accent-primary);
+    background: transparent;
+    color: var(--accent-primary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.78em;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+.profile-row-btn:hover {
+    background: var(--accent-primary);
+    color: #FFFFFF;
+}
+
+.profile-row-btn.delete {
+    border-color: var(--delete-red);
+    color: var(--delete-red);
+}
+
+.profile-row-btn.delete:hover {
+    background: var(--delete-red);
+    color: #FFFFFF;
+}
+
+/* =======================================
+   Toggle switches
+   ======================================= */
+.profile-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px 0 18px;
+    text-align: left;
+}
+
+.profile-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 0.95em;
+    color: var(--text-primary);
+    transition: border-color 0.3s;
+}
+
+.profile-toggle:hover {
+    border-color: var(--accent-primary);
+}
+
+.profile-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+}
+
+.toggle-track {
+    width: 52px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    position: relative;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 3px;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.toggle-track::after {
+    content: '';
+    position: static;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition: transform 0.3s, background-color 0.3s;
+    transform: translateX(0);
+}
+
+.profile-toggle input:checked + .toggle-track {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.profile-toggle input:checked + .toggle-track::after {
+    transform: translateX(22px);
+    background: #FFFFFF;
+}
+
+.profile-toggle input:disabled + .toggle-track {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.profile-toggle.disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Checkboxes */
+.profile-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.95em;
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+}
+
+.profile-check input {
+    margin-top: 3px;
+    accent-color: var(--accent-primary);
+}
+
+/* Terms scroll */
+.terms-scroll {
+    max-height: calc(100vh / var(--ui-zoom) - 220px);
+    overflow-y: auto;
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 22px;
+    text-align: left;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.terms-scroll p {
+    margin: 8px 0;
+    font-size: 0.92em;
+    line-height: 1.5;
+}
+
+/* Toast */
+.profile-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent-secondary);
+    color: #FFFFFF;
+    padding: 12px 24px;
+    border-radius: 25px;
+    z-index: 20000;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    font-size: 0.95em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 80vw;
+    text-align: center;
+}
+
+.profile-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.profile-toast.error {
+    background: var(--delete-red);
 }
