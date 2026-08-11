@@ -95,6 +95,8 @@ class ThreeMFLoader extends Loader {
 
 		let allResources = null;
 
+		let colorMeta = null;
+
 		function findResource( category, id, modelData ) {
 
 			if ( modelData.resources && modelData.resources[ category ] && modelData.resources[ category ][ id ] !== undefined ) {
@@ -235,12 +237,76 @@ class ThreeMFLoader extends Loader {
 
 			}
 
+			// Bambu Studio / PrusaSlicer store multi-color filament assignment in
+			// project metadata rather than in the 3MF core model. Recover the
+			// per-object color by pairing the filament palette with the extruder
+			// assigned to each model part.
+
+			const colorMeta = {};
+			let projectSettingsName = null;
+			let modelSettingsName = null;
+
+			for ( file in zip ) {
+
+				if ( /project_settings\.config$/.test( file ) ) projectSettingsName = file;
+				else if ( /model_settings\.config$/.test( file ) ) modelSettingsName = file;
+
+			}
+
+			if ( modelSettingsName && projectSettingsName ) {
+
+				const projectText = textDecoder.decode( zip[ projectSettingsName ] );
+				const modelText = textDecoder.decode( zip[ modelSettingsName ] );
+
+				try {
+
+					const projectData = JSON.parse( projectText );
+					const filamentColors = projectData.filament_colour;
+
+					if ( Array.isArray( filamentColors ) ) {
+
+						const modelXmlData = new DOMParser().parseFromString( modelText, 'application/xml' );
+						const partNodes = modelXmlData.querySelectorAll( 'part' );
+
+						for ( let i = 0; i < partNodes.length; i ++ ) {
+
+							const partNode = partNodes[ i ];
+							const partId = partNode.getAttribute( 'id' );
+							const metadataNodes = partNode.querySelectorAll( 'metadata' );
+							let extruder = null;
+
+							for ( let j = 0; j < metadataNodes.length; j ++ ) {
+
+								if ( metadataNodes[ j ].getAttribute( 'key' ) === 'extruder' ) {
+
+									extruder = parseInt( metadataNodes[ j ].getAttribute( 'value' ), 10 );
+									break;
+
+								}
+
+							}
+
+							if ( partId && extruder !== null && 1 <= extruder && extruder <= filamentColors.length ) {
+
+								colorMeta[ partId ] = filamentColors[ extruder - 1 ];
+
+							}
+
+						}
+
+					}
+
+				} catch ( e ) {}
+
+			}
+
 			return {
 				rels: rels,
 				modelRels: modelRels,
 				model: modelParts,
 				printTicket: printTicketParts,
-				texture: texturesParts
+				texture: texturesParts,
+				colorMeta: colorMeta
 			};
 
 		}
@@ -1232,6 +1298,27 @@ case 'material':
 
 			}
 
+			// apply the filament color when the mesh carries no color of its own
+			// (Bambu Studio / PrusaSlicer files assign color via project metadata)
+
+			if ( colorMeta && objectData.id && colorMeta[ objectData.id ] ) {
+
+				const color = new Color( colorMeta[ objectData.id ] );
+
+				for ( let i = 0, l = meshes.length; i < l; i ++ ) {
+
+					const material = meshes[ i ].material;
+
+					if ( material && material.map === null && material.vertexColors !== true && material.color && material.color.getHex() === 0xffffff ) {
+
+						material.color.copy( color );
+
+					}
+
+				}
+
+			}
+
 			return group;
 
 		}
@@ -1412,6 +1499,8 @@ case 'material':
 			const textureData = {};
 
 			allResources = { basematerials: {}, colorgroup: {}, texture2dgroup: {}, texture2d: {}, pbmetallicdisplayproperties: {} };
+
+			colorMeta = data3mf.colorMeta || null;
 
 			for ( let i = 0; i < modelsKeys.length; i ++ ) {
 
