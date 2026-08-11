@@ -465,6 +465,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (event) => {
         if (deletePopup && deletePopup.style.display === 'flex') {
             if (event.key === 'Escape') deletePopup.style.display = 'none';
+        } else if (addPopup && addPopup.style.display === 'flex') {
+            if (event.key === 'Escape') closeAddPhotos();
+        } else if (editPopup && editPopup.style.display === 'flex') {
+            if (event.key === 'Escape') closeEditPhoto();
         } else if (modal && modal.classList.contains('active')) {
             if (event.key === 'Escape') {
                 if (fullscreenEditMode) exitFullscreenEdit();
@@ -475,10 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.key === 'ArrowRight') showModalPhoto(currentIndex + 1);
         } else if (galleryModal && galleryModal.classList.contains('active')) {
             if (event.key === 'Escape') closeGallery();
-        } else if (editPopup && editPopup.style.display === 'flex') {
-            if (event.key === 'Escape') closeEditPhoto();
-        } else if (addPopup && addPopup.style.display === 'flex') {
-            if (event.key === 'Escape') closeAddPhotos();
         }
     });
 });

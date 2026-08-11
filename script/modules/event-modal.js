@@ -89,6 +89,7 @@
             if (!modal) return;
             modal.classList.add('open');
             resetFields();
+            if (window.MyMaintenanceEventTools) window.MyMaintenanceEventTools.reset();
             state.editingKey = null;
             state.editingIndex = -1;
             const editing = !!(opts && opts.event && opts.key);
@@ -112,6 +113,7 @@
                     if (evAssetWrap) evAssetWrap.style.display = '';
                     if (e.asset) selectAsset(e.asset);
                 }
+                if (window.MyMaintenanceEventTools) window.MyMaintenanceEventTools.setItems(e.tools, e.materials);
             } else {
                 if (evStartDate) evStartDate.value = key;
                 if (evFinishDate) evFinishDate.value = key;
@@ -160,7 +162,9 @@
                 location: evLocation ? evLocation.value.trim() : '',
                 description: evDesc ? evDesc.value.trim() : '',
                 isPlannedMaintenance: isPlanned,
-                asset: asset
+                asset: asset,
+                tools: window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().tools : [],
+                materials: window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().materials : []
             };
             if (state.editingKey && state.editingIndex >= 0) {
                 if (state.editingKey === startDate) {
@@ -182,7 +186,7 @@
         });
         if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
         if (evName) evName.addEventListener('keydown', function (e) { if (e.key === 'Enter' && evAdd) evAdd.click(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal && modal.classList.contains('open')) close(); });
 
         if (evPlanned) {
             evPlanned.addEventListener('change', function () {

@@ -1184,17 +1184,53 @@
     z-index: 9999;
     align-items: center;
     justify-content: center;
+    padding-top: 5vh;
 }
 .event-modal-overlay.open { display: flex; }
 .event-modal-card {
     background: var(--bg-primary);
     border-radius: 16px;
     padding: 22px 26px;
+    border-right: 6px solid var(--bg-primary);
+    border-top: 8px solid var(--bg-primary);
+    border-bottom: 8px solid var(--bg-primary);
     max-width: 480px;
     width: 90%;
+    box-sizing: border-box;
     box-shadow: 0 8px 40px rgba(0,0,0,0.15);
     max-height: 92vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+.event-modal-card::-webkit-scrollbar {
+    width: 8px;
+}
+.event-modal-card::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+.event-modal-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+.event-modal-card::-webkit-scrollbar-track-piece {
+    background: transparent;
+}
+.event-modal-card::-webkit-scrollbar-corner {
+    background: transparent;
+}
+.event-modal-card::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+.event-modal-card::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+body:has(.event-modal-overlay.open) {
+    overflow: hidden;
 }
 .event-modal-card h3 { margin: 0 0 14px; font-size: 1.15rem; }
 .event-modal-field { margin-bottom: 12px; }

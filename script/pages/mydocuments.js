@@ -64,17 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(s || '').toLowerCase().replace(/\s+/g, ' ');
     }
 
+    function normalizeSizeForSearch(s) {
+        return String(s || '').toLowerCase().replace(/,/g, '.').replace(/\s+/g, '');
+    }
+
     function searchFields(it) {
         const info = fileTypeInfo(it);
         return [
             { key: 'name', text: normalizeForSearch(it.name), weight: 100 },
-            { key: 'asset', text: normalizeForSearch(it.asset), weight: 90 },
+            { key: 'asset', text: normalizeForSearch(it.asset || 'Other'), weight: 90 },
             { key: 'fileName', text: normalizeForSearch(it.fileName), weight: 40 },
             { key: 'type', text: normalizeForSearch(info.label), weight: 20 },
             { key: 'performed', text: normalizeForSearch(formatDateLabel(it.performed)), weight: 15 },
             { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
             { key: 'datesD', text: dateDigits(it), weight: 120 },
-            { key: 'size', text: normalizeForSearch(formatSize(it.size)), weight: 10 }
+            { key: 'size', text: normalizeSizeForSearch(formatSize(it.size)), weight: 10, norm: normalizeSizeForSearch },
+            { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 }
         ];
     }
 
@@ -115,7 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let t = 0; t < terms.length; t++) {
             let best = 0;
             for (let f = 0; f < fields.length; f++) {
-                const sc = fieldTermScore(fields[f].text, terms[t]);
+                const term = fields[f].norm ? fields[f].norm(terms[t]) : terms[t];
+                const sc = fieldTermScore(fields[f].text, term);
                 if (sc > 0 && sc * fields[f].weight > best) best = sc * fields[f].weight;
             }
             total += best;
@@ -785,7 +791,8 @@ document.addEventListener('DOMContentLoaded', () => {
             zip: ['ZIP', 'file-zip'], '7z': ['ZIP', 'file-zip'], rar: ['ZIP', 'file-zip'],
             mp3: ['MP3', 'file-audio'], wav: ['AUD', 'file-audio'], flac: ['AUD', 'file-audio'],
             mp4: ['MKV', 'file-video'], mkv: ['MKV', 'file-video'], mov: ['MOV', 'file-video'],
-            webm: ['VID', 'file-video'], avi: ['AVI', 'file-video']
+            webm: ['VID', 'file-video'], avi: ['AVI', 'file-video'],
+            '3mf': ['3MF', 'file-3d'], stl: ['STL', 'file-3d'], obj: ['OBJ', 'file-3d'], step: ['STEP', 'file-3d']
         };
         if (map[ext]) return { label: map[ext][0], cls: map[ext][1], ext: ext, mime: mime };
         if (mime.indexOf('image') === 0) return { label: 'IMG', cls: 'file-image', ext: ext, mime: mime };
@@ -806,7 +813,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return a || 'Other';
     }
 
-    function docIcon() {
+    function docIcon(info) {
+        info = info || {};
+        if (info.cls === 'file-image') {
+            return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0 0v-600 600Zm86-97h429q8.5 0 12.75-8t-.75-16L590-457q-5-6-12-6t-12 6L446-302l-81-111q-5-6-12-6t-12 6l-86 112q-6 8-1.75 16t12.75 8Z"/></svg>';
+        }
+        if (info.cls === 'file-3d') {
+            return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M450-154v-309L180-619v309l270 156Zm60 0 270-156v-310L510-463.16V-154Zm-30-360 266-155-266-154-267 154 267 155ZM150-258q-14.25-8.43-22.12-22.21Q120-294 120-310v-340q0-16 7.88-29.79Q135.75-693.57 150-702l300-173q14.33-8 30.16-8 15.84 0 29.84 8l300 173q14.25 8.43 22.13 22.21Q840-666 840-650v340q0 16-7.87 29.79Q824.25-266.43 810-258L510-85q-14.33 8-30.16 8Q464-77 450-85L150-258Zm330-222Z"/></svg>';
+        }
         return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>';
     }
 
@@ -844,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const useMark = !!(terms && terms.length);
         const left = document.createElement('div');
         left.className = 'doc-row-left';
-        left.innerHTML = docIcon()
+        left.innerHTML = docIcon(info)
             + '<span class="doc-cell doc-cell-asset">' + (useMark ? highlight(assetLabel(it), terms) : escapeHtml(assetLabel(it))) + '</span>'
             + '<span class="doc-cell doc-cell-name">' + (useMark ? highlight(it.name, terms) : escapeHtml(it.name)) + '</span>';
         const right = document.createElement('div');
@@ -881,7 +895,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const info = fileTypeInfo(it);
         return '<div class="doc-row doc-row-open" data-doc-id="' + escapeHtml(it.id) + '">'
             + '<div class="doc-row-left">'
-            + docIcon()
+            + docIcon(info)
             + '<span class="doc-cell doc-cell-name">' + escapeHtml(it.name) + '</span>'
             + '</div>'
             + '<div class="doc-row-right">'

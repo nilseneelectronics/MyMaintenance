@@ -226,11 +226,11 @@ function insertCommonLayout() {
 }
 
 function setActiveSidebarLink() {
-    const current = location.pathname.split('/').pop() || 'dashboard.html';
-    const isToolPage = /^tool-/.test(current);
+    const current = decodeURIComponent(location.pathname.split('/').pop() || 'dashboard.html');
+    const isToolArea = /^(mytools|tool-)/.test(current);
     document.querySelectorAll('.sidebar a').forEach(a => {
-        const href = a.getAttribute('href');
-        a.classList.toggle('active', href === current || (isToolPage && (href === 'mytools.html' || href === 'mytools 2.html')));
+        const href = decodeURIComponent(a.getAttribute('href'));
+        a.classList.toggle('active', href === current || (isToolArea && /^mytools/.test(href)));
     });
 }
 
@@ -305,8 +305,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
 
     let lastScroll = 0;
-    window.addEventListener('scroll', () => {
-        const currentScroll = window.scrollY;
+    const scrollTarget = document.body;
+    scrollTarget.addEventListener('scroll', () => {
+        const currentScroll = scrollTarget.scrollTop;
         const hasToggle = !!document.getElementById('sidebar-toggle');
         const isLoggedIn = body.classList.contains('logged-in');
         if (currentScroll > lastScroll) {

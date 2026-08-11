@@ -32,7 +32,7 @@
     width: 92px;
     height: 92px;
     fill: var(--accent-primary);
-    stroke: var(--accent-primary);
+    stroke: none;
 }
 
 .tool-box h3 {
@@ -63,7 +63,7 @@
 
 .tool-box.disabled svg {
     fill: var(--text-secondary);
-    stroke: var(--text-secondary);
+    stroke: none;
 }
 
 .tool-box.disabled h3 {
