@@ -90,6 +90,29 @@ class ThreeMFLoader extends Loader {
 		const scope = this;
 		const textureLoader = new TextureLoader( this.manager );
 
+		// cross-part resource registry: colors / materials / textures may be
+		// defined in a different model part than the geometry that references them
+
+		let allResources = null;
+
+		function findResource( category, id, modelData ) {
+
+			if ( modelData.resources && modelData.resources[ category ] && modelData.resources[ category ][ id ] !== undefined ) {
+
+				return modelData.resources[ category ][ id ];
+
+			}
+
+			if ( allResources && allResources[ category ] && allResources[ category ][ id ] !== undefined ) {
+
+				return allResources[ category ][ id ];
+
+			}
+
+			return undefined;
+
+		}
+
 		function loadDocument( data ) {
 
 			let zip = null;
@@ -773,8 +796,7 @@ class ThreeMFLoader extends Loader {
 		function buildTexture( texture2dgroup, objects, modelData, textureData ) {
 
 			const texid = texture2dgroup.texid;
-			const texture2ds = modelData.resources.texture2d;
-			const texture2d = texture2ds[ texid ];
+			const texture2d = findResource( 'texture2d', texid, modelData );
 
 			if ( texture2d ) {
 
@@ -1088,27 +1110,27 @@ class ThreeMFLoader extends Loader {
 
 				switch ( resourceType ) {
 
-					case 'material':
-						const basematerials = modelData.resources.basematerials[ resourceId ];
-						const newMeshes = buildBasematerialsMeshes( basematerials, triangleProperties, meshData, objects, modelData, textureData, objectData );
+case 'material':
+					const basematerials = findResource( 'basematerials', resourceId, modelData );
+					const newMeshes = buildBasematerialsMeshes( basematerials, triangleProperties, meshData, objects, modelData, textureData, objectData );
 
-						for ( let j = 0, jl = newMeshes.length; j < jl; j ++ ) {
+					for ( let j = 0, jl = newMeshes.length; j < jl; j ++ ) {
 
-							meshes.push( newMeshes[ j ] );
+						meshes.push( newMeshes[ j ] );
 
-						}
+					}
 
-						break;
+					break;
 
-					case 'texture':
-						const texture2dgroup = modelData.resources.texture2dgroup[ resourceId ];
-						meshes.push( buildTexturedMesh( texture2dgroup, triangleProperties, meshData, objects, modelData, textureData, objectData ) );
-						break;
+				case 'texture':
+					const texture2dgroup = findResource( 'texture2dgroup', resourceId, modelData );
+					meshes.push( buildTexturedMesh( texture2dgroup, triangleProperties, meshData, objects, modelData, textureData, objectData ) );
+					break;
 
-					case 'vertexColors':
-						const colorgroup = modelData.resources.colorgroup[ resourceId ];
-						meshes.push( buildVertexColorMesh( colorgroup, triangleProperties, meshData, objectData ) );
-						break;
+				case 'vertexColors':
+					const colorgroup = findResource( 'colorgroup', resourceId, modelData );
+					meshes.push( buildVertexColorMesh( colorgroup, triangleProperties, meshData, objectData ) );
+					break;
 
 					case 'default':
 						meshes.push( buildDefaultMesh( meshData ) );
@@ -1137,15 +1159,15 @@ class ThreeMFLoader extends Loader {
 
 		function getResourceType( pid, modelData ) {
 
-			if ( modelData.resources.texture2dgroup[ pid ] !== undefined ) {
+			if ( findResource( 'texture2dgroup', pid, modelData ) !== undefined ) {
 
 				return 'texture';
 
-			} else if ( modelData.resources.basematerials[ pid ] !== undefined ) {
+			} else if ( findResource( 'basematerials', pid, modelData ) !== undefined ) {
 
 				return 'material';
 
-			} else if ( modelData.resources.colorgroup[ pid ] !== undefined ) {
+			} else if ( findResource( 'colorgroup', pid, modelData ) !== undefined ) {
 
 				return 'vertexColors';
 
@@ -1256,13 +1278,12 @@ class ThreeMFLoader extends Loader {
 			let material;
 
 			const displaypropertiesid = materialData.displaypropertiesid;
-			const pbmetallicdisplayproperties = modelData.resources.pbmetallicdisplayproperties;
+			const pbmetallicdisplayproperty = displaypropertiesid !== null ? findResource( 'pbmetallicdisplayproperties', displaypropertiesid, modelData ) : undefined;
 
-			if ( displaypropertiesid !== null && pbmetallicdisplayproperties[ displaypropertiesid ] !== undefined ) {
+			if ( pbmetallicdisplayproperty !== undefined ) {
 
 				// metallic display property, use StandardMaterial
 
-				const pbmetallicdisplayproperty = pbmetallicdisplayproperties[ displaypropertiesid ];
 				const metallicData = pbmetallicdisplayproperty.data[ materialData.index ];
 
 				material = new MeshStandardMaterial( { flatShading: true, roughness: metallicData.roughness, metalness: metallicData.metallicness } );
@@ -1378,6 +1399,26 @@ class ThreeMFLoader extends Loader {
 			const objects = {};
 			const modelsKeys = Object.keys( modelsData );
 			const textureData = {};
+
+			allResources = { basematerials: {}, colorgroup: {}, texture2dgroup: {}, texture2d: {}, pbmetallicdisplayproperties: {} };
+
+			for ( let i = 0; i < modelsKeys.length; i ++ ) {
+
+				const resources = modelsData[ modelsKeys[ i ] ].resources;
+
+				if ( resources === undefined ) continue;
+
+				for ( const category in allResources ) {
+
+					if ( resources[ category ] ) {
+
+						Object.assign( allResources[ category ], resources[ category ] );
+
+					}
+
+				}
+
+			}
 
 			// evaluate model relationships to textures
 
