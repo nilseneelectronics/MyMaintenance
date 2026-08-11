@@ -1312,6 +1312,8 @@ class ThreeMFLoader extends Loader {
 
 				}
 
+				if ( build === undefined ) continue;
+
 				const object3D = build.clone();
 
 				// apply component transform
@@ -1336,6 +1338,8 @@ class ThreeMFLoader extends Loader {
 
 			const objectData = modelData[ 'resources' ][ 'object' ][ objectId ];
 
+			if ( objectData === undefined ) return;
+
 			if ( objectData[ 'mesh' ] ) {
 
 				const meshData = objectData[ 'mesh' ];
@@ -1347,11 +1351,15 @@ class ThreeMFLoader extends Loader {
 
 				objects[ objectData.id ] = getBuild( meshData, objects, modelData, textureData, objectData, buildGroup );
 
-			} else {
+			} else if ( objectData[ 'components' ] ) {
 
 				const compositeData = objectData[ 'components' ];
 
 				objects[ objectData.id ] = getBuild( compositeData, objects, modelData, textureData, objectData, buildComposite );
+
+			} else {
+
+				return;
 
 			}
 
@@ -1390,20 +1398,48 @@ class ThreeMFLoader extends Loader {
 
 			}
 
-			// start build
+			// build all simple (mesh) objects from every model part first, so
+			// component references can resolve objects defined in another part
 
 			for ( let i = 0; i < modelsKeys.length; i ++ ) {
 
 				const modelsKey = modelsKeys[ i ];
 				const modelData = modelsData[ modelsKey ];
+				const objectMap = modelData[ 'resources' ] && modelData[ 'resources' ][ 'object' ];
 
-				const objectIds = Object.keys( modelData[ 'resources' ][ 'object' ] );
+				if ( objectMap === undefined ) continue;
+
+				const objectIds = Object.keys( objectMap );
 
 				for ( let j = 0; j < objectIds.length; j ++ ) {
 
 					const objectId = objectIds[ j ];
+					const objectData = objectMap[ objectId ];
 
-					buildObject( objectId, objects, modelData, textureData );
+					if ( objectData[ 'mesh' ] ) buildObject( objectId, objects, modelData, textureData );
+
+				}
+
+			}
+
+			// then composite objects, which may reference meshes from any part
+
+			for ( let i = 0; i < modelsKeys.length; i ++ ) {
+
+				const modelsKey = modelsKeys[ i ];
+				const modelData = modelsData[ modelsKey ];
+				const objectMap = modelData[ 'resources' ] && modelData[ 'resources' ][ 'object' ];
+
+				if ( objectMap === undefined ) continue;
+
+				const objectIds = Object.keys( objectMap );
+
+				for ( let j = 0; j < objectIds.length; j ++ ) {
+
+					const objectId = objectIds[ j ];
+					const objectData = objectMap[ objectId ];
+
+					if ( objectData[ 'mesh' ] === undefined ) buildObject( objectId, objects, modelData, textureData );
 
 				}
 
@@ -1431,12 +1467,21 @@ class ThreeMFLoader extends Loader {
 			const group = new Group();
 
 			const relationship = fetch3DModelPart( data3mf[ 'rels' ] );
+
+			if ( relationship === undefined ) return group;
+
 			const buildData = data3mf.model[ relationship[ 'target' ].substring( 1 ) ][ 'build' ];
+
+			if ( buildData === undefined ) return group;
 
 			for ( let i = 0; i < buildData.length; i ++ ) {
 
-				const buildItem = buildData[ i ];
-				const object3D = objects[ buildItem[ 'objectId' ] ].clone();
+			const buildItem = buildData[ i ];
+			const sourceObject = objects[ buildItem[ 'objectId' ] ];
+
+			if ( sourceObject === undefined ) continue;
+
+			const object3D = sourceObject.clone();
 
 				// apply transform
 
