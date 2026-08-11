@@ -783,6 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         rec.size = file.size;
                         rec.sizeLabel = formatSize(file.size);
                         rec.uploaded = toISO(new Date());
+                        rec.created = Date.now();
                     }
                 }
             } else {
@@ -793,6 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     privacy: privacy,
                     performed: performedDt ? toISO(performedDt) : '',
                     uploaded: toISO(new Date()),
+                    created: Date.now(),
                     size: file.size,
                     sizeLabel: formatSize(file.size),
                     type: file.type,
@@ -995,6 +997,13 @@ document.addEventListener('DOMContentLoaded', () => {
             + '</div>';
     }
 
+    function recTime(it) {
+        if (it.created) return it.created;
+        const p = String(it.uploaded || '').split('-').map(Number);
+        if (p.length === 3 && !isNaN(p[0] + p[1] + p[2])) return new Date(p[0], p[1] - 1, p[2]).getTime();
+        return 0;
+    }
+
     function sortBefore(a, b) {
         switch (docSort) {
             case 'alpha':
@@ -1008,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'performed':
                 return String(a.performed || '') > String(b.performed || '');
             default:
-                return String(a.uploaded || '') > String(b.uploaded || '');
+                return recTime(a) > recTime(b);
         }
     }
 
@@ -1102,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recentEl.innerHTML = '';
             recentEl.appendChild(renderHeaderRow());
             items.slice().sort(function (x, y) {
-                return String(y.uploaded || '').localeCompare(String(x.uploaded || ''));
+                return recTime(y) - recTime(x);
             }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
         }
     }

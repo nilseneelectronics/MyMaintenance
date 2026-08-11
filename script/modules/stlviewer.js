@@ -173,10 +173,18 @@ window.My3dViewer = (function () {
             animate();
         }).catch(function (err) {
             close();
+            var msg = (err && err.message) ? err.message : String(err);
+            if (window.console && window.console.error) window.console.error('My3dViewer: ' + msg);
             if (parent) {
-                parent.innerHTML = '<div class="preview-note">Could not load 3D model. Use Open or Download below.</div>';
+                parent.innerHTML = '<div class="preview-note">Could not load 3D model (' + escapeHtml(msg) + '). Use Open or Download below.</div>';
             }
             throw err;
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
         });
     }
 
