@@ -309,7 +309,15 @@ class ThreeMFLoader extends Loader {
 				basematerials: []
 			};
 
-			const basematerialNodes = basematerialsNode.querySelectorAll( 'base' );
+			let basematerialNodes = basematerialsNode.querySelectorAll( 'basematerial' );
+
+			if ( basematerialNodes.length === 0 ) {
+
+				// some exporters use the legacy <base> element name
+
+				basematerialNodes = basematerialsNode.querySelectorAll( 'base' );
+
+			}
 
 			for ( let i = 0; i < basematerialNodes.length; i ++ ) {
 
@@ -916,6 +924,9 @@ class ThreeMFLoader extends Loader {
 				const materialIndex = keys[ i ];
 				const trianglePropertiesProps = materialMap[ materialIndex ];
 				const basematerialData = basematerials.basematerials[ materialIndex ];
+
+				if ( basematerialData === undefined ) continue;
+
 				const material = getBuild( basematerialData, objects, modelData, textureData, objectData, buildBasematerial );
 
 				//
