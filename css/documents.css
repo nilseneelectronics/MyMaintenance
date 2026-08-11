@@ -717,6 +717,123 @@
     height: 100% !important;
 }
 
+/* =======================================
+   Office document viewer
+   ======================================= */
+.office-spreadsheet {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.office-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.office-tab {
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 10px 10px 0 0;
+    border-bottom: none;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.office-tab:hover {
+    color: var(--text-primary);
+}
+
+.office-tab.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.office-sheets {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+}
+
+.office-sheet {
+    display: none;
+    padding: 10px;
+}
+
+.office-sheet.active {
+    display: block;
+}
+
+.office-sheet table {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.office-sheet table td,
+.office-sheet table th {
+    border: 1px solid #c8cdd2;
+    padding: 4px 8px;
+    color: #14171a;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.office-sheet table th {
+    background: #eef1f4;
+    font-weight: 600;
+}
+
+.office-word {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+    padding: 20px 24px;
+    color: #14171a;
+    line-height: 1.55;
+    font-size: 0.95rem;
+}
+
+.office-word p {
+    margin: 0 0 0.9em;
+}
+
+.office-word h1,
+.office-word h2,
+.office-word h3,
+.office-word h4 {
+    margin: 1.2em 0 0.5em;
+    line-height: 1.25;
+}
+
+.office-word img {
+    max-width: 100%;
+    height: auto;
+}
+
+.office-word table {
+    border-collapse: collapse;
+    margin: 0.8em 0;
+}
+
+.office-word table td,
+.office-word table th {
+    border: 1px solid #c8cdd2;
+    padding: 4px 8px;
+}
+
 .pdfv-toolbar {
     display: flex;
     align-items: center;

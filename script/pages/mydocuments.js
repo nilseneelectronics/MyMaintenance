@@ -874,8 +874,8 @@ document.addEventListener('DOMContentLoaded', () => {
             png: ['IMG', 'file-image'], jpg: ['IMG', 'file-image'], jpeg: ['IMG', 'file-image'],
             gif: ['IMG', 'file-image'], webp: ['IMG', 'file-image'], bmp: ['IMG', 'file-image'],
             svg: ['SVG', 'file-image'],
-            doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-doc'], odt: ['DOC', 'file-doc'],
-            xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-xls'],
+            doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-docx'], odt: ['DOC', 'file-doc'],
+            xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-csv'],
             ppt: ['PPT', 'file-ppt'], pptx: ['PPT', 'file-ppt'],
             txt: ['TXT', 'file-text'], md: ['TXT', 'file-text'], log: ['TXT', 'file-text'],
             zip: ['ZIP', 'file-zip'], '7z': ['ZIP', 'file-zip'], rar: ['ZIP', 'file-zip'],
@@ -1134,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function previewClose() {
         if (window.MyPdfViewer) window.MyPdfViewer.close();
         if (window.My3dViewer) window.My3dViewer.close();
+        if (window.MyOfficeViewer) window.MyOfficeViewer.close();
         const ov = document.getElementById('doc-preview-overlay');
         if (ov) ov.style.display = 'none';
         document.body.style.overflow = '';
@@ -1170,6 +1171,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.My3dViewer.open(data, it.fileName || (it.name + '.' + info.ext), body, info.ext);
             } else {
                 body.innerHTML = '<div class="preview-note">3D viewer not available. Use Open or Download below.</div>';
+            }
+        } else if ((info.cls === 'file-xls' || info.cls === 'file-csv' || info.cls === 'file-docx') && data) {
+            body.innerHTML = '';
+            if (window.MyOfficeViewer) {
+                window.MyOfficeViewer.open(data, it.fileName || (it.name + '.' + info.ext), body, info.ext);
+            } else {
+                body.innerHTML = '<div class="preview-note">Document viewer not available. Use Open or Download below.</div>';
             }
         } else {
             body.innerHTML = '<div class="preview-note">This file type cannot be previewed here. Use Open or Download below.</div>';
