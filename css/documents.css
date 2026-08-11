@@ -700,6 +700,23 @@
     overflow: hidden;
 }
 
+/* =======================================
+   3D model viewer
+   ======================================= */
+.viewer3d-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.viewer3d-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
 .pdfv-toolbar {
     display: flex;
     align-items: center;

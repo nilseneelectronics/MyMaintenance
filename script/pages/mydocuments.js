@@ -51,9 +51,86 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function store() {
-        localStorage.setItem(KEY, JSON.stringify(items));
+        const meta = items.map(function (it) {
+            const copy = Object.assign({}, it);
+            if (it.payloadInDB) {
+                delete copy.data;
+                delete copy.payloadInDB;
+            }
+            return copy;
+        });
+        localStorage.setItem(KEY, JSON.stringify(meta));
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
     }
+
+    const DB_NAME = 'floorplan_user_doc_payloads';
+    const DB_STORE = 'payloads';
+    let dbPromise = null;
+
+    function openDb() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise(function (resolve, reject) {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = function () {
+                if (!req.result.objectStoreNames.contains(DB_STORE)) {
+                    req.result.createObjectStore(DB_STORE);
+                }
+            };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+        });
+        return dbPromise;
+    }
+
+    function payloadSet(id, dataUrl) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readwrite');
+                tx.objectStore(DB_STORE).put(dataUrl, id);
+                tx.oncomplete = function () { resolve(); };
+                tx.onerror = function () { reject(tx.error); };
+            });
+        });
+    }
+
+    function payloadGet(id) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readonly');
+                const req = tx.objectStore(DB_STORE).get(id);
+                req.onsuccess = function () { resolve(req.result || null); };
+                req.onerror = function () { reject(req.error); };
+            });
+        });
+    }
+
+    function getPayload(it) {
+        if (it.data) return Promise.resolve(it.data);
+        return payloadGet(it.id).then(function (data) { return data || ''; });
+    }
+
+    function payloadDelete(id) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readwrite');
+                tx.objectStore(DB_STORE).delete(id);
+                tx.oncomplete = function () { resolve(); };
+                tx.onerror = function () { reject(tx.error); };
+            });
+        }).catch(function () {});
+    }
+
+    (function migratePayloads() {
+        const jobs = [];
+        items.forEach(function (it) {
+            if (it.data) jobs.push(
+                payloadSet(it.id, it.data)
+                    .then(function () { it.payloadInDB = true; })
+                    .catch(function () {})
+            );
+        });
+        if (jobs.length) Promise.all(jobs).then(function () { store(); });
+    })();
 
     const searchInput = document.getElementById('doc-search');
     const docListHead = document.getElementById('doc-list-head');
@@ -349,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function doDelete() {
         if (!editingId) return;
+        payloadDelete(editingId);
         items = items.filter(function (i) { return i.id !== editingId; });
         store();
         updateView();
@@ -691,24 +769,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const performedDt = parseDateStr(performedInput.value);
         const privacy = privacyValue();
         const apply = (dataUrl) => {
+            let rec = null;
             if (editingId) {
-                const it = items.find((i) => i.id === editingId);
-                if (it) {
-                    it.name = name;
-                    it.asset = asset;
-                    it.privacy = privacy;
-                    it.performed = performedDt ? toISO(performedDt) : '';
+                rec = items.find((i) => i.id === editingId);
+                if (rec) {
+                    rec.name = name;
+                    rec.asset = asset;
+                    rec.privacy = privacy;
+                    rec.performed = performedDt ? toISO(performedDt) : '';
                     if (dataUrl) {
-                        it.data = dataUrl;
-                        it.type = file.type;
-                        it.fileName = file.name;
-                        it.size = file.size;
-                        it.sizeLabel = formatSize(file.size);
-                        it.uploaded = toISO(new Date());
+                        rec.type = file.type;
+                        rec.fileName = file.name;
+                        rec.size = file.size;
+                        rec.sizeLabel = formatSize(file.size);
+                        rec.uploaded = toISO(new Date());
                     }
                 }
             } else {
-                items.push({
+                rec = {
                     id: 'd_' + Date.now(),
                     name: name,
                     asset: asset,
@@ -717,14 +795,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     uploaded: toISO(new Date()),
                     size: file.size,
                     sizeLabel: formatSize(file.size),
-                    data: dataUrl,
                     type: file.type,
                     fileName: file.name
-                });
+                };
+                items.push(rec);
             }
-            store();
-            updateView();
-            closePopup();
+            const finish = () => { store(); updateView(); closePopup(); };
+            if (dataUrl && rec) {
+                payloadSet(rec.id, dataUrl).then(function () {
+                    rec.payloadInDB = true;
+                    delete rec.data;
+                    finish();
+                }).catch(function () {
+                    rec.data = dataUrl;
+                    finish();
+                });
+            } else {
+                finish();
+            }
         };
         if (file) {
             const reader = new FileReader();
@@ -1036,12 +1124,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function previewClose() {
         if (window.MyPdfViewer) window.MyPdfViewer.close();
+        if (window.My3dViewer) window.My3dViewer.close();
         const ov = document.getElementById('doc-preview-overlay');
         if (ov) ov.style.display = 'none';
         document.body.style.overflow = '';
     }
 
-    function openPreview(it) {
+    async function openPreview(it) {
         ensurePreview();
         const ov = document.getElementById('doc-preview-overlay');
         if (!ov) return;
@@ -1051,7 +1140,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = ov.querySelector('.preview-title');
         title.textContent = it.name + (it.asset ? ' - ' + it.asset : '');
         ov.classList.remove('preview-max');
-        const data = it.data || '';
+        let data = '';
+        try {
+            data = await getPayload(it) || '';
+        } catch (err) {
+            data = '';
+        }
         if (info.cls === 'file-image' && data) {
             body.innerHTML = '<div class="preview-img-wrap"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>';
         } else if (info.cls === 'file-pdf' && data) {
@@ -1060,6 +1154,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.MyPdfViewer.open(data, it.fileName || (it.name + '.pdf'), body);
             } else {
                 body.innerHTML = '<div class="preview-note">PDF viewer not available. Use Open or Download below.</div>';
+            }
+        } else if (info.cls === 'file-3d' && data) {
+            body.innerHTML = '';
+            if (window.My3dViewer) {
+                window.My3dViewer.open(data, it.fileName || (it.name + '.' + info.ext), body, info.ext);
+            } else {
+                body.innerHTML = '<div class="preview-note">3D viewer not available. Use Open or Download below.</div>';
             }
         } else {
             body.innerHTML = '<div class="preview-note">This file type cannot be previewed here. Use Open or Download below.</div>';
@@ -1113,10 +1214,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) btn.textContent = isMax ? 'Exit full screen' : 'Full screen';
     }
 
-    function downloadDoc(it) {
-        if (!it.data) return;
+    async function downloadDoc(it) {
+        const data = await getPayload(it);
+        if (!data) return;
         const a = document.createElement('a');
-        a.href = it.data;
+        a.href = data;
         a.download = it.fileName || (it.name || 'document');
         document.body.appendChild(a);
         a.click();
@@ -1126,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function (e) {
         const row = e.target.closest('.doc-row-open');
         if (!row) return;
-        const rec = items.find(function (i) { return i.id === row.dataset.id; });
+        const rec = items.find(function (i) { return i.id === (row.dataset.docId || row.dataset.id); });
         if (rec) openPreview(rec);
     });
 

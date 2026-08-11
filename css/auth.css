@@ -121,7 +121,7 @@
     position: relative;
 }
 
-.input-group svg {
+.input-group > svg {
     position: absolute;
     left: 15px;
     top: 50%;
@@ -129,6 +129,65 @@
     color: var(--text-secondary);
     width: 20px;
     height: 20px;
+}
+
+.password-group input {
+    padding-right: 50px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--accent-primary);
+}
+
+.password-toggle svg {
+    position: static;
+    transform: none;
+    width: 20px;
+    height: 20px;
+    color: inherit;
+}
+
+.password-toggle .icon-on {
+    display: none;
+}
+
+.password-toggle:hover .icon-off {
+    display: none;
+}
+
+.password-toggle:hover .icon-on {
+    display: block;
+}
+
+.password-toggle.is-visible .icon-on {
+    display: block;
+}
+
+.password-toggle.is-visible .icon-off {
+    display: none;
+}
+
+.password-toggle.is-visible:hover .icon-on {
+    display: none;
+}
+
+.password-toggle.is-visible:hover .icon-off {
+    display: block;
 }
 
 .input-group input {
