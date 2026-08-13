@@ -214,6 +214,11 @@ window.MyOfficeViewer = (function () {
             Array.prototype.forEach.call(sec.childNodes, function (n) {
                 if (n.nodeType === 1 && n.tagName && n.tagName.toLowerCase() !== 'article') extras.push(n);
             });
+            var preExtras = [], postExtras = [];
+            extras.forEach(function (ex) {
+                if (ex.compareDocumentPosition(article) & Node.DOCUMENT_POSITION_FOLLOWING) preExtras.push(ex);
+                else postExtras.push(ex);
+            });
             var items = nodes.map(function (b) {
                 var rect = b.getBoundingClientRect();
                 var cs = b.nodeType === 1 ? getComputedStyle(b) : null;
@@ -241,10 +246,11 @@ window.MyOfficeViewer = (function () {
             pages.forEach(function (pageEls) {
                 if (!pageEls.length) return;
                 var ns = sec.cloneNode(false);
-                extras.forEach(function (ex) { ns.appendChild(ex.cloneNode(true)); });
+                preExtras.forEach(function (ex) { ns.appendChild(ex.cloneNode(true)); });
                 var na = article.cloneNode(false);
                 pageEls.forEach(function (el) { na.appendChild(el); });
                 ns.appendChild(na);
+                postExtras.forEach(function (ex) { ns.appendChild(ex.cloneNode(true)); });
                 out.push(ns);
             });
         });
