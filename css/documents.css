@@ -798,8 +798,66 @@
 .office-word {
     flex: 1;
     min-height: 0;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
     background: #3a3f44;
+    overflow: hidden;
+}
+
+.office-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    flex: none;
+}
+
+.office-doc-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.office-page-input {
+    width: 3ch;
+    min-width: 40px;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    text-align: center;
+    border: 2px solid var(--accent-primary);
+    border-radius: 999px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.office-page-input::-webkit-inner-spin-button,
+.office-page-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.office-page-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.office-page-total,
+.office-zoom-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.office-zoom-label {
+    min-width: 44px;
+    text-align: center;
+    cursor: pointer;
 }
 
 .pdfv-toolbar {
