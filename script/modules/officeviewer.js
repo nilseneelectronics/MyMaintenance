@@ -153,6 +153,7 @@ window.MyOfficeViewer = (function () {
             ignoreLastRenderedPageBreak: false,
             useBase64URL: true
         }).then(function () {
+            paginateDocx(scroll);
             var sections = scroll.querySelectorAll('.docx-wrapper > section.docx');
             if (sections.length === 0) {
                 throw new Error('Could not read Word document');
@@ -173,6 +174,75 @@ window.MyOfficeViewer = (function () {
         }, function (err) {
             throw new Error('Could not read Word document' + ((err && err.message) ? ': ' + err.message : ''));
         });
+    }
+
+    function ptToPx(pt) {
+        return pt * 96 / 72;
+    }
+
+    function paginateDocx(scroll) {
+        if (!scroll || scroll.querySelector('[data-paginated="1"]')) return;
+        var wrapper = scroll.querySelector('.docx-wrapper');
+        if (!wrapper) return;
+        var sections = Array.prototype.slice.call(wrapper.querySelectorAll(':scope > section.docx'));
+        if (!sections.length) return;
+        var out = [];
+        sections.forEach(function (sec) {
+            var article = sec.querySelector(':scope > article');
+            if (!article) { out.push(sec); return; }
+            var mh = getComputedStyle(sec).minHeight || sec.style.minHeight;
+            var pageHpx = ptToPx(parseFloat(mh)) || 0;
+            if (pageHpx <= 0 || sec.getBoundingClientRect().height <= pageHpx + 1) {
+                out.push(sec);
+                return;
+            }
+            var padTopPx = parseFloat(getComputedStyle(sec).paddingTop) || 0;
+            var padBotPx = parseFloat(getComputedStyle(sec).paddingBottom) || 0;
+            var contentH = pageHpx - padTopPx - padBotPx;
+            if (contentH <= 30) { out.push(sec); return; }
+            var nodes = [];
+            Array.prototype.forEach.call(article.childNodes, function (n) {
+                if (n.nodeType === 1) nodes.push(n);
+                else if (n.nodeType === 3 && String(n.textContent || '').trim()) nodes.push(n);
+            });
+            var items = nodes.map(function (b) {
+                var rect = b.getBoundingClientRect();
+                var cs = b.nodeType === 1 ? getComputedStyle(b) : null;
+                return {
+                    el: b,
+                    h: rect.height || 0,
+                    mt: cs ? (parseFloat(cs.marginTop) || 0) : 0,
+                    mb: cs ? (parseFloat(cs.marginBottom) || 0) : 0
+                };
+            });
+            var pages = [[]], usedH = 0, prevMb = 0;
+            items.forEach(function (it) {
+                var gap = Math.max(prevMb, it.mt);
+                var need = gap + it.h;
+                if (usedH > 0 && usedH + need > contentH) {
+                    pages.push([]);
+                    usedH = 0;
+                    prevMb = 0;
+                    need = it.h;
+                }
+                pages[pages.length - 1].push(it.el);
+                usedH += need;
+                prevMb = it.mb;
+            });
+            pages.forEach(function (pageEls) {
+                if (!pageEls.length) return;
+                var ns = sec.cloneNode(false);
+                var na = article.cloneNode(false);
+                pageEls.forEach(function (el) { na.appendChild(el); });
+                ns.appendChild(na);
+                out.push(ns);
+            });
+        });
+        if (out.length) {
+            sections.forEach(function (s) { wrapper.removeChild(s); });
+            out.forEach(function (s) { wrapper.appendChild(s); });
+            wrapper.setAttribute('data-paginated', '1');
+        }
     }
 
     function wireWheelZoom(scroll) {
