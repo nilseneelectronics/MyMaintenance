@@ -799,39 +799,7 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    background: #fff;
-    padding: 20px 24px;
-    color: #14171a;
-    line-height: 1.55;
-    font-size: 0.95rem;
-}
-
-.office-word p {
-    margin: 0 0 0.9em;
-}
-
-.office-word h1,
-.office-word h2,
-.office-word h3,
-.office-word h4 {
-    margin: 1.2em 0 0.5em;
-    line-height: 1.25;
-}
-
-.office-word img {
-    max-width: 100%;
-    height: auto;
-}
-
-.office-word table {
-    border-collapse: collapse;
-    margin: 0.8em 0;
-}
-
-.office-word table td,
-.office-word table th {
-    border: 1px solid #c8cdd2;
-    padding: 4px 8px;
+    background: #3a3f44;
 }
 
 .pdfv-toolbar {

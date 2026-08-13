@@ -1,5 +1,6 @@
 /* MyOfficeViewer - built-in preview for Office documents.
-   - Word (.docx) rendered to HTML via mammoth
+   - Word (.docx) rendered as real pages (A4 / Letter / custom page size as
+     defined in the file) via docx-preview
    - Excel (.xls / .xlsx / .csv) rendered to tables via SheetJS (XLSX)
    Lazy-loads classic scripts from script/vendor/ on first use, following the
    same pattern as MyPdfViewer / My3dViewer so it also works over file://. */
@@ -32,42 +33,42 @@ window.MyOfficeViewer = (function () {
         } catch (e) {}
     }
 
+    function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = function () { reject(new Error('Could not load the document viewer')); };
+            document.head.appendChild(s);
+        });
+    }
+
+    function loadStyle(src) {
+        if (document.querySelector('link[data-office-css="1"]')) return;
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = src;
+        l.setAttribute('data-office-css', '1');
+        document.head.appendChild(l);
+    }
+
     function loadLibs() {
         if (libPromise) return libPromise;
         ensureUlImageMetadata();
-        libPromise = new Promise(function (resolve, reject) {
-            var items = [
-                { name: 'mammoth', prop: 'mammoth', file: 'mammoth.browser.js' },
-                { name: 'XLSX', prop: 'XLSX', file: 'xlsx.full.min.js' }
-            ];
-            var pending = items.slice();
-            var failed = false;
-
-            function checkAll() {
-                var missing = pending.filter(function (it) {
-                    return typeof window[it.prop] === 'undefined';
-                });
-                pending = missing;
-                if (failed || pending.length === 0) {
-                    if (failed) reject(new Error('Could not load the document viewer'));
-                    else resolve();
-                }
-            }
-
-            function loadOne(it) {
-                if (typeof window[it.prop] !== 'undefined') { checkAll(); return; }
-                var s = document.createElement('script');
-                s.src = VENDOR + it.file;
-                s.onload = function () {
-                    if (typeof window[it.prop] === 'undefined') { failed = true; checkAll(); }
-                    else checkAll();
-                };
-                s.onerror = function () { failed = true; reject(new Error('Could not load the document viewer')); };
-                document.head.appendChild(s);
-            }
-
-            items.forEach(loadOne);
-        });
+        // Sequential: docx-preview reads window.JSZip at execution time and
+        // only exposes window.docx if jszip is already present.
+        libPromise = loadScript(VENDOR + 'jszip.min.js')
+            .then(function () {
+                return Promise.all([
+                    loadScript(VENDOR + 'docx-preview.min.js'),
+                    loadScript(VENDOR + 'xlsx.full.min.js')
+                ]);
+            })
+            .then(function () {
+                if (!window.docx) throw new Error('Could not load the document viewer');
+                if (!window.XLSX) throw new Error('Could not load the document viewer');
+                loadStyle(VENDOR + 'docx-preview.css');
+            });
         return libPromise;
     }
 
@@ -138,13 +139,16 @@ window.MyOfficeViewer = (function () {
         var wrap = document.createElement('div');
         wrap.className = 'office-word';
         parent.appendChild(wrap);
-        return mammoth.convertToHtml({ arrayBuffer: arrayBuffer }).then(function (result) {
-            var messages = result && result.messages ? result.messages : [];
-            var warn = messages.filter(function (m) { return m && m.type === 'warning'; }).length;
-            var errors = messages.filter(function (m) { return m && m.type === 'error'; }).length;
-            wrap.innerHTML = result.value || '<p class="preview-note">(empty document)</p>';
-            if (errors && window.console) window.console.warn('mammoth errors:', errors);
-            if (warn && window.console) window.console.warn('mammoth warnings:', warn);
+        return docx.renderAsync(arrayBuffer, wrap, null, {
+            inWrapper: true,
+            breakPages: true,
+            ignoreLastRenderedPageBreak: false,
+            useBase64URL: true
+        }).then(function () {
+            var pages = wrap.querySelectorAll('.docx-wrapper > section.docx');
+            if (pages.length === 0) {
+                throw new Error('Could not read Word document');
+            }
         }, function (err) {
             throw new Error('Could not read Word document' + ((err && err.message) ? ': ' + err.message : ''));
         });
