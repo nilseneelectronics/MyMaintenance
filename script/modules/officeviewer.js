@@ -190,8 +190,13 @@ window.MyOfficeViewer = (function () {
         sections.forEach(function (sec) {
             var article = sec.querySelector(':scope > article');
             if (!article) { out.push(sec); return; }
-            var mh = getComputedStyle(sec).minHeight || sec.style.minHeight;
-            var pageHpx = ptToPx(parseFloat(mh)) || 0;
+            var mh = getComputedStyle(sec).minHeight || sec.style.minHeight || '';
+            var mhNum = parseFloat(mh) || 0;
+            if (/pt/i.test(mh)) mhNum = ptToPx(mhNum);
+            else if (/in/i.test(mh)) mhNum = mhNum * 96;
+            else if (/cm/i.test(mh)) mhNum = mhNum * 96 / 2.54;
+            else if (/mm/i.test(mh)) mhNum = mhNum * 96 / 25.4;
+            var pageHpx = mhNum || 0;
             if (pageHpx <= 0 || sec.getBoundingClientRect().height <= pageHpx + 1) {
                 out.push(sec);
                 return;
@@ -204,6 +209,10 @@ window.MyOfficeViewer = (function () {
             Array.prototype.forEach.call(article.childNodes, function (n) {
                 if (n.nodeType === 1) nodes.push(n);
                 else if (n.nodeType === 3 && String(n.textContent || '').trim()) nodes.push(n);
+            });
+            var extras = [];
+            Array.prototype.forEach.call(sec.childNodes, function (n) {
+                if (n.nodeType === 1 && n.tagName && n.tagName.toLowerCase() !== 'article') extras.push(n);
             });
             var items = nodes.map(function (b) {
                 var rect = b.getBoundingClientRect();
@@ -232,6 +241,7 @@ window.MyOfficeViewer = (function () {
             pages.forEach(function (pageEls) {
                 if (!pageEls.length) return;
                 var ns = sec.cloneNode(false);
+                extras.forEach(function (ex) { ns.appendChild(ex.cloneNode(true)); });
                 var na = article.cloneNode(false);
                 pageEls.forEach(function (el) { na.appendChild(el); });
                 ns.appendChild(na);
@@ -394,8 +404,10 @@ window.MyOfficeViewer = (function () {
         if (!win) { docShareOpen(); return; }
         win.document.open();
         win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + currentWordName() + '</title>'
-            + '<style>body{margin:0;background:#e4e4e4;font-size:0}'
-            + 'section.docx{page-break-after:always;box-shadow:none;margin:0 auto}'
+            + '<style>body{margin:0;background:#fff}'
+            + '.docx-wrapper{background:none!important;padding:0!important}'
+            + '.docx-wrapper>section.docx{margin:0 auto}'
+            + 'section.docx{page-break-after:always;box-shadow:none}'
             + 'section.docx:last-child{page-break-after:auto}</style>'
             + css + '</head><body>');
         var inner = clone.querySelector('.docx-wrapper');
