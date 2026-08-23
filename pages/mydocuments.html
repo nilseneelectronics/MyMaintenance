@@ -70,7 +70,20 @@
         <div class="popup-content">
             <h3>Add document</h3>
             <div class="done-fields">
-                <label>File</label>
+                <div class="doc-field-label-row">
+                    <label>File</label>
+                    <div class="doc-info-wrap doc-format-info-wrap">
+                        <button type="button" class="doc-info-btn" id="doc-format-info" aria-label="Which formats can be previewed?" title="Which formats can be previewed?">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="26" height="26" fill="currentColor" aria-hidden="true"><path d="M504.5-288.63q8.5-8.62 8.5-21.37v-180q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v180q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63Zm-1-314.57q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></svg>
+                        </button>
+                        <div class="doc-tooltip" id="doc-format-tip" role="tooltip">
+                            <h4>Formats &amp; preview</h4>
+                            <p><strong>Fully viewable</strong><br>PDF, images (PNG, JPG, SVG, WEBP, GIF, BMP), 3D (3MF, STL, OBJ, STEP), Excel (XLSX, XLS, CSV), Word (DOCX) and text (TXT, MD, LOG, RTF).</p>
+                            <p><strong>Thumbnail</strong><br>PowerPoint (PPTX), Keynote, Pages and Numbers show a thumbnail preview.</p>
+                            <p><strong>No viewing</strong><br>Other formats are not supported for preview. Use Open or Download to view them externally.</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="doc-file-picker">
                     <button type="button" class="photo-picker-btn" id="doc-pick-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>

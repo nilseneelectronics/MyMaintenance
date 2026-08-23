@@ -234,19 +234,36 @@ function visibleDims() {
         if (!pdfDoc) return;
         const canvases = pagesWrap.querySelectorAll('canvas');
         if (!canvases.length) return;
-        const win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) { window.open(container.dataset.dataUrl, '_blank'); return; }
-        win.document.open();
-        win.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + currentFileName() + '</title>'
+        const fr = document.createElement('iframe');
+        fr.setAttribute('aria-hidden', 'true');
+        fr.setAttribute('tabindex', '-1');
+        fr.style.position = 'fixed';
+        fr.style.left = '-9999px';
+        fr.style.top = '0';
+        fr.style.width = '0';
+        fr.style.height = '0';
+        fr.style.border = '0';
+        document.body.appendChild(fr);
+        const fd = fr.contentDocument;
+        fd.open();
+        fd.write('<!doctype html><html><head><meta charset="utf-8"><title>' + currentFileName() + '</title>'
             + '<style>body{margin:0;background:#fff}'
             + 'img{display:block;width:100%;height:auto;box-sizing:border-box;padding:10px;page-break-after:always;}'
             + 'img:last-child{page-break-after:auto;}</style></head><body>');
         canvases.forEach(function (c) {
-            win.document.write('<img src="' + c.toDataURL('image/jpeg', 0.92) + '">');
+            fd.write('<img src="' + c.toDataURL('image/jpeg', 0.92) + '">');
         });
-        win.document.write('</body></html>');
-        win.document.close();
-        setTimeout(function () { win.focus(); win.print(); }, 400);
+        fd.write('</body></html>');
+        fd.close();
+        setTimeout(function () {
+            try {
+                const fw = fr.contentWindow;
+                if (fw) { fw.focus(); fw.print(); }
+            } catch (e) {}
+            setTimeout(function () {
+                if (fr && fr.parentNode) fr.parentNode.removeChild(fr);
+            }, 100);
+        }, 400);
     }
 
     function dataUrlToBlob(dataUrl) {

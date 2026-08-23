@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyNeighborhood - MyMaintenance</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/banner.css">
+    <link rel="stylesheet" href="../css/grid.css">
+    <link rel="stylesheet" href="../css/profile.css">
+    <link rel="stylesheet" href="../css/documents.css">
+    <link rel="stylesheet" href="../css/planning.css">
+    <link rel="stylesheet" href="../css/tools.css">
+    <link rel="stylesheet" href="../css/homes.css">
+    <link rel="stylesheet" href="../css/neighborhood.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="sidebar-open logged-in">
+    <main class="main">
+        <h1>MyNeighborhood</h1>
+
+        <!-- Neighborhood selector -->
+        <div class="custom-dropdown address-selector" data-assets="neighborhoods">
+            <div class="dropdown-toggle">
+                <span id="nb-selector-label">-- Select neighborhood --</span>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <ul class="dropdown-menu" id="nb-selector-menu"></ul>
+        </div>
+
+        <div class="homes-content-grid">
+
+            <!-- Left: Neighborhood photos -->
+            <div class="photo-box" id="nb-photo-box">
+                <h3>Neighborhood Photos</h3>
+                <button class="view-button" id="nb-view-all-photos">View all photos</button>
+                <div class="big-photo-container" id="nb-big-photo-container">
+                    <img id="nb-main-photo" src="https://picsum.photos/id/1036/1200/675" alt="Neighborhood photo">
+                    <div class="photo-arrows">
+                        <button class="arrow left" id="nb-prev-arrow"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        <button class="arrow right" id="nb-next-arrow"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    </div>
+                </div>
+                <button class="view-button add-photos-outline" id="nb-add-photo-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v600h600v-335q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h58v-58q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v58h57q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-57v57q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-57Z"/></svg>
+                    Add photos
+                </button>
+            </div>
+
+            <!-- Upcoming events -->
+            <div class="planned-box">
+                <h3>Upcoming events</h3>
+                <div class="asset-planned-list" id="nb-events-list"></div>
+                <div class="box-actions">
+                    <button class="view-button" id="nb-add-event">Add event</button>
+                </div>
+            </div>
+
+            <!-- Registered documentation -->
+            <div class="docs-box">
+                <h3>Registered documentation</h3>
+                <div class="asset-docs-list" id="nb-docs-list"></div>
+                <div class="box-actions">
+                    <button class="view-button" id="nb-show-all-docs">Show all</button>
+                    <button class="view-button" id="nb-add-document">Add document</button>
+                </div>
+            </div>
+
+            <!-- Neighbors list -->
+            <div class="neighbor-box" id="nb-neighbor-box">
+                <div class="asset-info-header">
+                    <h3>Neighbors</h3>
+                    <button class="view-button" id="nb-add-neighbor">Edit neighborhood</button>
+                </div>
+                <div class="neighbor-list" id="nb-neighbor-list"></div>
+            </div>
+
+        </div>
+
+            </main>
+<!-- Neighborhood register/edit popup -->
+        <div id="nb-info-popup" class="popup-overlay">
+            <div class="popup-content nb-popup-wide">
+                <h3 id="nb-info-popup-title">Register a neighborhood</h3>
+                <div class="done-fields">
+                    <label>Neighborhood name <span class="req-star">*</span></label>
+                    <input type="text" id="nb-name" placeholder="Neighborhood name">
+                    <label>Amount of houses</label>
+                    <div class="nb-houses-stepper">
+                        <button type="button" class="nb-houses-step minus" id="nb-houses-minus" aria-label="Remove house">−</button>
+                        <input type="number" id="nb-houses" min="0" placeholder="e.g. 15">
+                        <button type="button" class="nb-houses-step plus" id="nb-houses-plus" aria-label="Add house">+</button>
+                    </div>
+                    <label>Country</label>
+                    <div class="nb-location-row">
+                        <div class="nb-location-field">
+                            <input type="text" id="nb-country" placeholder="e.g. Norway">
+                        </div>
+                        <div class="nb-location-field">
+                            <input type="text" id="nb-zip" placeholder="Zip code">
+                        </div>
+                        <div class="nb-location-field">
+                            <input type="text" id="nb-city" placeholder="City">
+                        </div>
+                    </div>
+                    <label>Other information</label>
+                    <textarea id="nb-other" rows="3" placeholder="Additional information..."></textarea>
+
+                    <!-- Address / people builder -->
+                    <div class="nb-addr-builder" id="nb-addr-builder"></div>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn delete" id="nb-info-delete" style="display:none">Delete</button>
+                    <button class="popup-btn cancel" id="nb-info-cancel">Cancel</button>
+                    <button class="popup-btn confirm" id="nb-info-save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event popup -->
+        <div class="event-modal-overlay" id="nb-event-modal">
+            <div class="event-modal-card">
+                <h3 id="nbe-modal-title">Add event</h3>
+                <div class="event-modal-field">
+                    <label>Name</label>
+                    <input type="text" id="nbe-name" placeholder="e.g. Snow plowing, dugnad, meeting">
+                </div>
+                <div class="event-modal-row">
+                    <div class="event-modal-field">
+                        <label>Start date</label>
+                        <input type="date" id="nbe-date" onclick="this.showPicker()">
+                    </div>
+                    <div class="event-modal-field">
+                        <label>Start time</label>
+                        <input type="time" id="nbe-time" onclick="this.showPicker()">
+                    </div>
+                </div>
+                <div class="event-modal-field">
+                    <label>Location</label>
+                    <input type="text" id="nbe-location" placeholder="Location">
+                </div>
+                <div class="event-modal-field">
+                    <label>Description</label>
+                    <textarea id="nbe-desc" rows="2" placeholder="Full description..."></textarea>
+                </div>
+                <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button class="btn-cancel" id="nbe-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
+                    <button class="btn-add" id="nbe-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document add popup (reuse pattern) -->
+        <div id="nb-doc-add-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Add document</h3>
+                <div class="done-fields">
+                    <label>File</label>
+                    <div class="doc-file-picker">
+                        <button type="button" class="photo-picker-btn" id="nb-doc-pick-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
+                            Add document
+                        </button>
+                        <span class="doc-file-name" id="nb-doc-file-name">No file selected</span>
+                    </div>
+                    <input type="file" id="nb-doc-file" style="display:none">
+                    <label>Name</label>
+                    <input type="text" id="nb-doc-name" placeholder="Document name...">
+                    <label>Date performed</label>
+                    <input type="text" class="doc-date-field" id="nb-doc-performed" placeholder="dd/mm/yyyy" autocomplete="off">
+                </div>
+                <div class="popup-buttons">
+                    <button type="button" class="popup-btn cancel" id="nb-doc-cancel">Cancel</button>
+                    <button type="button" class="popup-btn confirm" id="nb-doc-save">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo gallery modal -->
+        <div class="photo-modal" id="nb-gallery-modal">
+            <div class="gallery-modal-content">
+                <div class="modal-header">
+                    <button class="modal-back-btn" id="nb-gallery-close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</button>
+                    <h3>All photos</h3>
+                    <div class="modal-header-actions">
+                        <button class="modal-back-btn" id="nb-gallery-add-photo">Add photos</button>
+                    </div>
+                </div>
+                <div class="gallery-scroll-pad">
+                    <div class="gallery-grid" id="nb-gallery-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add photos popup -->
+        <div id="nb-add-photos-popup" class="popup-overlay">
+            <div class="popup-content">
+                <h3>Add photos</h3>
+                <div class="done-fields">
+                    <label>Pictures</label>
+                    <div class="done-pictures">
+                        <p class="done-no-photos" id="nbp-no-photos">No pictures added</p>
+                        <div class="done-photo-grid" id="nbp-photo-grid"></div>
+                        <button type="button" class="photo-picker-btn" id="nbp-picture-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v600h600v-335q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h58v-58q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v58h57q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-57v57q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-57Z"/></svg>
+                            Add pictures
+                        </button>
+                        <div class="photo-picker-options" id="nbp-photo-options">
+                            <button type="button" data-source="library">Select from library</button>
+                            <button type="button" data-source="documents">Select from documents</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="popup-buttons">
+                    <button id="nbp-cancel" class="popup-btn cancel">Cancel</button>
+                    <button id="nbp-save" class="popup-btn confirm">Save</button>
+                </div>
+            </div>
+        </div>
+
+
+
+    <script src="../script/modules/assets.js"></script>
+    <script src="../script/modules/pdfviewer.js"></script>
+    <script src="../script/modules/stlviewer.js"></script>
+    <script src="../script/modules/officeviewer.js"></script>
+    <script src="../script/pages/mydocuments.js"></script>
+    <script src="../script/pages/myneighborhood.js"></script>
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+</body>
+</html>

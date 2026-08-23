@@ -10,6 +10,7 @@ const translations = {
     // Sidebar + headers
     "MyDashboard": { en: "MyDashboard", no: "Mitt Dashbord" },
     "MyHomes": { en: "MyHomes", no: "Mine Hjem" },
+    "MyNeighborhood": { en: "MyNeighborhood", no: "Mitt Nabolag" },
     "MyVehicles": { en: "MyVehicles", no: "Mine Kjøretøy" },
     "MyDocuments": { en: "MyDocuments", no: "Mine Dokumenter" },
     "MyPlanning": { en: "MyPlanning", no: "Min Planlegging" },
@@ -133,6 +134,7 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'contractors.html',
     'tools.html',
     'myhomes.html',
+    'myneighborhood.html',
     'myvehicles.html',
     'mydocuments.html',
     'myplanning.html',
@@ -197,6 +199,7 @@ const COMMON_LAYOUT = {
             <ul>
                 <li><a href="dashboard.html">MyDashboard</a></li>
                 <li><a href="myhomes.html">MyHomes</a></li>
+                <li><a href="myneighborhood.html">MyNeighborhood</a></li>
                 <li><a href="myvehicles.html">MyVehicles</a></li>
                 <li><a href="mydocuments.html">MyDocuments</a></li>
                 <li><a href="myplanning.html">MyPlanning</a></li>
