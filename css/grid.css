@@ -117,12 +117,11 @@
 .biz-box5 { grid-area: biz-box5; }
 
 .grid-box {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-primary);
     padding: 20px;
     border-radius: 18px;
     text-align: left;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    box-shadow: 0 10px 24px rgba(5, 20, 28, 0.08);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
 }
@@ -412,13 +411,12 @@
 }
 
 .dash-box {
-    background-color: var(--bg-secondary);
-    border: 2px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     padding: 20px;
     border-radius: 20px;
     text-align: center;
     transition: transform 0.3s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .dash-box a {

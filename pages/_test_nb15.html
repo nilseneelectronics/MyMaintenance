@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<iframe id="f" src="myneighborhood.html" style="width:900px;height:1100px;"></iframe>
+<pre id="out">...</pre>
+<script>
+try { localStorage.setItem('mymaintenance.authToken', 'offline-token'); } catch (e) {}
+var f = document.getElementById('f');
+setTimeout(function () {
+  var d = f.contentDocument || f.contentWindow.document;
+  var out = [];
+  try {
+    d.getElementById('nb-edit-info').click();
+    d.getElementById('nb-houses').value = '1';
+    d.getElementById('nb-houses').dispatchEvent(new Event('input'));
+    setTimeout(function () {
+      var out2 = [];
+      var addBtn = d.querySelectorAll('#nb-addr-builder .nb-add-people-btn')[0];
+      if (addBtn) addBtn.click();
+      var p1email = d.querySelector('#nb-addr-builder .nb-person-fields input[data-field="email"][data-person="0"]');
+      if (p1email) { p1email.value = 'ola@x.no'; p1email.dispatchEvent(new Event('input')); }
+      setTimeout(function () {
+        var plus = d.querySelector('#nb-addr-builder .nb-stepper .plus');
+        if (plus) plus.click();
+        var p2email = d.querySelector('#nb-addr-builder .nb-person-fields input[data-field="email"][data-person="1"]');
+        if (p2email) { p2email.value = 'kari@x.no'; p2email.dispatchEvent(new Event('input')); }
+        setTimeout(function () {
+          out2.push('roleRows=' + d.querySelectorAll('#nb-roles .nb-role-row').length);
+          out2.push('roleEmails=' + Array.prototype.map.call(d.querySelectorAll('#nb-roles .nb-role-row input'), function(i){return i.value;}).join(','));
+          out2.push('roleDropdowns=' + d.querySelectorAll('#nb-roles .nb-role-dropdown').length);
+          out2.push('roleDropdownClass=' + (d.querySelector('#nb-roles .nb-role-dropdown') ? d.querySelector('#nb-roles .nb-role-dropdown').className : 'none'));
+          out2.push('dropdownHasMenu=' + !!d.querySelector('#nb-roles .nb-role-dropdown .dropdown-menu'));
+          document.getElementById('out').textContent = out2.join('\n');
+          document.title = 'DONE';
+        }, 500);
+      }, 450);
+    }, 900);
+  } catch (e) { document.getElementById('out').textContent = 'ERR ' + e.message; document.title = 'DONE'; }
+}, 4000);
+</script>
+</body>
+</html>

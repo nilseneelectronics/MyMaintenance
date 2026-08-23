@@ -159,6 +159,7 @@
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
             <h3 id="ev-modal-title">Add event</h3>
+            <div class="done-fields">
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
@@ -210,6 +211,7 @@
                 <label>Description</label>
                 <textarea id="ev-desc" rows="2" placeholder="Full description..."></textarea>
             </div>
+            <div id="ev-tools-materials-wrap" style="display:none;">
             <div class="event-modal-field">
                 <label>Tools</label>
                 <div class="ev-list-input">
@@ -226,9 +228,11 @@
                 </div>
                 <div class="ev-tools-list" id="ev-materials-list"></div>
             </div>
-            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
-                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            </div>
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn cancel" id="ev-cancel">Cancel</button>
+                <button class="popup-btn confirm" id="ev-add">Add</button>
             </div>
         </div>
     </div>

@@ -228,6 +228,13 @@
     transform: rotate(45deg);
 }
 
+.doc-field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .doc-info-wrap {
     position: relative;
     margin-left: auto;
@@ -287,6 +294,13 @@
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+/* The "File" (format) info button sits at the top of the popup, so its
+   tooltip should open downward (and inward, via right:0) over the popup. */
+.doc-format-info-wrap .doc-tooltip {
+    bottom: auto;
+    top: calc(100% + 10px);
 }
 
 .doc-tooltip h4 {

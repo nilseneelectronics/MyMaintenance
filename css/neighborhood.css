@@ -2,11 +2,10 @@
 
 .neighbor-box {
     grid-column: span 18;
-    background-color: var(--bg-secondary);
-    border: 4px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .neighbor-list {
@@ -92,6 +91,7 @@
     height: calc(100vh / var(--ui-zoom) - 90px);
     display: flex;
     flex-direction: column;
+    padding: 40px;
 }
 
 .nb-popup-wide .done-fields {
@@ -101,7 +101,8 @@
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
-    padding-right: 4px;
+    padding-right: 26px;
+    margin-right: -26px;
 }
 
 .nb-popup-wide .popup-buttons {
@@ -243,15 +244,21 @@
 /* ---- Read-only neighbor list (compact, grouped by address) ---- */
 .nb-address-block-display {
     margin-bottom: 0;
-    padding: 12px 14px;
+    padding: 14px 0 6px;
+    border: none;
+    background: transparent;
+}
+
+.nb-address-block-display:not(:first-child):not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
 }
 
 .nb-address-value {
     flex: 1;
     min-width: 0;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--accent-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -261,27 +268,38 @@
 .nb-person-header,
 .nb-person-row {
     display: grid;
-    grid-template-columns: 88px 1fr 1fr 1.2fr;
-    gap: 10px;
+    grid-template-columns: 92px 1fr 1fr 1.3fr;
+    gap: 14px;
     align-items: center;
 }
 
 .nb-person-header {
     margin-top: 10px;
-    padding-bottom: 6px;
+    padding: 6px 10px 8px;
+    border-bottom: 2px solid var(--border-color);
+    border-top: none;
+    margin-bottom: 6px;
 }
 
 .nb-person-col-head {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
 }
 
 .nb-person-row {
-    padding: 7px 0;
-    border-top: 1px solid var(--border-color);
+    padding: 9px 10px;
+    margin-bottom: 2px;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.nb-person-row:hover {
+    background: var(--hover-bg);
 }
 
 .nb-person-cell {

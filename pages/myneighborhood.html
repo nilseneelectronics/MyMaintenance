@@ -128,6 +128,7 @@
         <div class="event-modal-overlay" id="nb-event-modal">
             <div class="event-modal-card">
                 <h3 id="nbe-modal-title">Add event</h3>
+                <div class="done-fields">
                 <div class="event-modal-field">
                     <label>Name</label>
                     <input type="text" id="nbe-name" placeholder="e.g. Snow plowing, dugnad, meeting">
@@ -150,9 +151,10 @@
                     <label>Description</label>
                     <textarea id="nbe-desc" rows="2" placeholder="Full description..."></textarea>
                 </div>
-                <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
-                    <button class="btn-cancel" id="nbe-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
-                    <button class="btn-add" id="nbe-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+                </div>
+                <div class="popup-buttons">
+                    <button class="popup-btn cancel" id="nbe-cancel">Cancel</button>
+                    <button class="popup-btn confirm" id="nbe-add">Add</button>
                 </div>
             </div>
         </div>
