@@ -17,13 +17,18 @@ window.MyMaintenanceProfileData = (function () {
         { key: 'subscription', label: 'Subscription' }
     ];
 
+    var NOTIF_CHANNELS = [
+        { key: 'push', label: 'Push notifications' },
+        { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Phone (SMS)' }
+    ];
+
     var NOTIF_TYPES = [
-        { key: 'plannedMaintenance', label: 'Planned maintenance events' },
-        { key: 'maintenanceAlerts', label: 'Maintenance alerts and deadlines' },
+        { key: 'calendar', label: 'Calendar' },
+        { key: 'maintenance', label: 'Maintenance' },
         { key: 'documents', label: 'Document changes' },
-        { key: 'familyInvites', label: 'Family invitations' },
-        { key: 'messages', label: 'Messages from your family' },
-        { key: 'reminders', label: 'Seasonal reminders' }
+        { key: 'invitations', label: 'Invitations' },
+        { key: 'todo', label: 'To-do list' }
     ];
 
     function defaultProfile() {
@@ -56,12 +61,8 @@ window.MyMaintenanceProfileData = (function () {
 
     function defaultNotifications() {
         return {
-            plannedMaintenance: true,
-            maintenanceAlerts: true,
-            documents: true,
-            familyInvites: true,
-            messages: false,
-            reminders: true
+            channels: { push: true, email: true, phone: false },
+            types: { calendar: true, maintenance: true, documents: true, invitations: true, todo: true }
         };
     }
 
@@ -92,7 +93,20 @@ window.MyMaintenanceProfileData = (function () {
     }
 
     function getNotifications() {
-        return load(NOTIF_KEY, defaultNotifications);
+        var raw = null;
+        try { raw = localStorage.getItem(NOTIF_KEY); } catch (_) {}
+        if (raw === null || raw === '') {
+            var seed = defaultNotifications();
+            try { localStorage.setItem(NOTIF_KEY, JSON.stringify(seed)); } catch (_) {}
+            return seed;
+        }
+        try {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.channels && parsed.types) return parsed;
+        } catch (_) {}
+        var fresh = defaultNotifications();
+        try { localStorage.setItem(NOTIF_KEY, JSON.stringify(fresh)); } catch (_) {}
+        return fresh;
     }
 
     function saveNotifications(notifications) {
@@ -131,6 +145,7 @@ window.MyMaintenanceProfileData = (function () {
         USER_KEY: USER_KEY,
         PASSWORD_KEY: PASSWORD_KEY,
         ACCESS_AREAS: ACCESS_AREAS,
+        NOTIF_CHANNELS: NOTIF_CHANNELS,
         NOTIF_TYPES: NOTIF_TYPES,
         presetAccess: presetAccess,
         getProfile: getProfile,

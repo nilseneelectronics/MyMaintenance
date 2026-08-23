@@ -1,10 +1,5 @@
 /* documents.css */
 
-/* Always reserve the scrollbar gutter so content/overlay doesn't shift */
-html {
-    scrollbar-gutter: stable;
-}
-
 /* =======================================
    Documents Page Styles
    ======================================= */
@@ -233,6 +228,13 @@ html {
     transform: rotate(45deg);
 }
 
+.doc-field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .doc-info-wrap {
     position: relative;
     margin-left: auto;
@@ -240,25 +242,29 @@ html {
 
 .doc-info-btn {
     flex: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid var(--accent-primary);
     background: none;
+    border: none;
     color: var(--accent-primary);
-    font-weight: 700;
-    font-size: 0.9rem;
-    font-family: 'Poppins', sans-serif;
-    line-height: 1;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    line-height: 1;
 }
 
-.doc-info-btn:hover {
-    background: var(--hover-bg);
+.doc-info-btn svg {
+    width: 26px;
+    height: 26px;
+    display: block;
+}
+
+.doc-info-btn:hover svg {
+    transform: scale(1.12);
+}
+
+.doc-info-btn:active svg {
+    transform: scale(0.96);
 }
 
 .doc-tooltip {
@@ -288,6 +294,13 @@ html {
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+/* The "File" (format) info button sits at the top of the popup, so its
+   tooltip should open downward (and inward, via right:0) over the popup. */
+.doc-format-info-wrap .doc-tooltip {
+    bottom: auto;
+    top: calc(100% + 10px);
 }
 
 .doc-tooltip h4 {
@@ -699,6 +712,166 @@ html {
 .preview-body > .pdfv {
     border-radius: 10px;
     overflow: hidden;
+}
+
+/* =======================================
+   3D model viewer
+   ======================================= */
+.viewer3d-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.viewer3d-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* =======================================
+   Office document viewer
+   ======================================= */
+.office-spreadsheet {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.office-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.office-tab {
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 10px 10px 0 0;
+    border-bottom: none;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.office-tab:hover {
+    color: var(--text-primary);
+}
+
+.office-tab.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.office-sheets {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+}
+
+.office-sheet {
+    display: none;
+    padding: 10px;
+}
+
+.office-sheet.active {
+    display: block;
+}
+
+.office-sheet table {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.office-sheet table td,
+.office-sheet table th {
+    border: 1px solid #c8cdd2;
+    padding: 4px 8px;
+    color: #14171a;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.office-sheet table th {
+    background: #eef1f4;
+    font-weight: 600;
+}
+
+.office-word {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #3a3f44;
+    overflow: hidden;
+}
+
+.office-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    flex: none;
+}
+
+.office-doc-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.office-page-input {
+    width: 3ch;
+    min-width: 40px;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 8px;
+    text-align: center;
+    border: 2px solid var(--accent-primary);
+    border-radius: 999px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.office-page-input::-webkit-inner-spin-button,
+.office-page-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.office-page-input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.office-page-total,
+.office-zoom-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.office-zoom-label {
+    min-width: 44px;
+    text-align: center;
+    cursor: pointer;
 }
 
 .pdfv-toolbar {

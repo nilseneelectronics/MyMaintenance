@@ -4,6 +4,7 @@ window.MyMaintenanceConfig = {
     loggedInPages: [
         'dashboard.html',
         'myhomes.html',
+        'myneighborhood.html',
         'myvehicles.html',
         'mydocuments.html',
         'myplanning.html',
@@ -25,6 +26,7 @@ window.MyMaintenanceConfig = {
         'contractors.html',
         'tools.html',
         'myhomes.html',
+        'myneighborhood.html',
         'myvehicles.html',
         'mydocuments.html',
         'myplanning.html',

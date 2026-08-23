@@ -51,9 +51,86 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function store() {
-        localStorage.setItem(KEY, JSON.stringify(items));
+        const meta = items.map(function (it) {
+            const copy = Object.assign({}, it);
+            if (it.payloadInDB) {
+                delete copy.data;
+                delete copy.payloadInDB;
+            }
+            return copy;
+        });
+        localStorage.setItem(KEY, JSON.stringify(meta));
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
     }
+
+    const DB_NAME = 'floorplan_user_doc_payloads';
+    const DB_STORE = 'payloads';
+    let dbPromise = null;
+
+    function openDb() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise(function (resolve, reject) {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = function () {
+                if (!req.result.objectStoreNames.contains(DB_STORE)) {
+                    req.result.createObjectStore(DB_STORE);
+                }
+            };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { reject(req.error); };
+        });
+        return dbPromise;
+    }
+
+    function payloadSet(id, dataUrl) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readwrite');
+                tx.objectStore(DB_STORE).put(dataUrl, id);
+                tx.oncomplete = function () { resolve(); };
+                tx.onerror = function () { reject(tx.error); };
+            });
+        });
+    }
+
+    function payloadGet(id) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readonly');
+                const req = tx.objectStore(DB_STORE).get(id);
+                req.onsuccess = function () { resolve(req.result || null); };
+                req.onerror = function () { reject(req.error); };
+            });
+        });
+    }
+
+    function getPayload(it) {
+        if (it.data) return Promise.resolve(it.data);
+        return payloadGet(it.id).then(function (data) { return data || ''; });
+    }
+
+    function payloadDelete(id) {
+        return openDb().then(function (db) {
+            return new Promise(function (resolve, reject) {
+                const tx = db.transaction(DB_STORE, 'readwrite');
+                tx.objectStore(DB_STORE).delete(id);
+                tx.oncomplete = function () { resolve(); };
+                tx.onerror = function () { reject(tx.error); };
+            });
+        }).catch(function () {});
+    }
+
+    (function migratePayloads() {
+        const jobs = [];
+        items.forEach(function (it) {
+            if (it.data) jobs.push(
+                payloadSet(it.id, it.data)
+                    .then(function () { it.payloadInDB = true; })
+                    .catch(function () {})
+            );
+        });
+        if (jobs.length) Promise.all(jobs).then(function () { store(); });
+    })();
 
     const searchInput = document.getElementById('doc-search');
     const docListHead = document.getElementById('doc-list-head');
@@ -64,17 +141,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(s || '').toLowerCase().replace(/\s+/g, ' ');
     }
 
+    function normalizeSizeForSearch(s) {
+        return String(s || '').toLowerCase().replace(/,/g, '.').replace(/\s+/g, '');
+    }
+
     function searchFields(it) {
         const info = fileTypeInfo(it);
         return [
             { key: 'name', text: normalizeForSearch(it.name), weight: 100 },
-            { key: 'asset', text: normalizeForSearch(it.asset), weight: 90 },
+            { key: 'asset', text: normalizeForSearch(it.asset || 'Other'), weight: 90 },
             { key: 'fileName', text: normalizeForSearch(it.fileName), weight: 40 },
             { key: 'type', text: normalizeForSearch(info.label), weight: 20 },
             { key: 'performed', text: normalizeForSearch(formatDateLabel(it.performed)), weight: 15 },
             { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
             { key: 'datesD', text: dateDigits(it), weight: 120 },
-            { key: 'size', text: normalizeForSearch(formatSize(it.size)), weight: 10 }
+            { key: 'size', text: normalizeSizeForSearch(formatSize(it.size)), weight: 10, norm: normalizeSizeForSearch },
+            { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 }
         ];
     }
 
@@ -115,7 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let t = 0; t < terms.length; t++) {
             let best = 0;
             for (let f = 0; f < fields.length; f++) {
-                const sc = fieldTermScore(fields[f].text, terms[t]);
+                const term = fields[f].norm ? fields[f].norm(terms[t]) : terms[t];
+                const sc = fieldTermScore(fields[f].text, term);
                 if (sc > 0 && sc * fields[f].weight > best) best = sc * fields[f].weight;
             }
             total += best;
@@ -343,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function doDelete() {
         if (!editingId) return;
+        payloadDelete(editingId);
         items = items.filter(function (i) { return i.id !== editingId; });
         store();
         updateView();
@@ -685,40 +769,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const performedDt = parseDateStr(performedInput.value);
         const privacy = privacyValue();
         const apply = (dataUrl) => {
+            let rec = null;
             if (editingId) {
-                const it = items.find((i) => i.id === editingId);
-                if (it) {
-                    it.name = name;
-                    it.asset = asset;
-                    it.privacy = privacy;
-                    it.performed = performedDt ? toISO(performedDt) : '';
+                rec = items.find((i) => i.id === editingId);
+                if (rec) {
+                    rec.name = name;
+                    rec.asset = asset;
+                    rec.privacy = privacy;
+                    rec.performed = performedDt ? toISO(performedDt) : '';
                     if (dataUrl) {
-                        it.data = dataUrl;
-                        it.type = file.type;
-                        it.fileName = file.name;
-                        it.size = file.size;
-                        it.sizeLabel = formatSize(file.size);
-                        it.uploaded = toISO(new Date());
+                        rec.type = file.type;
+                        rec.fileName = file.name;
+                        rec.size = file.size;
+                        rec.sizeLabel = formatSize(file.size);
+                        rec.uploaded = toISO(new Date());
+                        rec.created = Date.now();
                     }
                 }
             } else {
-                items.push({
+                rec = {
                     id: 'd_' + Date.now(),
                     name: name,
                     asset: asset,
                     privacy: privacy,
                     performed: performedDt ? toISO(performedDt) : '',
                     uploaded: toISO(new Date()),
+                    created: Date.now(),
                     size: file.size,
                     sizeLabel: formatSize(file.size),
-                    data: dataUrl,
                     type: file.type,
                     fileName: file.name
-                });
+                };
+                items.push(rec);
             }
-            store();
-            updateView();
-            closePopup();
+            const finish = () => { store(); updateView(); closePopup(); };
+            if (dataUrl && rec) {
+                payloadSet(rec.id, dataUrl).then(function () {
+                    rec.payloadInDB = true;
+                    delete rec.data;
+                    finish();
+                }).catch(function () {
+                    rec.data = dataUrl;
+                    finish();
+                });
+            } else {
+                finish();
+            }
         };
         if (file) {
             const reader = new FileReader();
@@ -778,14 +874,15 @@ document.addEventListener('DOMContentLoaded', () => {
             png: ['IMG', 'file-image'], jpg: ['IMG', 'file-image'], jpeg: ['IMG', 'file-image'],
             gif: ['IMG', 'file-image'], webp: ['IMG', 'file-image'], bmp: ['IMG', 'file-image'],
             svg: ['SVG', 'file-image'],
-            doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-doc'], odt: ['DOC', 'file-doc'],
-            xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-xls'],
+            doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-docx'], odt: ['DOC', 'file-doc'],
+            xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-csv'],
             ppt: ['PPT', 'file-ppt'], pptx: ['PPT', 'file-ppt'],
             txt: ['TXT', 'file-text'], md: ['TXT', 'file-text'], log: ['TXT', 'file-text'],
             zip: ['ZIP', 'file-zip'], '7z': ['ZIP', 'file-zip'], rar: ['ZIP', 'file-zip'],
             mp3: ['MP3', 'file-audio'], wav: ['AUD', 'file-audio'], flac: ['AUD', 'file-audio'],
             mp4: ['MKV', 'file-video'], mkv: ['MKV', 'file-video'], mov: ['MOV', 'file-video'],
-            webm: ['VID', 'file-video'], avi: ['AVI', 'file-video']
+            webm: ['VID', 'file-video'], avi: ['AVI', 'file-video'],
+            '3mf': ['3MF', 'file-3d'], stl: ['STL', 'file-3d'], obj: ['OBJ', 'file-3d'], step: ['STEP', 'file-3d']
         };
         if (map[ext]) return { label: map[ext][0], cls: map[ext][1], ext: ext, mime: mime };
         if (mime.indexOf('image') === 0) return { label: 'IMG', cls: 'file-image', ext: ext, mime: mime };
@@ -806,7 +903,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return a || 'Other';
     }
 
-    function docIcon() {
+    function docIcon(info) {
+        info = info || {};
+        if (info.cls === 'file-image') {
+            return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm0 0v-600 600Zm86-97h429q8.5 0 12.75-8t-.75-16L590-457q-5-6-12-6t-12 6L446-302l-81-111q-5-6-12-6t-12 6l-86 112q-6 8-1.75 16t12.75 8Z"/></svg>';
+        }
+        if (info.cls === 'file-3d') {
+            return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M450-154v-309L180-619v309l270 156Zm60 0 270-156v-310L510-463.16V-154Zm-30-360 266-155-266-154-267 154 267 155ZM150-258q-14.25-8.43-22.12-22.21Q120-294 120-310v-340q0-16 7.88-29.79Q135.75-693.57 150-702l300-173q14.33-8 30.16-8 15.84 0 29.84 8l300 173q14.25 8.43 22.13 22.21Q840-666 840-650v340q0 16-7.87 29.79Q824.25-266.43 810-258L510-85q-14.33 8-30.16 8Q464-77 450-85L150-258Zm330-222Z"/></svg>';
+        }
         return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" height="22px" viewBox="0 -960 960 960" width="22px" fill="#20b2aa"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>';
     }
 
@@ -844,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const useMark = !!(terms && terms.length);
         const left = document.createElement('div');
         left.className = 'doc-row-left';
-        left.innerHTML = docIcon()
+        left.innerHTML = docIcon(info)
             + '<span class="doc-cell doc-cell-asset">' + (useMark ? highlight(assetLabel(it), terms) : escapeHtml(assetLabel(it))) + '</span>'
             + '<span class="doc-cell doc-cell-name">' + (useMark ? highlight(it.name, terms) : escapeHtml(it.name)) + '</span>';
         const right = document.createElement('div');
@@ -881,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const info = fileTypeInfo(it);
         return '<div class="doc-row doc-row-open" data-doc-id="' + escapeHtml(it.id) + '">'
             + '<div class="doc-row-left">'
-            + docIcon()
+            + docIcon(info)
             + '<span class="doc-cell doc-cell-name">' + escapeHtml(it.name) + '</span>'
             + '</div>'
             + '<div class="doc-row-right">'
@@ -891,6 +995,13 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '</div>'
             + '</div>';
+    }
+
+    function recTime(it) {
+        if (it.created) return it.created;
+        const p = String(it.uploaded || '').split('-').map(Number);
+        if (p.length === 3 && !isNaN(p[0] + p[1] + p[2])) return new Date(p[0], p[1] - 1, p[2]).getTime();
+        return 0;
     }
 
     function sortBefore(a, b) {
@@ -906,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'performed':
                 return String(a.performed || '') > String(b.performed || '');
             default:
-                return String(a.uploaded || '') > String(b.uploaded || '');
+                return recTime(a) > recTime(b);
         }
     }
 
@@ -1000,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recentEl.innerHTML = '';
             recentEl.appendChild(renderHeaderRow());
             items.slice().sort(function (x, y) {
-                return String(y.uploaded || '').localeCompare(String(x.uploaded || ''));
+                return recTime(y) - recTime(x);
             }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
         }
     }
@@ -1022,12 +1133,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function previewClose() {
         if (window.MyPdfViewer) window.MyPdfViewer.close();
+        if (window.My3dViewer) window.My3dViewer.close();
+        if (window.MyOfficeViewer) window.MyOfficeViewer.close();
         const ov = document.getElementById('doc-preview-overlay');
         if (ov) ov.style.display = 'none';
         document.body.style.overflow = '';
     }
 
-    function openPreview(it) {
+    async function openPreview(it) {
         ensurePreview();
         const ov = document.getElementById('doc-preview-overlay');
         if (!ov) return;
@@ -1037,7 +1150,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = ov.querySelector('.preview-title');
         title.textContent = it.name + (it.asset ? ' - ' + it.asset : '');
         ov.classList.remove('preview-max');
-        const data = it.data || '';
+        let data = '';
+        try {
+            data = await getPayload(it) || '';
+        } catch (err) {
+            data = '';
+        }
         if (info.cls === 'file-image' && data) {
             body.innerHTML = '<div class="preview-img-wrap"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>';
         } else if (info.cls === 'file-pdf' && data) {
@@ -1046,6 +1164,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.MyPdfViewer.open(data, it.fileName || (it.name + '.pdf'), body);
             } else {
                 body.innerHTML = '<div class="preview-note">PDF viewer not available. Use Open or Download below.</div>';
+            }
+        } else if (info.cls === 'file-3d' && data) {
+            body.innerHTML = '';
+            if (window.My3dViewer) {
+                window.My3dViewer.open(data, it.fileName || (it.name + '.' + info.ext), body, info.ext);
+            } else {
+                body.innerHTML = '<div class="preview-note">3D viewer not available. Use Open or Download below.</div>';
+            }
+        } else if ((info.cls === 'file-xls' || info.cls === 'file-csv' || info.cls === 'file-docx') && data) {
+            body.innerHTML = '';
+            if (window.MyOfficeViewer) {
+                window.MyOfficeViewer.open(data, it.fileName || (it.name + '.' + info.ext), body, info.ext);
+            } else {
+                body.innerHTML = '<div class="preview-note">Document viewer not available. Use Open or Download below.</div>';
             }
         } else {
             body.innerHTML = '<div class="preview-note">This file type cannot be previewed here. Use Open or Download below.</div>';
@@ -1099,10 +1231,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) btn.textContent = isMax ? 'Exit full screen' : 'Full screen';
     }
 
-    function downloadDoc(it) {
-        if (!it.data) return;
+    async function downloadDoc(it) {
+        const data = await getPayload(it);
+        if (!data) return;
         const a = document.createElement('a');
-        a.href = it.data;
+        a.href = data;
         a.download = it.fileName || (it.name || 'document');
         document.body.appendChild(a);
         a.click();
@@ -1112,7 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', function (e) {
         const row = e.target.closest('.doc-row-open');
         if (!row) return;
-        const rec = items.find(function (i) { return i.id === row.dataset.id; });
+        const rec = items.find(function (i) { return i.id === (row.dataset.docId || row.dataset.id); });
         if (rec) openPreview(rec);
     });
 

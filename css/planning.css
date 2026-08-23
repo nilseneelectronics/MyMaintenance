@@ -10,11 +10,10 @@
 }
 
 .upcoming-box {
-    background-color: var(--bg-secondary);
-    border: 4px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px 30px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
 }
@@ -50,11 +49,10 @@
 }
 
 .todo-box {
-    background-color: var(--bg-secondary);
-    border: 4px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px 30px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .todo-list {
@@ -658,7 +656,7 @@
 }
 
 .asset-dropdown.open .asset-toggle {
-    border-bottom: none;
+    border-bottom-color: transparent;
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
 }
@@ -1051,6 +1049,36 @@
     margin-bottom: 10px;
 }
 
+/* Generic form popups: keep header + buttons stationary, scroll only the
+   content. (Register popups override this with their own id-specific rules.) */
+.popup-content:has(.done-fields) {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(92vh / var(--ui-zoom) - 24px);
+}
+.popup-content:has(.done-fields) > h3,
+.popup-content:has(.done-fields) > .popup-buttons,
+.popup-content:has(.done-fields) > .reg-hint {
+    flex: none;
+}
+.popup-content:has(.done-fields) .done-fields {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+.popup-content:has(.done-fields) .done-fields::-webkit-scrollbar { width: 8px; }
+.popup-content:has(.done-fields) .done-fields::-webkit-scrollbar-track { background: transparent; }
+.popup-content:has(.done-fields) .done-fields::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+.popup-content:has(.done-fields) .done-fields::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+
 .popup-task {
     font-size: 1.1em;
     margin-bottom: 30px;
@@ -1109,6 +1137,51 @@
     background: var(--accent-secondary);
     border: 2px solid var(--accent-secondary);
     font-weight: bold;
+}
+
+/* Event / add-maintenance modal buttons: match the standard .popup-btn styles
+   (the buttons use inline styles, so !important is required to override). */
+.modal-buttons {
+    display: flex;
+    gap: 15px !important;
+    margin-top: 16px;
+}
+.modal-buttons .btn-cancel,
+.modal-buttons .btn-add,
+.modal-buttons .btn-cancel-modal,
+.modal-buttons .btn-add-modal {
+    flex: 1 !important;
+    padding: 14px !important;
+    font-size: 1.1em !important;
+    border-radius: 25px !important;
+    font-family: 'Poppins', sans-serif !important;
+    cursor: pointer;
+    transition: 500ms;
+}
+.modal-buttons .btn-cancel,
+.modal-buttons .btn-cancel-modal {
+    background: transparent !important;
+    border: 2px solid var(--accent-primary) !important;
+    color: var(--text-secondary) !important;
+}
+.modal-buttons .btn-cancel:hover,
+.modal-buttons .btn-cancel-modal:hover {
+    background: var(--accent-primary) !important;
+    color: #FFFFFF !important;
+    font-weight: bold !important;
+}
+.modal-buttons .btn-add,
+.modal-buttons .btn-add-modal {
+    background: var(--accent-primary) !important;
+    border: 2px solid var(--accent-primary) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+}
+.modal-buttons .btn-add:hover,
+.modal-buttons .btn-add-modal:hover {
+    background: var(--accent-secondary) !important;
+    border-color: var(--accent-secondary) !important;
+    font-weight: bold !important;
 }
 
 .dtm-delete-btn {
@@ -1180,23 +1253,92 @@
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0,0,0,0.4);
-    z-index: 9999;
+    background: rgba(0,0,0,0.7);
+    z-index: 10000;
     align-items: center;
     justify-content: center;
 }
 .event-modal-overlay.open { display: flex; }
 .event-modal-card {
-    background: var(--bg-primary);
-    border-radius: 16px;
-    padding: 22px 26px;
-    max-width: 480px;
+    background: var(--bg-secondary);
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 16px 14px 0;
+    border-radius: 25px;
+    padding: 26px 16px 26px 40px;
+    max-width: 520px;
     width: 90%;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
-    max-height: 92vh;
-    overflow-y: auto;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 4px var(--accent-primary), 0 10px 30px rgba(0,0,0,0.3);
+    max-height: calc(96vh / var(--ui-zoom) - 16px);
+    display: flex;
+    flex-direction: column;
 }
-.event-modal-card h3 { margin: 0 0 14px; font-size: 1.15rem; }
+.event-modal-card h3,
+.event-modal-card .popup-buttons,
+.event-modal-card .modal-buttons {
+    flex: none;
+}
+.event-modal-card .done-fields {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+    margin-right: -16px;
+    padding-right: 16px;
+}
+/* Description grows to fill the remaining space when the modal is at its
+   locked (Planned Maintenance) height. */
+.event-modal-card .done-fields .event-modal-field:has(#ev-desc) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 90px;
+}
+.event-modal-card .done-fields .event-modal-field:has(#ev-desc) #ev-desc {
+    flex: 1 1 auto;
+    min-height: 70px;
+    resize: none;
+}
+.event-modal-card .done-fields::-webkit-scrollbar {
+    width: 8px;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-track {
+    background: transparent;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-track-piece {
+    background: transparent;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-corner {
+    background: transparent;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+.event-modal-card .done-fields::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+body:has(.event-modal-overlay.open) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+.event-modal-card h3 {
+    margin: 0 0 10px;
+    text-align: center;
+    color: var(--accent-primary);
+}
 .event-modal-field { margin-bottom: 12px; }
 .event-modal-field label {
     display: flex;
@@ -1222,7 +1364,7 @@
     padding: 0;
     border: 2px solid var(--accent-primary);
     border-radius: 6px;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
@@ -1270,7 +1412,7 @@
     border-radius: 25px;
     font-family: 'Poppins', sans-serif;
     font-size: 0.9rem;
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     color: var(--text-primary);
     box-sizing: border-box;
 }

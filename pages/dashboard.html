@@ -83,6 +83,7 @@
     <div class="event-modal-overlay" id="event-modal">
         <div class="event-modal-card">
             <h3 id="ev-modal-title">Add event</h3>
+            <div class="done-fields">
             <div class="event-modal-field">
                 <label>Name</label>
                 <input type="text" id="ev-name" placeholder="Event name">
@@ -134,9 +135,28 @@
                 <label>Description</label>
                 <textarea id="ev-desc" rows="2" placeholder="Full description..."></textarea>
             </div>
-            <div class="modal-buttons" style="display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn-cancel" id="ev-cancel" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Cancel</button>
-                <button class="btn-add" id="ev-add" style="padding:8px 20px;border-radius:8px;border:1.5px solid var(--accent-primary);background:var(--accent-primary);color:#fff;font-family:'Poppins',sans-serif;font-size:0.9rem;cursor:pointer;">Add</button>
+            <div id="ev-tools-materials-wrap" style="display:none;">
+            <div class="event-modal-field">
+                <label>Tools</label>
+                <div class="ev-list-input">
+                    <input type="text" id="ev-tools-input" placeholder="Type a tool and press Enter..." autocomplete="off">
+                    <button type="button" class="ev-list-add" id="ev-tools-add">OK</button>
+                </div>
+                <div class="ev-tools-list" id="ev-tools-list"></div>
+            </div>
+            <div class="event-modal-field">
+                <label>Materials</label>
+                <div class="ev-list-input">
+                    <input type="text" id="ev-materials-input" placeholder="Type a material and press Enter..." autocomplete="off">
+                    <button type="button" class="ev-list-add" id="ev-materials-add">OK</button>
+                </div>
+                <div class="ev-tools-list" id="ev-materials-list"></div>
+            </div>
+            </div>
+            </div>
+            <div class="popup-buttons">
+                <button class="popup-btn cancel" id="ev-cancel">Cancel</button>
+                <button class="popup-btn confirm" id="ev-add">Add</button>
             </div>
         </div>
     </div>
@@ -283,12 +303,15 @@
             });
         }
 
-        function homeIcon() {
-            return '<svg class="ev-calendar-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="#20b2aa" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>';
+        function homeIcon(h) {
+            const t = h && h.houseType ? String(h.houseType).toLowerCase() : '';
+            const p = t === 'apartment' ? 'M180-120q-24.75 0-42.37-17.63Q120-155.25 120-180v-435q0-24.75 17.63-42.38Q155.25-675 180-675h105v-105q0-24.75 17.63-42.38Q320.25-840 345-840h270q24.75 0 42.38 17.62Q675-804.75 675-780v270h105q24.75 0 42.38 17.62Q840-474.75 840-450v270q0 24.75-17.62 42.37Q804.75-120 780-120H533v-165H427v165H180Zm0-60h105v-105H180v105Zm0-165h105v-105H180v105Zm0-165h105v-105H180v105Zm165 165h105v-105H345v105Zm0-165h105v-105H345v105Zm0-165h105v-105H345v105Zm165 330h105v-105H510v105Zm0-165h105v-105H510v105Zm0-165h105v-105H510v105Zm165 495h105v-105H675v105Zm0-165h105v-105H675v105Z' : t === 'cabin' ? 'M160-180v-341l-60 46q-10.35 8-22.17 6Q66-471 58-481q-8-10-6-22t12-20l96-73v-84q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v38l224-170q16.21-12 36.11-12Q500-824 516-812l381 290q9.94 7.62 11.47 19.81Q910-490 902-479.63q-8 9.63-19.5 11.13T861-475l-61-46v341q0 24.75-17.62 42.37Q764.75-120 740-120H220q-24.75 0-42.37-17.63Q160-155.25 160-180Zm60 0h230v-130q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v130h230v-387L480-765 220-567v387Zm0 0h520-520Zm-25-580q-15 0-24.5-11t-4.5-24q11-34 40.06-54.5Q235.13-870 270-870q14 0 26-7.07T314-897q5-9 12.5-16t18.5-7q15 0 24.5 11t4.5 24q-12 34-40.75 54.5T270-810q-14 0-25.5 7.5T226-783q-5 9-12.7 16-7.71 7-18.3 7Z' : 'M220-180h150v-220q0-12.75 8.63-21.38Q387.25-430 400-430h160q12.75 0 21.38 8.62Q590-412.75 590-400v220h150v-390L480-765 220-570v390Zm-60 0v-390q0-14.25 6.38-27 6.37-12.75 17.62-21l260-195q15.68-12 35.84-12Q500-825 516-813l260 195q11.25 8.25 17.63 21 6.37 12.75 6.37 27v390q0 24.75-17.62 42.37Q764.75-120 740-120H560q-12.75 0-21.37-8.63Q530-137.25 530-150v-220H430v220q0 12.75-8.62 21.37Q412.75-120 400-120H220q-24.75 0-42.37-17.63Q160-155.25 160-180Zm320-293Z';
+            return '<svg class="ev-calendar-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa" aria-hidden="true"><path d="' + p + '"/></svg>';
         }
 
-        function vehicleIcon() {
-            return '<svg class="ev-calendar-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="#20b2aa" aria-hidden="true"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.3l1.04 3H5.81l1.04-3zM19 17H5v-4.5h14V17z"/></svg>';
+        function vehicleIcon(v) {
+            const p = v && v.type === 'Boat' ? 'M407-89.5Q370-99 333-117q-53 25-92.5 31T150-80q-12 0-21-8.63-9-8.62-9-21.37 0-12 9-21t21-9q25.11-.4 46.55-1.2Q218-142 239-146.5q21-4.5 42-12.5t45-22q3.5-2 7-2t7 2q34 20 69 29.5t71 9.5q36 0 71-9.5t69-29.5q3.5-2 7-2t7 2q24 12.5 45 21.25T721-147q21 4 42.5 5.5T810-140q13 0 21.5 8.62 8.5 8.63 8.5 21.38 0 12.75-9 21.37Q822-80 810-80q-51 0-91-6t-91-31q-38 19-75 28t-73 9q-36 0-73-9.5ZM480.5-229q-35.5 0-75-20.5T331-307q-26 26-54.5 43T219-238q-15 5-28-3.5T173-265l-62-210q-4-12 1.82-22.61 5.82-10.6 18.18-14.39l55-16v-190q0-24.75 17.63-42.38Q221.25-778 246-778h132v-73q0-12.75 8.63-21.38Q395.25-881 408-881h144q12.75 0 21.38 8.62Q582-863.75 582-851v73h132q24.75 0 42.38 17.62Q774-742.75 774-718v190l55 16q12.36 3.79 18.18 14.39Q853-487 849-475l-61 210q-5 15-18 23.5t-28 4.5q-30-9-58-26.5T630-307q-35 37-74.5 57.5t-75 20.5ZM246-718v171l216-66q8-2 18-2.5t18 2.5l216 67v-172H246Zm234 163-304 92 48 159q27-15 45.5-31.5T309-374q9-10 22.5-10t22.5 11q25 29 55 56.5t72 27.5q42 0 71-27.5t54-56.5q9-11 22.5-11t22.5 10q20 21 39.5 38.5T736-304l48-159-304-92Zm0 133Z' : 'M200-204v44q0 16.67-11.74 28.33Q176.53-120 159.76-120q-16.76 0-28.26-11.67Q120-143.33 120-160v-304q0-4.67.5-9.33.5-4.67 2.5-9.67l78-236q6-19 21.75-30T258-760h444q19.5 0 35.25 11T759-719l78 236q2 5 2.5 9.67.5 4.66.5 9.33v304q0 16.67-11.74 28.33Q816.53-120 799.76-120q-16.76 0-28.26-11.67Q760-143.33 760-160v-44H200Zm3-330h554l-55-166H258l-55 166Zm-23 60v210-210Zm105.76 160q23.24 0 38.74-15.75Q340-345.5 340-368q0-23.33-15.75-39.67Q308.5-424 286-424q-23.33 0-39.67 16.26Q230-391.47 230-368.24q0 23.24 16.26 38.74 16.27 15.5 39.5 15.5ZM675-314q23.33 0 39.67-15.75Q731-345.5 731-368q0-23.33-16.26-39.67Q698.47-424 675.24-424q-23.24 0-38.74 16.26-15.5 16.27-15.5 39.5 0 23.24 15.75 38.74Q652.5-314 675-314Zm-495 50h600v-210H180v210Z';
+            return '<svg class="ev-calendar-icon" xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="#20b2aa" aria-hidden="true"><path d="' + p + '"/></svg>';
         }
 
         function renderDashVehicles() {
@@ -313,7 +336,7 @@
                 + vehicles.map(function (v) {
                     return '<div class="ev-row ev-row-open dash-vehicle-item" data-id="' + esc(v.id) + '">'
                         + '<div class="ev-row-left">'
-                        + vehicleIcon()
+                        + vehicleIcon(v)
                         + '<span class="ev-cell ev-cell-name">' + esc(v.name || '') + '</span>'
                         + '<span class="ev-cell ev-cell-asset">' + esc(v.type || '') + '</span>'
                         + '</div>'
@@ -343,7 +366,7 @@
                 + homes.map(function (h) {
                     return '<div class="ev-row ev-row-open dash-home-item" data-id="' + esc(h.id) + '">'
                         + '<div class="ev-row-left">'
-                        + homeIcon()
+                        + homeIcon(h)
                         + '<span class="ev-cell ev-cell-name">' + esc(h.name || '') + '</span>'
                         + '<span class="ev-cell ev-cell-asset">' + esc(h.houseType || '') + '</span>'
                         + '</div>'
@@ -578,10 +601,14 @@
         </div>
     </div>
     <script src="../script/pages/mydocuments.js"></script>
+    <script src="../script/modules/pdfviewer.js"></script>
+    <script src="../script/modules/stlviewer.js"></script>
+    <script src="../script/modules/officeviewer.js"></script>
     <script src="../script/modules/events.js"></script>
     <script src="../script/modules/assets.js"></script>
     <script src="../script/modules/home-register.js"></script>
     <script src="../script/modules/vehicle-register.js"></script>
+    <script src="../script/modules/event-tools.js"></script>
     <script src="../script/modules/event-modal.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>

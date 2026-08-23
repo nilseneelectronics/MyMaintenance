@@ -18,10 +18,9 @@
     height: 200px;
     margin-left: auto;
     margin-right: auto;
-    border: 2px solid var(--accent-primary);
+    border: 1px solid var(--border-color);
     border-radius: 20px;
-    background-color: var(--bg-secondary);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-primary);
 }
 
 .profile-image {
@@ -352,6 +351,14 @@
     text-align: left;
 }
 
+.profile-notif-section h4 {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    font-weight: 600;
+    text-align: left;
+    margin: 6px 0 2px;
+}
+
 .profile-toggle {
     display: flex;
     justify-content: space-between;
@@ -426,6 +433,19 @@
     cursor: not-allowed;
 }
 
+.profile-forgot-link {
+    display: inline-block;
+    font-size: 0.85em;
+    color: var(--accent-primary);
+    text-decoration: none;
+    margin: 6px 0 16px;
+    align-self: flex-end;
+}
+
+.profile-forgot-link:hover {
+    text-decoration: underline;
+}
+
 /* Checkboxes */
 .profile-check {
     display: flex;
@@ -438,8 +458,39 @@
 }
 
 .profile-check input {
-    margin-top: 3px;
-    accent-color: var(--accent-primary);
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    margin: 1px 0 0;
+    flex: 0 0 auto;
+    border: 2px solid var(--border-color);
+    border-radius: 7px;
+    background: var(--bg-primary);
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.profile-check input:hover {
+    border-color: var(--accent-primary);
+}
+
+.profile-check input:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.profile-check input:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid #FFFFFF;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 /* Terms scroll */

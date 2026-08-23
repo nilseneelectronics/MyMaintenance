@@ -21,7 +21,9 @@
         const evAssetMenu = document.getElementById('ev-asset-menu');
         const evAssetValueEl = document.querySelector('#ev-asset-toggle .asset-value');
         const evAssetOther = document.getElementById('ev-asset-other');
+        const evToolsMaterialsWrap = document.getElementById('ev-tools-materials-wrap');
         const evModalTitle = document.getElementById('ev-modal-title');
+        const cardEl = modal.querySelector('.event-modal-card');
 
         let state = { planned: false, asset: '', editingKey: null, editingIndex: -1 };
 
@@ -76,6 +78,7 @@
             state.asset = '';
             if (evPlanned) evPlanned.checked = false;
             if (evAssetWrap) evAssetWrap.style.display = 'none';
+            if (evToolsMaterialsWrap) evToolsMaterialsWrap.style.display = 'none';
             if (evAssetValueEl) evAssetValueEl.textContent = '-- Select an asset --';
             if (evAssetMenu) evAssetMenu.querySelectorAll('button').forEach(function (b) { b.classList.remove('selected'); });
             if (evAssetOther) {
@@ -85,10 +88,28 @@
             if (evAssetDropdown) evAssetDropdown.classList.remove('open');
         }
 
+        // Lock the card to the "Planned Maintenance checked" height so the
+        // buttons stay in the exact same place whether or not that box is ticked.
+        function lockTallHeight() {
+            if (!cardEl) return;
+            const aw = evAssetWrap, tw = evToolsMaterialsWrap;
+            const awPrev = aw ? aw.style.display : '';
+            const twPrev = tw ? tw.style.display : '';
+            if (aw) aw.style.display = '';
+            if (tw) tw.style.display = '';
+            cardEl.style.height = 'auto';
+            const h = cardEl.offsetHeight;
+            cardEl.style.height = h + 'px';
+            if (aw) aw.style.display = awPrev;
+            if (tw) tw.style.display = twPrev;
+        }
+
         function open(key, opts) {
             if (!modal) return;
             modal.classList.add('open');
             resetFields();
+            if (window.MyMaintenanceEventTools) window.MyMaintenanceEventTools.reset();
+            lockTallHeight();
             state.editingKey = null;
             state.editingIndex = -1;
             const editing = !!(opts && opts.event && opts.key);
@@ -110,8 +131,12 @@
                     state.planned = true;
                     if (evPlanned) evPlanned.checked = true;
                     if (evAssetWrap) evAssetWrap.style.display = '';
+                    if (evToolsMaterialsWrap) evToolsMaterialsWrap.style.display = '';
                     if (e.asset) selectAsset(e.asset);
+                } else {
+                    if (evToolsMaterialsWrap) evToolsMaterialsWrap.style.display = 'none';
                 }
+                if (window.MyMaintenanceEventTools) window.MyMaintenanceEventTools.setItems(e.tools, e.materials);
             } else {
                 if (evStartDate) evStartDate.value = key;
                 if (evFinishDate) evFinishDate.value = key;
@@ -130,6 +155,7 @@
                     evPlanned.checked = true;
                     state.planned = true;
                     if (evAssetWrap) evAssetWrap.style.display = '';
+                    if (evToolsMaterialsWrap) evToolsMaterialsWrap.style.display = '';
                     if (opts.asset) selectAsset(opts.asset);
                 }
             }
@@ -160,7 +186,9 @@
                 location: evLocation ? evLocation.value.trim() : '',
                 description: evDesc ? evDesc.value.trim() : '',
                 isPlannedMaintenance: isPlanned,
-                asset: asset
+                asset: asset,
+                tools: (isPlanned && window.MyMaintenanceEventTools) ? window.MyMaintenanceEventTools.getItems().tools : [],
+                materials: (isPlanned && window.MyMaintenanceEventTools) ? window.MyMaintenanceEventTools.getItems().materials : []
             };
             if (state.editingKey && state.editingIndex >= 0) {
                 if (state.editingKey === startDate) {
@@ -182,12 +210,13 @@
         });
         if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
         if (evName) evName.addEventListener('keydown', function (e) { if (e.key === 'Enter' && evAdd) evAdd.click(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal && modal.classList.contains('open')) close(); });
 
         if (evPlanned) {
             evPlanned.addEventListener('change', function () {
                 state.planned = evPlanned.checked;
                 if (evAssetWrap) evAssetWrap.style.display = state.planned ? '' : 'none';
+                if (evToolsMaterialsWrap) evToolsMaterialsWrap.style.display = state.planned ? '' : 'none';
                 if (!state.planned) {
                     state.asset = '';
                     if (evAssetValueEl) evAssetValueEl.textContent = '-- Select an asset --';

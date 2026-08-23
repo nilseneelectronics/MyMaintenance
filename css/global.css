@@ -30,6 +30,7 @@
     --sidebar-padding-top: 10px;
     --main-padding-top: 20px;
     --ui-zoom: 0.75;
+    --page-scrollbar-inset: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +48,7 @@
    ======================================= */
 html {
     zoom: var(--ui-zoom);
+    overflow: hidden;
 }
 
 body {
@@ -54,12 +56,15 @@ body {
     font-family: 'Poppins', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s, color 0.3s;
+    transition: border-top-width 0.3s ease, background-color 0.3s, color 0.3s;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    min-height: calc(100vh / var(--ui-zoom));
-    min-height: calc(100dvh / var(--ui-zoom));
+    height: calc(100vh / var(--ui-zoom));
+    height: calc(100dvh / var(--ui-zoom));
+    max-height: calc(100dvh / var(--ui-zoom));
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 a {
@@ -70,9 +75,8 @@ a {
    Main Content Styles
    ======================================= */
 main {
-    margin-top: var(--navbar-height);
+    margin-top: 0;
     padding-top: var(--main-padding-top);
-    transition: margin-top 0.3s ease;
     min-height: 0;
     width: 100%;
     max-width: 100%;
@@ -80,7 +84,7 @@ main {
     margin-right: auto;
     text-align: center;
     position: relative;
-    z-index: 1;
+    z-index: auto;
     flex: 1 0 auto;
 }
 
@@ -100,11 +104,58 @@ main h1 {
     font-size: 2.6em;
 }
 
-.sidebar-open main {
-    margin-top: calc(var(--navbar-height) + var(--sidebar-height));
+body:has(main) {
+    border-top: var(--navbar-height) solid var(--bg-primary);
+    border-bottom: var(--page-scrollbar-inset) solid var(--bg-primary);
 }
 
-body:not(.logged-in).shrunk.sidebar-open main,
-.logged-in.sidebar-open main {
-    margin-top: calc(var(--navbar-height-shrunk) + var(--sidebar-height));
+body:not(.logged-in).shrunk:has(main) {
+    border-top-width: var(--navbar-height-shrunk);
+}
+
+body.sidebar-open:has(main) {
+    border-top-width: calc(var(--navbar-height) + var(--sidebar-height));
+}
+
+body:not(.logged-in).shrunk.sidebar-open:has(main),
+body.logged-in.sidebar-open:has(main) {
+    border-top-width: calc(var(--navbar-height-shrunk) + var(--sidebar-height));
+}
+
+/* =======================================
+   Scrollbars
+   ======================================= */
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-primary);
+}
+
+body::-webkit-scrollbar-button {
+    width: 8px;
+    height: 14px;
+    background-color: transparent;
+}
+
+body::-webkit-scrollbar-button:hover {
+    background-color: var(--hover-bg);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
 }

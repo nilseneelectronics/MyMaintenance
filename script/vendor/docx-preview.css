@@ -1,0 +1,74 @@
+/* docx-preview library predefined base styles (from docxjs upstream). */
+.docx-wrapper {
+  background: gray;
+  padding: 30px;
+  padding-bottom: 0;
+  display: flex;
+  flex-flow: column;
+  align-items: center;
+}
+
+.docx-wrapper > section.docx {
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  margin-bottom: 30px;
+}
+
+.docx {
+  color: black;
+  hyphens: auto;
+  text-underline-position: from-font;
+}
+
+section.docx {
+  box-sizing: border-box;
+  display: flex;
+  flex-flow: column nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+section.docx > article {
+  margin-bottom: auto;
+  z-index: 1;
+}
+
+section.docx > footer {
+  z-index: 1;
+}
+
+.docx table {
+  border-collapse: collapse;
+}
+
+.docx table td,
+.docx table th {
+  vertical-align: top;
+}
+
+.docx p {
+  margin: 0pt;
+  min-height: 1em;
+}
+
+.docx span {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.docx a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.docx svg {
+  fill: transparent;
+}
+
+/* Keep the docx pages visible inside the preview body (dark theme). */
+.office-word .docx-wrapper {
+  background: #3a3f44;
+  padding: 20px;
+  box-sizing: border-box;
+  min-height: 100%;
+}

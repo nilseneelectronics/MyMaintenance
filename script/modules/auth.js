@@ -232,6 +232,29 @@ window.MyMaintenanceAuth = {
         wireEnterSubmit(signinForm);
         wireEnterSubmit(signupForm);
 
+        document.querySelectorAll('.password-toggle').forEach((button) => {
+            const input = button.closest('.input-group')?.querySelector('input');
+            if (!input) return;
+
+            const applyType = () => {
+                input.type = button.classList.contains('is-visible') ? 'text' : 'password';
+            };
+
+            button.addEventListener('click', () => {
+                button.classList.toggle('is-visible');
+                applyType();
+                button.setAttribute('aria-label', button.classList.contains('is-visible') ? 'Hide password' : 'Show password');
+            });
+
+            button.addEventListener('mouseenter', () => {
+                if (!button.classList.contains('is-visible')) input.type = 'text';
+            });
+
+            button.addEventListener('mouseleave', () => {
+                if (!button.classList.contains('is-visible')) input.type = 'password';
+            });
+        });
+
         if (signinForm) {
             signinForm.addEventListener('submit', async (event) => {
                 event.preventDefault();

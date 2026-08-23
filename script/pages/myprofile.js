@@ -602,10 +602,20 @@
         toast('Password updated');
     }
 
+    function sendResetLink() {
+        var email = $('fp-email').value.trim();
+        if (!email) { toast('Please enter your email address first.', true); return; }
+        if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
+        $('fp-email').value = '';
+        closeOverlay($('forgot-password-popup'));
+        toast('If an account exists for ' + email + ', a reset link has been sent.');
+    }
+
     /* ===================== NOTIFICATIONS ===================== */
     function openNotifications() {
         notifs = PD.getNotifications();
-        buildToggleRows($('ntf-toggles'), PD.NOTIF_TYPES, notifs, false);
+        buildToggleRows($('ntf-channels'), PD.NOTIF_CHANNELS, notifs.channels || {}, false);
+        buildToggleRows($('ntf-types'), PD.NOTIF_TYPES, notifs.types || {}, false);
         openOverlay($('notification-popup'));
     }
 
@@ -654,7 +664,7 @@
         var myPopups = [
             'profile-edit-popup', 'avatar-confirm-popup', 'family-popup', 'access-popup', 'invite-popup',
             'member-access-popup', 'homes-popup', 'vehicles-popup', 'transfer-popup',
-            'confirm-popup', 'password-popup', 'notification-popup', 'terms-popup',
+            'confirm-popup', 'password-popup', 'forgot-password-popup', 'notification-popup', 'terms-popup',
             'delete-account-popup'
         ];
         myPopups.forEach(function (id) {
@@ -785,6 +795,15 @@
         /* password popup */
         $('pw-cancel').addEventListener('click', function () { closeOverlay($('password-popup')); });
         $('pw-save').addEventListener('click', savePassword);
+        $('pw-forgot').addEventListener('click', function (e) {
+            e.preventDefault();
+            $('fp-email').value = '';
+            openOverlay($('forgot-password-popup'));
+        });
+
+        /* forgot password popup */
+        $('fp-cancel').addEventListener('click', function () { closeOverlay($('forgot-password-popup')); });
+        $('fp-send').addEventListener('click', sendResetLink);
 
         /* notification popup */
         $('ntf-cancel').addEventListener('click', function () { closeOverlay($('notification-popup')); });
@@ -819,6 +838,10 @@
             if (isOpen('homes-popup')) { $('homes-close').click(); return; }
             if (isOpen('vehicles-popup')) { $('vehicles-close').click(); return; }
             if (isOpen('terms-popup')) { $('terms-close').click(); return; }
+            if (isOpen('forgot-password-popup')) { $('fp-cancel').click(); return; }
+            if (isOpen('password-popup')) { $('pw-cancel').click(); return; }
+            if (isOpen('notification-popup')) { $('ntf-cancel').click(); return; }
+            if (isOpen('delete-account-popup')) { $('da-cancel').click(); return; }
         }
         function confirmTopmost() {
             var t = document.activeElement;
@@ -828,6 +851,8 @@
             if (isOpen('confirm-popup')) { $('confirm-ok').click(); return; }
             if (isOpen('profile-edit-popup')) { saveEditProfile(); return; }
             if (isOpen('member-access-popup')) { $('ma-save').click(); return; }
+            if (isOpen('forgot-password-popup')) { sendResetLink(); return; }
+            if (isOpen('password-popup')) { savePassword(); return; }
         }
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {

@@ -44,26 +44,48 @@
             box.innerHTML = '<div class="asset-list-empty">No planned maintenance yet.</div>';
             return;
         }
+        const symbol = plannedSymbol();
         box.innerHTML = window.MyMaintenanceEvents.eventHeaderRowHtml({ name: 'Maintenance', asset: 'Asset', date: 'Date' })
             + events.map(function (item) {
-                return window.MyMaintenanceEvents.eventRowHtml(item.key, item.ev);
+                return window.MyMaintenanceEvents.eventRowHtml(item.key, item.ev, symbol);
             }).join('');
         box.querySelectorAll('.ev-row-open').forEach(function (el, idx) {
             el.addEventListener('click', function () {
-                openEditEvent(events[idx]);
+                const item = events[idx];
+                if (!item) return;
+                window.location.href = 'myplanning-calendar.html?date=' + encodeURIComponent(item.key);
             });
         });
     }
 
-    function openEditEvent(item) {
-        if (!window.MyMaintenanceEventModal || !window.MyMaintenanceEvents || !item) return;
-        const events = window.MyMaintenanceEvents.load();
-        const arr = events[item.key] || [];
-        const index = arr.indexOf(item.ev);
-        window.MyMaintenanceEventModal.open(item.key, {
-            event: item.ev,
-            index: index >= 0 ? index : 0
-        });
+    function plannedSymbol() {
+        if (pageAssetType() === 'homes') return homeSymbol();
+        const asset = currentAsset();
+        if (asset && window.MyMaintenanceAssets) {
+            const vehicles = window.MyMaintenanceAssets.getVehicles() || [];
+            for (let i = 0; i < vehicles.length; i++) {
+                if (vehicles[i].type === 'Boat' && window.MyMaintenanceAssets.vehicleLabel(vehicles[i]) === asset) {
+                    return 'boat';
+                }
+            }
+        }
+        return 'car';
+    }
+
+    function homeSymbol() {
+        const asset = currentAsset();
+        if (asset && window.MyMaintenanceAssets) {
+            const homes = window.MyMaintenanceAssets.getHomes() || [];
+            for (let i = 0; i < homes.length; i++) {
+                if (window.MyMaintenanceAssets.homeLabel(homes[i]) === asset) {
+                    const t = String(homes[i].houseType || '').toLowerCase();
+                    if (t === 'apartment') return 'apartment';
+                    if (t === 'cabin') return 'cabin';
+                    return 'home';
+                }
+            }
+        }
+        return 'home';
     }
 
     function renderDocs() {

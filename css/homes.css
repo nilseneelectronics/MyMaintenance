@@ -91,10 +91,10 @@
 .photo-box {
     grid-column: span 6;
     grid-row: span 12;
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     overflow: hidden;
 }
 
@@ -118,6 +118,10 @@
     color: var(--accent-primary);
     border: 2px solid var(--accent-primary);
     margin: 18px 0 0 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .photo-box .add-photos-outline:hover {
@@ -128,10 +132,10 @@
 .floorplan-box {
     grid-column: span 18;
     grid-row: span 8;
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     overflow: hidden;
 }
 
@@ -228,11 +232,10 @@
 }
 
 .planned-box, .docs-box {
-    background-color: var(--bg-secondary);
-    border: 4px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 15px 20px 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     color: inherit;
     position: relative;
     display: flex;
@@ -777,39 +780,64 @@
 /* =======================================
    Register home popup
    ======================================= */
+#register-home-popup,
+#register-vehicle-popup {
+    z-index: 30000;
+}
+
 #register-home-popup .popup-content,
 #register-vehicle-popup .popup-content {
     max-width: 520px;
-    max-height: calc(100vh / var(--ui-zoom) - 40px);
-    overflow-y: auto;
+    height: calc(92vh / var(--ui-zoom) - 24px);
+    display: flex;
+    flex-direction: column;
     text-align: left;
+    border-style: solid;
+    border-color: transparent;
+    border-width: 14px 16px 14px 0;
+    padding: 0 16px 0 40px;
+    box-shadow: 0 0 0 4px var(--accent-primary), 0 10px 30px rgba(0,0,0,0.3);
 }
 
-#register-home-popup .popup-content::-webkit-scrollbar,
-#register-vehicle-popup .popup-content::-webkit-scrollbar {
+#register-home-popup .popup-content h3,
+#register-vehicle-popup .popup-content h3,
+#register-home-popup .popup-content .popup-buttons,
+#register-vehicle-popup .popup-content .popup-buttons {
+    flex: none;
+}
+
+#register-home-popup .done-fields,
+#register-vehicle-popup .done-fields {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+    margin-right: -16px;
+    padding-right: 16px;
+    margin-bottom: 20px;
+}
+
+#register-home-popup .done-fields::-webkit-scrollbar,
+#register-vehicle-popup .done-fields::-webkit-scrollbar {
     width: 8px;
 }
 
-#register-home-popup .popup-content::-webkit-scrollbar-track,
-#register-vehicle-popup .popup-content::-webkit-scrollbar-track {
+#register-home-popup .done-fields::-webkit-scrollbar-track,
+#register-vehicle-popup .done-fields::-webkit-scrollbar-track {
     background: transparent;
 }
 
-#register-home-popup .popup-content::-webkit-scrollbar-thumb,
-#register-vehicle-popup .popup-content::-webkit-scrollbar-thumb {
+#register-home-popup .done-fields::-webkit-scrollbar-thumb,
+#register-vehicle-popup .done-fields::-webkit-scrollbar-thumb {
     background: var(--border-color);
     border-radius: 4px;
 }
 
-#register-home-popup .popup-content::-webkit-scrollbar-thumb:hover,
-#register-vehicle-popup .popup-content::-webkit-scrollbar-thumb:hover {
+#register-home-popup .done-fields::-webkit-scrollbar-thumb:hover,
+#register-vehicle-popup .done-fields::-webkit-scrollbar-thumb:hover {
     background: var(--accent-primary);
-}
-
-#register-home-popup .popup-content,
-#register-vehicle-popup .popup-content {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-color) transparent;
 }
 
 #register-home-popup h3,
@@ -822,11 +850,6 @@
     color: var(--text-secondary);
     margin: 0 0 16px;
     text-align: center;
-}
-
-#register-home-popup .done-fields,
-#register-vehicle-popup .done-fields {
-    margin-bottom: 20px;
 }
 
 #register-home-popup input[type="text"],
@@ -889,11 +912,10 @@
    ======================================= */
 .asset-info-box {
     grid-column: span 18;
-    background-color: var(--bg-secondary);
-    border: 4px solid var(--accent-primary);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .asset-info-header {
