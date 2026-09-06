@@ -23,13 +23,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const privacyRadios = document.querySelectorAll('input[name="doc-privacy"]');
     const privacyInfo = document.getElementById('doc-privacy-info');
     const privacyWrap = document.querySelector('.doc-info-wrap');
+    const docTypeDropdown = document.getElementById('doc-type-dropdown');
+    const docTypeToggle = document.getElementById('doc-type-toggle');
+    const docTypeMenu = document.getElementById('doc-type-menu');
+    const docTypeValueEl = document.querySelector('#doc-type-toggle .asset-value');
 
     if (!addBtn || !popup) return;
 
     const KEY = 'floorplan_user_docs';
     let selectedAssetValue = '';
+    let selectedDocType = '';
     let docSort = 'uploaded';
     let docReverse = false;
+    let scanMode = false;
+    let currentOcrText = '';
+    let currentOcrItems = [];
+    let currentOcrExpanded = '';
+    let currentOcrEmbedding = null;
+    let ocrWorkerPromise = null;
+    const EMBED_MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
+    const SEMANTIC_WEIGHT = 100;
+    const SEMANTIC_MIN = 0.3;
+    let embedModelPromise = null;
+    let semanticModel = null;
+    let semanticReady = false;
 
     function seedDocs() {
         return [
@@ -138,11 +155,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchTimer = null;
 
     function normalizeForSearch(s) {
-        return String(s || '').toLowerCase().replace(/\s+/g, ' ');
+        return String(s || '').toLowerCase().replace(/\s+/g, ' ')
+            .replace(/å/g, 'a').replace(/ä/g, 'a')
+            .replace(/ø/g, 'o').replace(/ö/g, 'o')
+            .replace(/æ/g, 'a');
     }
 
     function normalizeSizeForSearch(s) {
         return String(s || '').toLowerCase().replace(/,/g, '.').replace(/\s+/g, '');
+    }
+
+    function normalizeOcrForSearch(s) {
+        return normalizeForSearch(String(s || '')).replace(/[.,]/g, '.');
     }
 
     function searchFields(it) {
@@ -156,7 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
             { key: 'datesD', text: dateDigits(it), weight: 120 },
             { key: 'size', text: normalizeSizeForSearch(formatSize(it.size)), weight: 10, norm: normalizeSizeForSearch },
-            { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 }
+            { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 },
+            { key: 'docType', text: normalizeForSearch(it.docType), weight: 40 },
+            { key: 'ocr', text: normalizeOcrForSearch(it.ocrText), weight: 60, norm: normalizeOcrForSearch },
+            { key: 'ocrItems', text: ocrItemsSearchText(it), weight: 70, norm: normalizeOcrForSearch }
         ];
     }
 
@@ -243,21 +270,66 @@ document.addEventListener('DOMContentLoaded', () => {
         return out;
     }
 
+    function semanticSearch(query, keywordResults) {
+        if (!semanticReady) return Promise.resolve(keywordResults);
+        const q = String(query || '').trim().toLowerCase();
+        if (!q) return Promise.resolve(keywordResults);
+        return embedText(q).then(function (qv) {
+            const byId = {};
+            keywordResults.forEach(function (r) { byId[r.it.id] = r.s; });
+            const scored = [];
+            const included = {};
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                const v = it.ocrEmbedding;
+                if (!v || !v.length) continue;
+                const sim = cosineSim(qv, v);
+                if (sim < SEMANTIC_MIN) continue;
+                const base = byId[it.id] || 0;
+                scored.push({ it: it, s: base + sim * SEMANTIC_WEIGHT, sim: sim });
+                included[it.id] = true;
+            }
+            keywordResults.forEach(function (r) {
+                if (!included[r.it.id]) scored.push(r);
+            });
+            scored.sort(function (a, b) {
+                if (b.s !== a.s) return b.s - a.s;
+                return sortBefore(a.it, b.it) ? -1 : (sortBefore(b.it, a.it) ? 1 : 0);
+            });
+            return scored;
+        });
+    }
+
     function renderSearch() {
         const groupsEl = document.getElementById('doc-groups');
         if (!groupsEl) return;
-        const results = searchResults(searchQuery);
         const q = searchQuery.trim();
-        if (docListHead) docListHead.style.display = 'none';
-        if (!results.length) {
-            groupsEl.innerHTML = '<p class="doc-empty">No documents match &ldquo;' + escapeHtml(q) + '&rdquo;.</p>';
-            return;
-        }
-        groupsEl.innerHTML = '<div class="doc-search-header">' + results.length + ' result' + (results.length === 1 ? '' : 's')
-            + ' for &ldquo;' + escapeHtml(q) + '&rdquo;</div>';
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
-        for (let i = 0; i < results.length; i++) {
-            groupsEl.appendChild(renderRow(results[i].it, terms));
+        if (!terms.length) { resetSearch(); return; }
+        if (docListHead) docListHead.style.display = 'none';
+        if (!semanticReady && !embedModelPromise && window.__fpEmbed) {
+            getEmbedder().catch(function () {});
+        }
+        const keywordResults = searchResults(searchQuery);
+        const render = function (results) {
+            groupsEl.innerHTML = '';
+            if (!results.length) {
+                groupsEl.innerHTML = '<p class="doc-empty">No documents match &ldquo;' + escapeHtml(q) + '&rdquo;.</p>';
+                return;
+            }
+            const extra = semanticReady ? ' &middot; AI search' : '';
+            groupsEl.innerHTML = '<div class="doc-search-header">' + results.length + ' result' + (results.length === 1 ? '' : 's')
+                + ' for &ldquo;' + escapeHtml(q) + '&rdquo;' + extra + '</div>';
+            for (let i = 0; i < results.length; i++) {
+                groupsEl.appendChild(renderRow(results[i].it, terms));
+            }
+        };
+        render(keywordResults);
+        if (semanticReady) {
+            semanticSearch(searchQuery, keywordResults).then(function (results) {
+                if (searchQuery.trim() !== q) return;
+                render(results);
+            }).catch(function () {});
         }
     }
 
@@ -436,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
         previewClose();
     }
 
-    function openPopup() {
+    function resetPopupFields() {
         editingId = null;
         ensureDeleteBtn();
         const d = popup.querySelector('.doc-delete-btn');
@@ -445,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFileError();
         if (oldDatePopup) oldDatePopup.style.display = 'none';
         nameInput.value = '';
+        clearNameError();
         performedInput.value = '';
         performedInput.classList.remove('invalid');
         uploadedInput.value = toInputDate(new Date());
@@ -460,17 +533,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (cal) cal.classList.remove('open');
         setPrivacy('private');
+        selectedDocType = '';
+        if (docTypeValueEl) docTypeValueEl.textContent = '-- Select type --';
+        if (docTypeMenu) docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+        if (docTypeDropdown) docTypeDropdown.classList.remove('open');
+        currentOcrText = '';
+        currentOcrItems = [];
+        currentOcrExpanded = '';
+        currentOcrEmbedding = null;
+        hideScanStatus();
+    }
+
+    function openPopup() {
+        resetPopupFields();
+        scanMode = false;
+        fileInput.accept = '';
+        fileInput.removeAttribute('capture');
+        setPickLabel('Add document');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Add document';
         popup.style.display = 'flex';
     }
 
+    function openScanPopup() {
+        resetPopupFields();
+        scanMode = true;
+        fileInput.accept = 'image/*';
+        fileInput.setAttribute('capture', 'environment');
+        setPickLabel('Scan document');
+        const h = popup.querySelector('h3');
+        if (h) h.textContent = 'Scan document';
+        popup.style.display = 'flex';
+    }
+
     function openEditPopup(it) {
         editingId = it.id;
+        scanMode = false;
+        currentOcrText = '';
+        currentOcrItems = [];
+        currentOcrExpanded = '';
+        currentOcrEmbedding = null;
+        fileInput.accept = '';
+        fileInput.removeAttribute('capture');
+        setPickLabel('Add document');
+        hideScanStatus();
         fileInput.value = '';
         clearFileError();
         if (oldDatePopup) oldDatePopup.style.display = 'none';
         nameInput.value = it.name || '';
+        clearNameError();
         performedInput.value = formatDateLabel(it.performed) || '';
         performedInput.classList.remove('invalid');
         uploadedInput.value = formatDateLabel(it.uploaded) || '';
@@ -509,6 +620,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = popup.querySelector('.doc-delete-btn');
         if (d) d.style.display = '';
         setPrivacy(it.privacy);
+        const docTypeVal = it.docType || '';
+        selectedDocType = docTypeVal;
+        if (docTypeMenu) {
+            const typeBtns = Array.prototype.slice.call(docTypeMenu.querySelectorAll('button[data-value]'));
+            typeBtns.forEach((b) => b.classList.remove('selected'));
+            if (docTypeVal) {
+                const typeMatch = typeBtns.find((b) => b.dataset.value === docTypeVal);
+                if (typeMatch) typeMatch.classList.add('selected');
+                if (docTypeValueEl) docTypeValueEl.textContent = docTypeVal;
+            } else {
+                if (docTypeValueEl) docTypeValueEl.textContent = '-- Select type --';
+            }
+        }
+        if (docTypeDropdown) docTypeDropdown.classList.remove('open');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
@@ -519,6 +644,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     addBtn.addEventListener('click', openPopup);
+    const scanBtn = document.getElementById('doc-scan-btn');
+    if (scanBtn) scanBtn.addEventListener('click', openScanPopup);
     cancelBtn.addEventListener('click', closePopup);
     popup.addEventListener('click', (e) => {
         if (e.target === popup) closePopup();
@@ -578,9 +705,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    if (docTypeToggle) {
+        docTypeToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (docTypeDropdown) docTypeDropdown.classList.toggle('open');
+        });
+    }
+    if (docTypeMenu) {
+        docTypeMenu.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-value]');
+            if (!btn) return;
+            selectedDocType = btn.dataset.value;
+            if (docTypeValueEl) docTypeValueEl.textContent = btn.textContent;
+            docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if (docTypeDropdown) docTypeDropdown.classList.remove('open');
+        });
+    }
     document.addEventListener('click', (e) => {
         if (assetDropdown && !assetDropdown.contains(e.target)) {
             assetDropdown.classList.remove('open');
+        }
+        if (docTypeDropdown && !docTypeDropdown.contains(e.target)) {
+            docTypeDropdown.classList.remove('open');
         }
         if (cal && !cal.contains(e.target) && e.target !== performedInput) {
             cal.classList.remove('open');
@@ -596,9 +743,550 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileNameLabel) fileNameLabel.classList.add('error');
     }
 
+    function markNameError() {
+        if (!nameInput) return;
+        nameInput.classList.remove('shake', 'invalid');
+        void nameInput.offsetWidth;
+        nameInput.classList.add('shake', 'invalid');
+        nameInput.focus();
+    }
+
+    function clearNameError() {
+        if (nameInput) nameInput.classList.remove('shake', 'invalid');
+    }
+
     function clearFileError() {
         if (pickBtn) pickBtn.classList.remove('shake', 'error');
         if (fileNameLabel) fileNameLabel.classList.remove('error');
+    }
+
+    function getScanStatusEl() {
+        return document.getElementById('doc-scan-status');
+    }
+
+    function showScanStatus(msg, cls) {
+        const el = getScanStatusEl();
+        if (!el) return;
+        el.textContent = msg;
+        el.className = 'doc-scan-status ' + (cls || 'scanning');
+        el.style.display = '';
+    }
+
+    function hideScanStatus() {
+        const el = getScanStatusEl();
+        if (el) {
+            el.style.display = 'none';
+            el.className = 'doc-scan-status';
+        }
+    }
+
+    function setPickLabel(text) {
+        const el = document.getElementById('doc-pick-label');
+        if (el) el.textContent = text;
+    }
+
+    function isImageFile(file) {
+        return !!file && (/^image\//i.test(file.type) || /\.(png|jpe?g|gif|webp|bmp|tiff?)$/i.test(file.name || ''));
+    }
+
+    function getOcrWorker() {
+        if (!window.Tesseract) return Promise.reject(new Error('OCR not available'));
+        if (ocrWorkerPromise) return ocrWorkerPromise;
+        ocrWorkerPromise = window.Tesseract.createWorker('nor+eng', 1, {
+            logger: function (m) {
+                if (m && m.status === 'recognizing text') {
+                    showScanStatus('Scanning document... ' + Math.round(m.progress * 100) + '%');
+                }
+            }
+        });
+        return ocrWorkerPromise;
+    }
+
+    function preprocessImage(src) {
+        return new Promise(function (resolve, reject) {
+            const img = new Image();
+            img.onload = function () {
+                try {
+                    const MAX = 2000;
+                    const maxDim = Math.max(img.width, img.height);
+                    let scale = 2;
+                    if (maxDim * scale > MAX) scale = MAX / maxDim;
+                    scale = Math.max(scale, 0.5);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const d = imageData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                        const v = g < 128 ? Math.max(0, g - 40) : Math.min(255, g + 40);
+                        d[i] = d[i + 1] = d[i + 2] = v;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    resolve(canvas);
+                } catch (e) { reject(e); }
+            };
+            img.onerror = function () { reject(new Error('Could not load image')); };
+            img.src = src;
+        });
+    }
+
+    function runScan(file) {
+        showScanStatus('Preparing scanner...');
+        const reader = new FileReader();
+        reader.onload = function () {
+            showScanStatus('Preparing image...');
+            preprocessImage(reader.result).then(function (processed) {
+                return getOcrWorker().then(function (worker) {
+                    showScanStatus('Scanning document...');
+                    return worker.recognize(processed);
+                });
+            }).then(function (result) {
+                const text = String((result && result.data && result.data.text) || '').trim();
+                currentOcrText = text;
+                currentOcrItems = extractProductLines(text);
+                if (!text) {
+                    showScanStatus('Could not read any text. Try a clearer picture, or save the document as-is.', 'error');
+                    return;
+                }
+                applyOcrResult(text);
+                showScanStatus('Content recognized and searchable. You can adjust the name and date before saving.', 'ok');
+                enrichProductText(currentOcrItems).then(function (expanded) {
+                    currentOcrExpanded = expanded;
+                    return embedProducts(expanded);
+                }).then(function (vec) {
+                    currentOcrEmbedding = vec;
+                }).catch(function () {});
+            }).catch(function () {
+                showScanStatus('Scanning failed. You can still save the document, but its content will not be searchable.', 'error');
+            });
+        };
+        reader.onerror = function () {
+            showScanStatus('Could not read the file.', 'error');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    const STORE_PATTERNS = [
+        [/lampe[\s\-]?magasin(?:et)?/i, 'Lampemagasinet'],
+        [/jern[1il]?a/i, 'Jernia'],
+        [/byggmak(?:k)?er/i, 'Byggmakker'],
+        [/byggmax/i, 'Byggmax'],
+        [/gausdal/i, 'Gausdal'],
+        [/optimera/i, 'Optimera'],
+        [/hellesens?/i, 'Hellesen'],
+        [/fl[üu]gger/i, 'Flügger'],
+        [/tretorget/i, 'Tretorget'],
+        [/hagemagasinet/i, 'Hagemagasinet'],
+        [/megaflis/i, 'Megaflis'],
+        [/jula/i, 'Jula'],
+        [/maxbo/i, 'Maxbo'],
+        [/xl[ -]?bygg/i, 'XL Bygg'],
+        [/mont[e\u00e9]r/i, 'Mont\u00e9r'],
+        [/bauhaus/i, 'Bauhaus'],
+        [/biltema/i, 'Biltema'],
+        [/plantasjen/i, 'Plantasjen'],
+        [/clas ohlson/i, 'Clas Ohlson'],
+        [/europris/i, 'Europris'],
+        [/fargerike/i, 'Fargerike'],
+        [/elkj[\u00f8o]p/i, 'Elkj\u00f8p'],
+        [/mekonomen/i, 'Mekonomen'],
+        [/thansen/i, 'Thansen'],
+        [/jysk/i, 'Jysk'],
+        [/ikea/i, 'IKEA'],
+        [/granng[\u00e5a]rden/i, 'Granng\u00e5rden'],
+        [/coop[ -]?obs|obs[ -]?hyper/i, 'OBS'],
+        [/obs[ -]?mega/i, 'OBS'],
+        [/kiwi/i, 'Kiwi'],
+        [/rema[ -]?1000/i, 'Rema 1000'],
+        [/bunnpris/i, 'Bunnpris'],
+        [/extra/i, 'Extra'],
+        [/meny/i, 'Meny'],
+        [/spar/i, 'Spar'],
+        [/matkroken/i, 'Matkroken'],
+        [/joker/i, 'Joker'],
+        [/lidl/i, 'Lidl'],
+        [/coop/i, 'Coop'],
+        [/rusta/i, 'Rusta'],
+        [/normal/i, 'Normal'],
+        [/tiger/i, 'Tiger'],
+        [/s[\u00f8o]strene grene|sostrene grene/i, 'S\u00f8strene Grene'],
+        [/nille/i, 'Nille'],
+        [/cubus/i, 'Cubus'],
+        [/kappahl/i, 'KappAhl'],
+        [/xxl/i, 'XXL'],
+        [/sport ?1/i, 'Sport 1'],
+        [/g[ -]?sport/i, 'G-Sport'],
+        [/intersport/i, 'Intersport'],
+        [/sportsmann/i, 'Sportsmann'],
+        [/fjellsport/i, 'Fjellsport'],
+        [/power/i, 'Power'],
+        [/komplett/i, 'Komplett'],
+        [/netonnet/i, 'NetOnNet'],
+        [/gigaboks/i, 'Gigaboks'],
+        [/epleh(?:uset|uset)/i, 'Eplehuset'],
+        [/humac/i, 'Humac'],
+        [/apotek ?1/i, 'Apotek 1'],
+        [/vitusapotek/i, 'Vitusapotek'],
+        [/boots/i, 'Boots'],
+        [/apotek/i, 'Apotek'],
+        [/vinmonopolet/i, 'Vinmonopolet'],
+        [/systembolaget/i, 'Systembolaget'],
+        [/brilleland/i, 'Brilleland'],
+        [/synsam/i, 'Synsam'],
+        [/specsavers/i, 'Specsavers']
+
+    ];
+
+    function detectStore(text) {
+        const t = String(text || '');
+        // OBS Bygg: the logo has an exclamation mark inside the "O", so OCR often
+        // mangles it (e.g. "ÖBS", "ØBS", "O!BS", "0BS"), or reads only "BYGG"
+        // alongside the parent Coop brand. Catch all of those variants first.
+        if (/[o\u00f8\u00f6\u00f3\u00f2\u00f4\u00f5\u00d8\u00d6\u00d3\u00d2\u00d4\u00d50][!|]?bs[ !.\-]?bygg/i.test(t)) return 'OBS Bygg';
+        if (/coop/i.test(t) && /bygg/i.test(t)) return 'OBS Bygg';
+        if (/[o\u00f8\u00f6\u00f3\u00f2\u00f4\u00f5\u00d8\u00d6\u00d3\u00d2\u00d4\u00d50][!|]?bs(?![a-z\u00e6\u00f8\u00e5])/i.test(t)) return 'OBS Bygg';
+        // Lampemagasinet: the logo is often mangled by OCR into fragments
+        // (e.g. "npelagasinet", "smagasinet", "emagasinet", "lamp"), so match on
+        // co-occurrence of a lamp fragment and a magasin fragment anywhere.
+        if (/lamp/i.test(t) && /magasin/i.test(t)) return 'Lampemagasinet';
+        for (let i = 0; i < STORE_PATTERNS.length; i++) {
+            if (STORE_PATTERNS[i][0].test(t)) return STORE_PATTERNS[i][1];
+        }
+        return '';
+    }
+
+    const DOC_TYPE_PATTERNS = [
+        [/\b(receipt|re\u00e7u|recu|kassasjekk|kvitto|quittung|kassenbon|recibo|ricevuta|kassabon)\b|(?:salgs?|kassa|kj\u00f8ps|kj\u00f8pe)?kvit{1,2}ering\b/i, 'Receipt'],
+        [/\b(warranty|guarantee|garantie|garanzia|garant\u00eda|garantia)\b|garanti(?:bevis|periode|sak|e|en|er)?\b/i, 'Warranty']
+    ];
+
+    function detectDocType(text) {
+        const t = String(text || '');
+        for (let i = 0; i < DOC_TYPE_PATTERNS.length; i++) {
+            if (DOC_TYPE_PATTERNS[i][0].test(t)) return DOC_TYPE_PATTERNS[i][1];
+        }
+        return '';
+    }
+
+    function setDocType(value) {
+        if (!value) return;
+        selectedDocType = value;
+        if (docTypeMenu) {
+            docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+            const match = docTypeMenu.querySelector('button[data-value="' + value + '"]');
+            if (match) match.classList.add('selected');
+        }
+        if (docTypeValueEl) docTypeValueEl.textContent = value;
+        if (docTypeDropdown) docTypeDropdown.classList.remove('open');
+    }
+
+    function detectSpelledDate(text) {
+        const t = String(text || '');
+        const MONTHS = {
+            januar: 1, january: 1, jan: 1,
+            februar: 2, february: 2, feb: 2,
+            mars: 3, march: 3, mar: 3,
+            april: 4, apr: 4,
+            mai: 5, may: 5,
+            juni: 6, june: 6,
+            juli: 7, july: 7,
+            august: 8, aug: 8,
+            september: 9, sept: 9, sep: 9,
+            oktober: 10, october: 10, oct: 10,
+            november: 11, nov: 11,
+            desember: 12, december: 12, dec: 12
+        };
+        const months = Object.keys(MONTHS);
+        const re = new RegExp('(^|[^\\d])' + '(\\d{1,2})\\.?\\s*(' + months.join('|') + ')\\s+((?:19|20)\\d{2})' + '([^\\d]|$)', 'gi');
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(t)) !== null) {
+            const day = +m[2];
+            const month = MONTHS[String(m[3]).toLowerCase()];
+            const year = +m[4];
+            if (month && day >= 1 && day <= 31 && year >= 1990 && year <= 2100) {
+                const dt = new Date(year, month - 1, day);
+                if (dt.getMonth() === month - 1 && dt.getDate() === day) {
+                    return { day: day, month: month, year: year };
+                }
+            }
+        }
+        return null;
+    }
+
+    function detectDate(text) {
+        const t = String(text || '');
+        const sep = '[.\\/-]';
+        const dmy4 = new RegExp('(^|[^\\d])' + '(\\d{1,2})' + sep + '(\\d{1,2})' + sep + '((?:19|20)\\d{2})' + '([^\\d]|$)', 'g');
+        const ymd = new RegExp('(^|[^\\d])' + '((?:19|20)\\d{2})' + sep + '(\\d{1,2})' + sep + '(\\d{1,2})' + '([^\\d]|$)', 'g');
+        const dmy2 = new RegExp('(^|[^\\d])' + '(\\d{2})' + sep + '(\\d{2})' + sep + '(\\d{2})' + '([^\\d]|$)', 'g');
+        const run = function (re, order) {
+            let m;
+            re.lastIndex = 0;
+            while ((m = re.exec(t)) !== null) {
+                let day, month, year;
+                if (order === 'ymd') { year = +m[2]; month = +m[3]; day = +m[4]; }
+                else { day = +m[2]; month = +m[3]; year = +m[4]; }
+                if (year < 100) year = year >= 90 ? 1900 + year : 2000 + year;
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1990 && year <= 2100) {
+                    const dt = new Date(year, month - 1, day);
+                    if (dt.getMonth() === month - 1 && dt.getDate() === day) {
+                        return { day: day, month: month, year: year };
+                    }
+                }
+            }
+            return null;
+        };
+        return run(dmy4, 'dmy') || detectSpelledDate(t) || run(ymd, 'ymd') || run(dmy2, 'dmy');
+    }
+
+    function applyOcrResult(text) {
+        const store = detectStore(text);
+        const date = detectDate(text);
+        const docType = detectDocType(text);
+        if (!nameInput.value.trim()) {
+            const parts = [];
+            if (store) parts.push(store);
+            if (date) parts.push(pad2(date.day) + '.' + pad2(date.month) + '.' + date.year);
+            if (parts.length) nameInput.value = parts.join(' ');
+        }
+        if (nameInput.value.trim()) clearNameError();
+        if (date && !performedInput.value.trim()) {
+            performedInput.value = pad2(date.day) + '/' + pad2(date.month) + '/' + date.year;
+            performedInput.classList.remove('invalid');
+        }
+        if (!selectedDocType && docType) setDocType(docType);
+    }
+
+    function pad2(n) {
+        return String(n).padStart(2, '0');
+    }
+
+    const PRODUCT_CATEGORIES = [
+        { key: 'avløp', terms: ['avløp', 'drainage', 'vannlås', 'vannlaas', 'sluk', 'slukrist', 'drenering', 'kloakk', 'drain', 'kum', 'stakestål', 'avløpsrør', 'pumpekum'] },
+        { key: 'vann', terms: ['vann', 'kran', 'armatur', 'slange', 'pumpe', 'vanntank', 'kobling', 'water', 'faucet', 'hose', 'pump', 'rør'] },
+        { key: 'elektrisk', terms: ['elektrisk', 'ledning', 'kabel', 'sikring', 'bryter', 'stikkontakt', 'støpsel', 'lampe', 'pære', 'electric', 'wiring', 'socket', 'switch', 'cable', 'bulb', 'spenning'] },
+        { key: 'maling', terms: ['maling', 'lakk', 'grunning', 'sparkel', 'paint', 'primer', 'lacquer', 'beis', 'fortynner'] },
+        { key: 'verktøy', terms: ['verktøy', 'drill', 'skrutrekker', 'hammer', 'sag', 'tang', 'tool', 'screwdriver', 'saw', 'plier', 'vinkelsliper', 'stikksag', 'bormaskin', 'skrumaskin'] },
+        { key: 'trevirke', terms: ['trevirke', 'plank', 'lekte', 'furu', 'gran', 'sponplate', 'kryssfiner', 'k-virke', 'konstruksjonsvirke', 'virke', 'tømmer', 'stender', 'bjelke', 'wood', 'lumber', 'plywood', 'stud', 'timber', 'møbelfront'] },
+        { key: 'feste', terms: ['skrue', 'spiker', 'bolt', 'mutter', 'dyvel', 'anker', 'brakett', 'screw', 'nail', 'nut', 'dowel', 'anchor', 'feste', 'kile'] },
+        { key: 'hage', terms: ['hage', 'plante', 'gjødsel', 'jord', 'gress', 'garden', 'plant', 'fertilizer', 'soil', 'lawn', 'blomst', 'frø'] },
+        { key: 'buntebånd', terms: ['buntebånd', 'bunteband', 'strips', 'kabelbinder', 'kabelstrips', 'tilbinder', 'buntningsklamme', 'cable tie', 'tie wrap', 'zip tie', 'bånd'] },
+        { key: 'grill', terms: ['grill', 'barbecue', 'bbq', 'weber', 'gass', 'gas', 'regulator', 'propangass', 'grillrist', 'kull', 'charcoal', 'grillkull', 'sausage', 'pølse', 'grillmat'] },
+        { key: 'rengjøring', terms: ['rengjøring', 'vaskemiddel', 'såpe', 'klor', 'børste', 'svamp', 'cleaning', 'detergent', 'soap', 'brush', 'sponge', 'mopp', 'oppvaskmiddel'] },
+        { key: 'bil', terms: ['bil', 'auto', 'olje', 'vindusvisker', 'dekkskift', 'car', 'auto', 'oil', 'wiper', 'tire', 'batteri', 'dekkskift'] },
+        { key: 'dør', terms: ['dør', 'håndtak', 'vrider', 'lås', 'hengsel', 'terskel', 'door', 'handle', 'lock', 'hinge', 'karm'] },
+        { key: 'mat', terms: ['mat', 'melk', 'brød', 'ost', 'kjøtt', 'fisk', 'grønnsaker', 'frukt', 'kaffe', 'pålegg', 'middag', 'frokost', 'lunsj', 'matvarer', 'food', 'milk', 'bread', 'cheese', 'meat', 'fish', 'vegetable', 'fruit', 'coffee', 'egg'] },
+        { key: 'drikke', terms: ['drikke', 'brus', 'juice', 'saft', 'vannflaske', 'drink', 'beverage', 'cola', 'øl', 'vin', 'cider', 'smoothie'] },
+        { key: 'bygg', terms: ['betong', 'murstein', 'sement', 'puss', 'gips', 'mørtel', 'leca', 'concrete', 'brick', 'cement', 'plaster', 'mortar', 'mur'] },
+        { key: 'tak', terms: ['takstein', 'takpapp', 'takplater', 'møne', 'takrenne', 'nedløp', 'tak', 'roofing', 'gutter', 'shingles'] },
+        { key: 'isolasjon', terms: ['isolasjon', 'glava', 'mineralull', 'isopor', 'isoler', 'insulation', 'fiber'] },
+        { key: 'gulv', terms: ['gulv', 'parkett', 'laminat', 'vinyl', 'flis', 'belegg', 'floor', 'flooring', 'laminate', 'vinyl', 'tile', 'laminatgulv'] },
+        { key: 'terrasse', terms: ['terrasse', 'terrassebord', 'impregnert', 'utedekke', 'deck', 'terrace', 'platting'] },
+        { key: 'beslag', terms: ['beslag', 'vinkel', 'jern', 'metall', 'bracket', 'mounting', 'profil'] },
+        { key: 'klær', terms: ['klær', 'bukse', 'skjorte', 'jakke', 'genser', 'sko', 'støvler', 'sokker', 't-skjorte', 'tights', 'clothing', 'clothes', 'shirt', 'pants', 'jacket', 'shoes', 'boots', 'dress', 'sko'] },
+        { key: 'sport', terms: ['sport', 'fotball', 'sykkel', 'ski', 'stav', 'sportsutstyr', 'hjelm', 'sport', 'bicycle', 'bike', 'helmet', 'racket'] },
+        { key: 'medisin', terms: ['paracet', 'ibuprofen', 'plaster', 'vitamin', 'medisin', 'bandasje', 'salve', 'medicine', 'vitamin', 'bandage', 'smertestillende'] },
+        { key: 'dyr', terms: ['hundefor', 'kattefor', 'dyrefôr', 'kattesand', 'dyrefor', 'pet', 'dog food', 'cat food', 'godbit'] },
+        { key: 'møbler', terms: ['møbler', 'stol', 'seng', 'sofa', 'skap', 'hylle', 'møbel', 'furniture', 'chair', 'table', 'bed', 'sofa', 'cabinet', 'shelf'] },
+        { key: 'smøremiddel', terms: ['smøremiddel', 'smørefett', 'wd40', 'rustløser', 'lubricant', 'smøring', 'spray'] }
+    ];
+
+    function isReceiptNoiseLine(line) {
+        const t = String(line || '').toLowerCase();
+        if (/^(sum|total|totalt|beløp|belop|mva|med vennlig hilsen|vennligst|takk|kvittering|receipt|sale|return|refund|refusjon|betaling|betalt|kontant|kort|cash|card|saldo|avgift|org\.?nr|organisasjonsnr|forfallsdato|bankkort|viser|visa|mastercard|dankort|jeg godtar|vil du handle|operatør|operator|ordre|order|bong|ticket|butikk|store|kjede)\b/.test(t)) return true;
+        if (/^(www\.|https?:|e-?post|tlf\.?|telefon|@)/.test(t)) return true;
+        if (/\b(orgnr|mva\b|totalt|sum\b|saldo\b|change\b|tilbake|betalt\b|kontant\b|dankort\b|visa\b|mastercard\b|refusjon|refund|swish|vipps)\b/.test(t)) return true;
+        if (/^[^a-z\u00e6\u00f8\u00e5]*\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4}/i.test(t)) return true;
+        return false;
+    }
+
+    function extractProductLines(text) {
+        const lines = String(text || '').split(/\r?\n/);
+        const out = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].replace(/\s+/g, ' ').trim();
+            if (!line) continue;
+            if (!/[a-z\u00e6\u00f8\u00e5]/i.test(line)) continue;
+            if (isReceiptNoiseLine(line)) continue;
+            const cleaned = line.replace(/\s*(kr\.?)?\s*\d{1,3}(?:[ .]\d{3})*(?:,\d{2})?\s*$/i, '').trim();
+            if (cleaned.length >= 2) out.push(cleaned);
+        }
+        return out;
+    }
+
+    function termInText(norm, term) {
+        const idx = norm.indexOf(term);
+        if (idx === -1) return false;
+        if (term.length <= 3) {
+            const before = idx > 0 ? norm[idx - 1] : '';
+            const after = norm[idx + term.length] || '';
+            if (/[a-z0-9]/.test(before) || /[a-z0-9]/.test(after)) return false;
+        }
+        return true;
+    }
+
+    function productCategoryText(line) {
+        const norm = normalizeForSearch(line);
+        const out = [];
+        for (let i = 0; i < PRODUCT_CATEGORIES.length; i++) {
+            const cat = PRODUCT_CATEGORIES[i];
+            for (let j = 0; j < cat.terms.length; j++) {
+                if (termInText(norm, normalizeForSearch(cat.terms[j]))) {
+                    out.push(cat.terms.join(' '));
+                    break;
+                }
+            }
+        }
+        return out.join(' ');
+    }
+
+    let categoryProtosPromise = null;
+    let categoryProtos = null;
+    const CAT_INFER_MIN = 0.34;
+
+    function getCategoryProtos() {
+        if (categoryProtos) return Promise.resolve(categoryProtos);
+        if (categoryProtosPromise) return categoryProtosPromise;
+        categoryProtosPromise = Promise.all(PRODUCT_CATEGORIES.map(function (cat) {
+            return embedText(cat.terms.join(' ')).then(function (v) {
+                return { key: cat.key, terms: cat.terms, vec: v };
+            });
+        })).then(function (protos) {
+            categoryProtos = protos;
+            return protos;
+        }).catch(function (err) {
+            categoryProtosPromise = null;
+            throw err;
+        });
+        return categoryProtosPromise;
+    }
+
+    function inferCategorySynonyms(line) {
+        if (!semanticReady) return Promise.resolve('');
+        return getCategoryProtos().then(function (protos) {
+            return embedText(line).then(function (pv) {
+                let best = null;
+                let bestSim = 0;
+                for (let i = 0; i < protos.length; i++) {
+                    const sim = cosineSim(pv, protos[i].vec);
+                    if (sim > bestSim) { bestSim = sim; best = protos[i]; }
+                }
+                if (best && bestSim >= CAT_INFER_MIN) return best.key + ' ' + best.terms.join(' ');
+                return '';
+            });
+        }).catch(function () { return ''; });
+    }
+
+    function enrichProductText(items) {
+        const results = [];
+        const jobs = [];
+        for (let i = 0; i < items.length; i++) {
+            (function (idx, item) {
+                const literal = productCategoryText(item);
+                if (literal) {
+                    results[idx] = item + ' ' + literal;
+                } else {
+                    jobs.push(inferCategorySynonyms(item).then(function (syns) {
+                        results[idx] = item + (syns ? ' ' + syns : '');
+                    }).catch(function () {
+                        results[idx] = item;
+                    }));
+                }
+            })(i, items[i]);
+        }
+        return Promise.all(jobs).then(function () { return results.join(' '); });
+    }
+
+    function getOcrItems(it) {
+        if (it && Array.isArray(it.ocrItems) && it.ocrItems.length) return it.ocrItems;
+        if (it && it.ocrText) return extractProductLines(it.ocrText);
+        return [];
+    }
+
+    function expandedItemsText(items) {
+        const parts = [];
+        for (let i = 0; i < items.length; i++) {
+            const cats = productCategoryText(items[i]);
+            parts.push(items[i] + (cats ? ' ' + cats : ''));
+        }
+        return parts.join(' ');
+    }
+
+    function ocrItemsSearchText(it) {
+        if (it && it.ocrExpanded) return normalizeForSearch(it.ocrExpanded);
+        return normalizeForSearch(expandedItemsText(getOcrItems(it)));
+    }
+
+    function getEmbedder() {
+        if (semanticModel) return Promise.resolve(semanticModel);
+        if (embedModelPromise) return embedModelPromise;
+        const lib = window.__fpEmbed;
+        if (!lib || typeof lib.pipeline !== 'function') {
+            return Promise.reject(new Error('Embedding model not available'));
+        }
+        embedModelPromise = lib.pipeline('feature-extraction', EMBED_MODEL).then(function (p) {
+            semanticModel = p;
+            semanticReady = true;
+            backfillEmbeddings();
+            if (searchQuery && searchQuery.trim()) renderSearch();
+            return p;
+        }).catch(function (err) {
+            embedModelPromise = null;
+            throw err;
+        });
+        return embedModelPromise;
+    }
+
+    function embedText(text) {
+        return getEmbedder().then(function (p) {
+            return p(String(text || ''), { pooling: 'mean', normalize: true });
+        }).then(function (out) {
+            const data = Array.isArray(out.data) ? out.data : Array.from(out.data || []);
+            return data.map(function (v) { return Math.round(v * 1e6) / 1e6; });
+        });
+    }
+
+    function cosineSim(a, b) {
+        let s = 0;
+        for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+        return s;
+    }
+
+    function embedProducts(text) {
+        if (!text) return Promise.resolve(null);
+        return embedText(text).catch(function () { return null; });
+    }
+
+    function backfillEmbeddings() {
+        if (!semanticReady) return;
+        const jobs = [];
+        items.forEach(function (it) {
+            if (it.ocrEmbedding && it.ocrEmbedding.length) return;
+            const raw = getOcrItems(it);
+            if (!raw.length) return;
+            if (it.ocrExpanded) {
+                jobs.push(embedText(it.ocrExpanded).then(function (vec) {
+                    it.ocrEmbedding = vec;
+                }).catch(function () {}));
+                return;
+            }
+            jobs.push(enrichProductText(raw).then(function (expanded) {
+                it.ocrExpanded = expanded;
+                return embedText(expanded);
+            }).then(function (vec) {
+                it.ocrEmbedding = vec;
+            }).catch(function () {}));
+        });
+        if (jobs.length) {
+            Promise.all(jobs).then(function () {
+                store();
+                if (searchQuery && searchQuery.trim()) renderSearch();
+            });
+        }
     }
 
     fileInput.addEventListener('change', () => {
@@ -611,10 +1299,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         sizeInput.value = formatSize(file.size);
         if (fileNameLabel) fileNameLabel.textContent = file.name;
-        if (!nameInput.value.trim()) {
+        if (!scanMode && !nameInput.value.trim()) {
             const base = file.name.replace(/\.[^.]+$/, '');
             nameInput.value = base;
         }
+        if (scanMode) {
+            if (isImageFile(file)) {
+                runScan(file);
+            } else {
+                showScanStatus('This file type cannot be scanned. It will be saved without scanned content.', 'error');
+            }
+        }
+    });
+
+    nameInput.addEventListener('input', () => {
+        if (nameInput.value.trim()) clearNameError();
     });
 
     const calState = { year: new Date().getFullYear(), month: new Date().getMonth(), selected: null, showYears: false };
@@ -760,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const name = nameInput.value.trim();
         if (!name) {
-            alert('Please give the document a name.');
+            markNameError();
             return;
         }
         const asset = selectedAssetValue === '__other__'
@@ -770,12 +1469,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const privacy = privacyValue();
         const apply = (dataUrl) => {
             let rec = null;
+            const docTypeVal = selectedDocType;
             if (editingId) {
                 rec = items.find((i) => i.id === editingId);
                 if (rec) {
                     rec.name = name;
                     rec.asset = asset;
                     rec.privacy = privacy;
+                    rec.docType = docTypeVal;
                     rec.performed = performedDt ? toISO(performedDt) : '';
                     if (dataUrl) {
                         rec.type = file.type;
@@ -784,6 +1485,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         rec.sizeLabel = formatSize(file.size);
                         rec.uploaded = toISO(new Date());
                         rec.created = Date.now();
+                        rec.ocrText = currentOcrText || '';
+                        rec.ocrItems = currentOcrItems;
+                        rec.ocrExpanded = currentOcrExpanded;
+                        rec.ocrEmbedding = currentOcrEmbedding;
                     }
                 }
             } else {
@@ -792,13 +1497,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: name,
                     asset: asset,
                     privacy: privacy,
+                    docType: docTypeVal,
                     performed: performedDt ? toISO(performedDt) : '',
                     uploaded: toISO(new Date()),
                     created: Date.now(),
                     size: file.size,
                     sizeLabel: formatSize(file.size),
                     type: file.type,
-                    fileName: file.name
+                    fileName: file.name,
+                    ocrText: currentOcrText || '',
+                    ocrItems: currentOcrItems,
+                    ocrExpanded: currentOcrExpanded,
+                    ocrEmbedding: currentOcrEmbedding
                 };
                 items.push(rec);
             }
@@ -833,7 +1543,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const name = nameInput.value.trim();
         if (!name) {
-            alert('Please give the document a name.');
+            markNameError();
             return;
         }
         const hasDateText = performedInput.value.trim() !== '';
@@ -955,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
-            + '<span class="doc-cell doc-cell-type">' + escapeHtml(info.label) + '</span>'
+            + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || info.label) + '</span>'
             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>';
