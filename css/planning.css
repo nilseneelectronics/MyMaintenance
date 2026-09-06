@@ -1425,3 +1425,161 @@ body:has(.event-modal-overlay.open) {
 .event-modal-row { display: flex; gap: 12px; }
 .event-modal-row .event-modal-field { flex: 1; }
 @media (max-width: 480px) { .event-modal-row { flex-direction: column; } }
+
+/* =======================================
+   Responsive: My Planning page
+   Keeps a gap from the screen edges and lets the event rows
+   (upcoming / planned maintenance / all events) compress instead
+   of overflowing on narrow screens.
+   ======================================= */
+.planning-content {
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+/* Sub-page headers (done tasks / all events / calendar): keep the back
+   button on the left, above the centered title (z-index). On narrow
+   screens the button becomes slimmer and the title shrinks so they fit
+   instead of overlapping. */
+.planning-content > div > button[onclick="history.back()"],
+.cal-page > div > button[onclick="history.back()"] {
+    z-index: 2;
+}
+
+@media (max-width: 640px) {
+    .planning-content > div > button[onclick="history.back()"],
+    .cal-page > div > button[onclick="history.back()"] {
+        padding: 8px 14px !important;
+    }
+    .planning-content > div > h1,
+    .cal-page > div > h1 {
+        font-size: 1.5em;
+    }
+}
+
+@media (max-width: 420px) {
+    .planning-content > div > h1,
+    .cal-page > div > h1 {
+        font-size: 1.2em;
+    }
+}
+
+/* Fluid event rows: name truncates, location/date/time compress. */
+#upcoming-events .ev-row,
+#plan-planned .ev-row,
+#all-events-list .ev-row {
+    gap: 10px;
+}
+#upcoming-events .ev-row-left,
+#plan-planned .ev-row-left,
+#all-events-list .ev-row-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 10px;
+}
+#upcoming-events .ev-cell-name,
+#plan-planned .ev-cell-name,
+#all-events-list .ev-cell-name {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+#upcoming-events .ev-cell-asset,
+#plan-planned .ev-cell-asset,
+#all-events-list .ev-cell-asset {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 38%;
+    text-align: left;
+}
+#upcoming-events .ev-row-right,
+#plan-planned .ev-row-right,
+#all-events-list .ev-row-right {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 10px;
+}
+#upcoming-events .ev-cell-date,
+#plan-planned .ev-cell-date,
+#all-events-list .ev-cell-date,
+#upcoming-events .ev-cell-time,
+#plan-planned .ev-cell-time,
+#all-events-list .ev-cell-time {
+    width: auto;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 850px) {
+    .planning-content {
+        padding: 0 12px;
+    }
+    .upcoming-box,
+    .todo-box {
+        padding: 20px 18px;
+    }
+}
+
+@media (max-width: 745px) {
+    #upcoming-events .ev-cell-asset,
+    #plan-planned .ev-cell-asset,
+    #all-events-list .ev-cell-asset {
+        display: none;
+    }
+}
+
+@media (max-width: 560px) {
+    .planning-content {
+        padding: 0 10px;
+    }
+    .upcoming-box,
+    .todo-box {
+        padding: 18px 14px;
+    }
+    .calendar-section {
+        margin-top: 28px;
+    }
+    .calendar-mimic {
+        gap: 14px;
+    }
+    /* Long task names truncate so the "done" button stays on screen */
+    .todo-list li > span {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .add-todo {
+        gap: 8px;
+    }
+    .add-todo input,
+    .add-todo .add-button {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Collapse "Mark as done" to just the check icon */
+    .todo-list .done-btn {
+        font-size: 0;
+        gap: 0;
+        padding: 8px 12px;
+    }
+}
+
+/* Planning popups: keep a gap from the screen edges on narrow screens */
+@media (max-width: 500px) {
+    #done-popup .popup-content,
+    #delete-popup .popup-content,
+    .event-modal-card {
+        box-sizing: border-box;
+        width: calc(100% - 32px);
+    }
+    #done-popup .popup-content,
+    #delete-popup .popup-content {
+        padding: 24px 18px;
+    }
+}

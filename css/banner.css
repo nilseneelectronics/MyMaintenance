@@ -50,3 +50,16 @@
   font-size: 1.15rem;
   padding: 12px 36px;
 }
+
+@media (max-width: 480px) {
+  .hero-content h1 {
+    font-size: clamp(2.2rem, 9vw, 3rem);
+  }
+  .hero-sub {
+    font-size: 1.05rem;
+  }
+  .hero-content .btn {
+    font-size: 1rem;
+    padding: 10px 28px;
+  }
+}

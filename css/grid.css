@@ -404,10 +404,57 @@
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
     max-width: 1400px;
     margin: 0 auto 40px;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 747px) {
+    .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0 12px;
+        gap: 16px;
+    }
+    /* Stack the paired boxes and make every box full-width so they're all
+       exactly the same width (must be more specific than the base span-2
+       rule, otherwise that rule wins and widens the documents box). */
+    .dashboard-grid .dash-box.homes-box,
+    .dashboard-grid .dash-box.vehicles-box,
+    .dashboard-grid .dash-box.tools,
+    .dashboard-grid .dash-box.profile,
+    .dashboard-grid .documents-box,
+    .dashboard-grid .planning-box,
+    .dashboard-grid .planned-maintenance-box {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-grid {
+        padding: 0 10px;
+        gap: 14px;
+    }
+    .dash-box {
+        padding: 14px 12px;
+    }
+    .dash-box .button-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .dash-box .button-group .add-button,
+    .dash-box .button-group .view-button {
+        width: 100%;
+    }
+    /* Make My Homes / My Vehicles rows consistent and trim them on phones */
+    #dash-homes .ev-cell-icon,
+    #dash-vehicles .ev-cell-icon,
+    #dash-upcoming .ev-cell-icon,
+    #dash-planned .ev-cell-icon {
+        display: none;
+    }
 }
 
 .dash-box {
@@ -417,7 +464,15 @@
     border-radius: 20px;
     text-align: center;
     transition: transform 0.3s ease;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    overflow: hidden;
 }
+
+/* My Homes / My Vehicles / Try MyTools / Edit MyProfile pair up in the
+   2-column grid and only stack once the grid itself collapses below. */
 
 .dash-box a {
     display: flex;
@@ -459,6 +514,7 @@
 #dash-vehicles .ev-row-left {
     gap: 10px;
     flex: 1 1 auto;
+    min-width: 0;
 }
 
 #dash-homes .ev-cell-name,
@@ -466,6 +522,9 @@
     min-width: 0;
     flex: 1 1 auto;
     font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #dash-homes .ev-cell-asset,
@@ -474,6 +533,9 @@
     min-width: 80px;
     text-align: right;
     font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #dash-homes .ev-header-row .ev-cell-name,
@@ -481,6 +543,48 @@
 #dash-vehicles .ev-header-row .ev-cell-name,
 #dash-vehicles .ev-header-row .ev-cell-asset {
     font-size: 0.8rem;
+}
+
+/* Dashboard "Upcoming" / "Planned Maintenance" rows: keep everything
+   shrinkable so no content overflows the box (name/asset/date/time truncate). */
+#dash-upcoming .ev-row,
+#dash-planned .ev-row {
+    gap: 10px;
+}
+#dash-upcoming .ev-row-left,
+#dash-planned .ev-row-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 10px;
+}
+#dash-upcoming .ev-cell-name,
+#dash-planned .ev-cell-name {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+#dash-upcoming .ev-cell-asset,
+#dash-planned .ev-cell-asset {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 38%;
+    text-align: left;
+}
+#dash-upcoming .ev-row-right,
+#dash-planned .ev-row-right {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 10px;
+}
+#dash-upcoming .ev-cell-date,
+#dash-planned .ev-cell-date,
+#dash-upcoming .ev-cell-time,
+#dash-planned .ev-cell-time {
+    width: auto;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .documents-box h3, .planning-box h3, .documents-box p, .planning-box p {
@@ -904,12 +1008,16 @@
    ======================================= */
 .showcase {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
   align-items: center;
   gap: 40px;
   max-width: 1100px;
   margin: 0 auto 60px;
   padding: 0 24px;
+}
+
+.showcase-reverse {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
 }
 
 .showcase:first-of-type {
@@ -926,6 +1034,10 @@
   margin-bottom: 6px;
 }
 
+.showcase-text {
+  text-align: center;
+}
+
 .showcase-text h2 {
   font-size: clamp(1.8rem, 3vw, 2.2rem);
   margin: 0 0 10px;
@@ -937,7 +1049,7 @@
   font-size: 1.15rem;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
   max-width: 440px;
 }
 
@@ -999,5 +1111,14 @@
   .hero {
     height: 55vh;
     min-height: 320px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cta-banner {
+    padding: 60px 16px;
+  }
+  .showcase {
+    padding: 0 16px;
   }
 }

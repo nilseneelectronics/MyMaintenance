@@ -542,3 +542,69 @@
 .profile-toast.error {
     background: var(--delete-red);
 }
+
+/* =======================================
+   Responsive: My Profile page
+   ======================================= */
+.main-profile {
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+    .profile-box {
+        height: auto;
+        padding: 20px;
+        gap: 20px;
+    }
+    .profile-image {
+        margin-left: 0;
+    }
+    .profile-upload-button img,
+    .profile-avatar-icon svg {
+        width: 100px;
+        height: 100px;
+    }
+    .profile-info p {
+        font-size: 1.05em;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-box {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px 14px;
+    }
+    .profile-upload-button img,
+    .profile-avatar-icon svg {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* Profile popups: keep a gap from the screen edges on narrow screens */
+@media (max-width: 500px) {
+    .main-profile .popup-content {
+        box-sizing: border-box;
+        width: calc(100% - 32px);
+        padding: 24px 18px;
+    }
+    .profile-picture-picker {
+        flex-direction: column;
+        gap: 14px;
+    }
+    .reg-row,
+    .profile-reg-row {
+        grid-template-columns: 1fr;
+    }
+    .profile-list-row {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .profile-row-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

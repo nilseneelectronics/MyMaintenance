@@ -40,7 +40,6 @@
             <!-- Left: Neighborhood photos -->
             <div class="photo-box" id="nb-photo-box">
                 <h3>Neighborhood Photos</h3>
-                <button class="view-button" id="nb-view-all-photos">View all photos</button>
                 <div class="big-photo-container" id="nb-big-photo-container">
                     <img id="nb-main-photo" src="https://picsum.photos/id/1036/1200/675" alt="Neighborhood photo">
                     <div class="photo-arrows">
@@ -48,10 +47,17 @@
                         <button class="arrow right" id="nb-next-arrow"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
                 </div>
-                <button class="view-button add-photos-outline" id="nb-add-photo-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v600h600v-335q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h58v-58q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v58h57q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-57v57q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-57Z"/></svg>
-                    Add photos
-                </button>
+                <div class="photo-box-side">
+                    <button class="view-button" id="nb-view-all-photos">View all photos</button>
+                    <button class="view-button add-photos-outline" id="nb-add-photo-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v600h600v-335q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h58v-58q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v58h57q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-57v57q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-57Z"/></svg>
+                        Add photos
+                    </button>
+                    <div class="photo-thumbs" id="nb-photo-thumbs">
+                        <img id="nb-thumb-1" src="" alt="More photo" loading="lazy">
+                        <img id="nb-thumb-2" src="" alt="More photo" loading="lazy">
+                    </div>
+                </div>
             </div>
 
             <!-- Upcoming events -->

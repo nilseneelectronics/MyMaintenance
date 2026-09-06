@@ -6,6 +6,15 @@
     border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
+    overflow: hidden;
+}
+
+/* MyNeighborhood: stretch photo / events / docs boxes to full width */
+#nb-photo-box,
+.planned-box:has(#nb-events-list),
+.docs-box:has(#nb-docs-list) {
+    grid-column: span 18;
+    grid-row: auto;
 }
 
 .neighbor-list {
@@ -564,4 +573,36 @@
 #nb-doc-add-popup input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+/* =======================================
+   MyNeighborhood responsive (narrow screens)
+   Zoom-compensated: 747px media == ~560px physical,
+   560px media == ~420px physical.
+   ======================================= */
+@media (max-width: 747px) {
+    .nb-person-header,
+    .nb-person-row {
+        grid-template-columns: 80px 1fr 1fr;
+        gap: 10px;
+    }
+    .nb-person-col-head:nth-child(4),
+    .nb-person-cell:nth-child(4) {
+        display: none;
+    }
+    .neighbor-box {
+        padding: 16px 14px;
+    }
+}
+
+@media (max-width: 560px) {
+    .nb-person-header,
+    .nb-person-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .nb-person-col-head:nth-child(1),
+    .nb-person-cell:nth-child(1) {
+        display: none;
+    }
 }

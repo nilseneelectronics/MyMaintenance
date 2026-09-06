@@ -42,3 +42,19 @@ footer p {
     color: var(--text-secondary);
     margin: 5px 0;
 }
+
+@media (max-width: 640px) {
+    footer {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 24px 16px;
+    }
+    footer .column {
+        max-width: 100%;
+        margin: 0 0 24px;
+    }
+    footer .column:last-child {
+        margin-bottom: 0;
+    }
+}
