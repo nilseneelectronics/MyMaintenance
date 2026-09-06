@@ -972,3 +972,172 @@
 .pdfv-page canvas {
     display: block;
 }
+
+/* =======================================
+   Responsive: Dashboard "Latest Documents" rows
+   Keeps the row on one line and progressively
+   drops the least important columns.
+   ======================================= */
+.documents-box .doc-cell-name,
+.documents-box .doc-cell-asset {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The dashboard box is narrow, so keep every row fluid: the name
+   truncates and the right side compresses instead of being clipped. */
+.documents-box .doc-cell-name { min-width: 0; flex: 1 1 auto; }
+.documents-box .doc-row-right { flex-shrink: 1; }
+.documents-box .doc-row-right .doc-cell { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.documents-box .doc-row-right .doc-cell-privacy,
+.documents-box .doc-row-right .doc-cell-edit { flex: none; }
+
+@media (max-width: 1100px) {
+    .documents-box .doc-row-left,
+    .documents-box .doc-row-right {
+        gap: 12px;
+    }
+    .documents-box .doc-cell-size { display: none; }
+    .documents-box .doc-cell-performed { width: 110px; }
+    .documents-box .doc-cell-asset { width: 160px; }
+}
+
+@media (max-width: 1000px) {
+    .documents-box .doc-cell-type { display: none; }
+}
+
+@media (max-width: 850px) {
+    .documents-box .doc-cell-uploaded { display: none; }
+    .documents-box .doc-cell-asset { width: 120px; }
+    .documents-box .doc-cell-performed { width: 92px; }
+}
+
+@media (max-width: 745px) {
+    .documents-box .doc-cell-asset { width: 110px; }
+    .documents-box .doc-cell-performed { width: 86px; }
+    .documents-box .doc-row-left,
+    .documents-box .doc-row-right { gap: 8px; }
+}
+
+@media (max-width: 560px) {
+    .documents-box .doc-cell-performed { display: none; }
+    .documents-box .doc-cell-asset { width: 110px; }
+}
+
+@media (max-width: 475px) {
+    .documents-box .doc-cell-asset { display: none; }
+    .documents-box .doc-cell-name { min-width: 0; }
+}
+
+/* =======================================
+   Responsive: My Documents page rows
+   (name/asset truncate; symbol, size and
+   uploaded date removed only on narrow screens)
+   ======================================= */
+#doc-groups .doc-cell-name,
+#doc-groups .doc-cell-asset {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Keep every row fluid so the name truncates and the right side
+   compresses instead of being clipped on narrow screens. */
+#doc-groups .doc-cell-name { min-width: 0; flex: 1 1 auto; }
+#doc-groups .doc-row-right { flex-shrink: 1; }
+#doc-groups .doc-row-right .doc-cell { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#doc-groups .doc-row-right .doc-cell-privacy,
+#doc-groups .doc-row-right .doc-cell-edit { flex: none; }
+
+@media (max-width: 1100px) {
+    #doc-groups .doc-row-left,
+    #doc-groups .doc-row-right {
+        gap: 12px;
+    }
+    #doc-groups .doc-cell-size { display: none; }
+    #doc-groups .doc-cell-asset { width: 160px; min-width: 0; text-align: left; }
+}
+
+@media (max-width: 1000px) {
+    #doc-groups .doc-cell-type { display: none; }
+}
+
+@media (max-width: 850px) {
+    #doc-groups .doc-cell-uploaded { display: none; }
+    #doc-groups .doc-cell-icon,
+    #doc-groups .doc-symbol { display: none; }
+    #doc-groups .doc-cell-asset { width: 120px; }
+    #doc-groups .doc-cell-performed { width: 92px; }
+}
+
+@media (max-width: 745px) {
+    #doc-groups .doc-cell-asset { width: 110px; }
+    #doc-groups .doc-cell-performed { width: 86px; }
+    #doc-groups .doc-row-left,
+    #doc-groups .doc-row-right { gap: 8px; }
+}
+
+@media (max-width: 560px) {
+    #doc-groups .doc-cell-performed { display: none; }
+    #doc-groups .doc-cell-asset { width: 110px; }
+}
+
+@media (max-width: 475px) {
+    #doc-groups .doc-cell-asset { display: none; }
+    #doc-groups .doc-cell-name { min-width: 0; }
+}
+
+/* My Documents page: edge spacing + tidy rows (like the dashboard) */
+main:has(#doc-groups) .grid-container {
+    padding: 0 16px;
+    box-sizing: border-box;
+    /* Constrain the column to the container width so long document names
+       cannot stretch the row/grid beyond the screen (auto tracks size to
+       max-content, which clips the sort button and row right side). */
+    grid-template-columns: minmax(0, 1fr);
+}
+main:has(#doc-groups) .grid-container > * {
+    min-width: 0;
+}
+
+/* Keep the sort header on screen: title on the left, sort controls on
+   the right at their natural width. If they no longer fit side by side,
+   wrap the controls onto their own line (still right-aligned) instead
+   of letting them spill past the right edge. */
+#doc-list-head { flex-wrap: wrap; row-gap: 12px; }
+.doc-sort-controls { margin-left: auto; min-width: 0; }
+
+@media (max-width: 850px) {
+    main:has(#doc-groups) .grid-container {
+        padding: 0 12px;
+    }
+    #doc-groups .subgroup-content .doc-row {
+        padding-left: 12px;
+    }
+    #doc-sort-dropdown { min-width: 0; }
+    #doc-sort-dropdown .dropdown-toggle { padding: 0 14px; }
+}
+
+@media (max-width: 560px) {
+    main:has(#doc-groups) .grid-container {
+        padding: 0 10px;
+    }
+    #doc-groups .subgroup-content .doc-row {
+        padding-left: 6px;
+    }
+    #doc-sort-dropdown { min-width: 0; }
+}
+
+/* Document popups (add/edit, old-date confirm, delete confirm):
+   keep a comfortable gap from the screen edges on narrow screens
+   so the popup never touches the sides. */
+@media (max-width: 500px) {
+    #doc-add-popup .popup-content,
+    #doc-old-date-popup .popup-content,
+    #doc-confirm-overlay .popup-content {
+        box-sizing: border-box;
+        width: calc(100% - 32px);
+        padding: 24px 18px;
+    }
+}

@@ -10,6 +10,9 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .tool-box {
@@ -25,6 +28,8 @@
     justify-content: center;
     gap: 12px;
     min-height: 220px;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .tool-box svg {
@@ -93,5 +98,19 @@
 }
 
 @media (max-width: 700px) {
-    .tools-grid { grid-template-columns: 1fr; }
+    .tools-grid { grid-template-columns: 1fr; padding: 0 12px; gap: 18px; }
+    .tool-box { padding: 22px 20px; min-height: 0; }
+}
+
+@media (max-width: 560px) {
+    .tools-grid { padding: 0 10px; gap: 14px; }
+    .tool-box { padding: 20px 16px; }
+    .tool-box svg { width: 72px; height: 72px; }
+    .tool-box h3 { font-size: 1.2em; }
+    .tool-box p { font-size: 0.95em; }
+}
+
+@media (max-width: 420px) {
+    .tool-box svg { width: 60px; height: 60px; }
+    .tool-box h3 { font-size: 1.1em; }
 }

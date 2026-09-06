@@ -755,4 +755,84 @@ footer {
   .fp-panel {
     display: none;
   }
+  .fp-canvas-area {
+    min-height: 60vh;
+  }
+  .fp-layout {
+    flex-direction: column;
+  }
+  /* Move the toolbar to the top and let it wrap horizontally */
+  .fp-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px 6px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    min-width: 0;
+    padding: 8px;
+  }
+  .fp-tool-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: auto;
+    padding: 4px 6px;
+    border-bottom: none;
+    border-right: 1px solid var(--border-color);
+  }
+  .fp-tool-group:last-child {
+    border-right: none;
+  }
+  .fp-tool-label {
+    width: auto;
+    margin: 0 4px 0 0;
+  }
+  .fp-tool-group .btn-sm {
+    width: auto;
+    padding: 5px 10px;
+    font-size: 0.78em;
+  }
+  .fp-filebar {
+    flex-wrap: wrap;
+  }
+  /* Clear full-width canvas + filebar */
+  .fp-canvas-wrapper {
+    flex: 1;
+  }
+  .fp-plan-title {
+    top: auto;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .fp-tool-group .btn-sm {
+    padding: 4px 8px;
+    font-size: 0.72em;
+  }
+  .fp-toolbar {
+    padding: 6px;
+  }
+}
+
+/* Modals: keep them on screen on narrow widths */
+@media (max-width: 600px) {
+  .fp-modal {
+    min-width: 0;
+    width: calc(100% - 32px);
+    max-width: 100%;
+    padding: 24px 20px;
+    box-sizing: border-box;
+  }
+  .fp-modal-wide {
+    min-width: 0;
+  }
+  .fp-dialog {
+    width: calc(100% - 32px);
+    max-width: 100%;
+  }
 }

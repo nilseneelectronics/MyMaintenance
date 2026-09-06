@@ -8,13 +8,19 @@
     margin: 25px auto 50px;
     width: 100%;
     position: relative;
+    padding: 0 24px;
+    box-sizing: border-box;
+}
+
+main h1 {
+    font-size: clamp(1.25rem, 3.2vw, 2rem);
 }
 
 .address-selector .dropdown-toggle {
     background: transparent;
     border: none;
     padding: 18px 0;
-    font-size: 1.45em;
+    font-size: clamp(1.05rem, 2.4vw, 1.45rem);
     font-weight: 600;
     color: var(--text-primary);
     display: flex;
@@ -63,6 +69,9 @@
     text-align: left;
     width: 100%;
     border: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .address-selector .dropdown-menu button:hover {
@@ -82,10 +91,18 @@
    ======================================= */
 .homes-content-grid {
     display: grid;
-    grid-template-columns: repeat(18, 1fr);
+    grid-template-columns: repeat(18, minmax(0, 1fr));
     gap: 30px;
     max-width: 1400px;
     margin: 0 auto;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.homes-content-grid > * {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .photo-box {
@@ -96,12 +113,17 @@
     border-radius: 30px;
     padding: 25px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
 }
 
 .photo-box h3 {
     margin-top: 5px;
     margin-bottom: 20px;
     font-size: 1.4em;
+    flex: none;
 }
 
 .photo-box h3 {
@@ -157,6 +179,27 @@
     overflow: hidden;
     z-index: 2;
     background-color: #e8f5e9;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* Right column: tall buttons beside the main picture */
+.photo-box-side {
+    flex: none;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.photo-box-side .view-button {
+    width: 100%;
+    margin: 0;
+}
+
+/* "Preview more photos" strip is only used in the narrow layout */
+.photo-thumbs {
+    display: none;
 }
 
 .big-photo-container img,
@@ -240,6 +283,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .planned-box {
@@ -288,6 +332,9 @@
     font-size: 1.1em;
     border-radius: 8px;
     transition: color 0.3s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .planned-box .box-item-link:last-of-type,
@@ -916,6 +963,7 @@
     border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 25px;
+    overflow: hidden;
 }
 
 .asset-info-header {
@@ -1152,5 +1200,135 @@
     background: var(--accent-secondary);
     border: 2px solid var(--accent-secondary);
     font-weight: 700;
+}
+
+/* =======================================
+   MyHomes responsive (narrow screens)
+   Breakpoints are zoom-compensated (page uses --ui-zoom: 0.75)
+   so 960px media == ~720px physical, 747px media == ~560px physical,
+   640px media == ~480px physical (grid stacks below this).
+   ======================================= */
+@media (max-width: 960px) {
+    /* Drop the least important docs column as the box narrows */
+    .docs-box .doc-cell-size { display: none; }
+}
+
+@media (max-width: 747px) {
+    .docs-box .doc-cell-uploaded { display: none; }
+    .asset-info-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    .address-selector {
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .homes-content-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding: 0 10px;
+    }
+    /* Stack every box full-width (over/under each other) */
+    .homes-content-grid > * {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+    .docs-box .doc-cell-performed { display: none; }
+    .box-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .box-actions .view-button {
+        width: 100%;
+    }
+    .photo-box,
+    .planned-box,
+    .docs-box,
+    .floorplan-box,
+    .asset-info-box {
+        padding: 14px 12px;
+    }
+    .asset-info-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .asset-info-header .view-button {
+        width: 100%;
+    }
+    .address-selector {
+        padding: 0 16px;
+    }
+    /* Photo box on narrow screens: title on top, picture left, buttons right */
+    .photo-box {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .photo-box h3 {
+        flex: 1 1 100%;
+        margin-bottom: 4px;
+    }
+    .photo-box .big-photo-container {
+        flex: 0 1 48%;
+        align-self: stretch;
+        min-width: 0;
+    }
+    .photo-box-side {
+        flex: 1 1 0%;
+        align-self: stretch;
+        justify-content: space-between;
+    }
+    /* Preview up to 2 more photos below the buttons */
+    .photo-thumbs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .photo-thumbs img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        background-color: #e8f5e9;
+        min-width: 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .photo-thumbs img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Very narrow: use the same layout as full-screen (column, no preview) */
+@media (max-width: 360px) {
+    .photo-box {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .photo-box h3 {
+        flex: none;
+        margin-bottom: 8px;
+    }
+    .photo-box .big-photo-container {
+        flex: 1 1 auto;
+        align-self: auto;
+        width: 100%;
+    }
+    .photo-box-side {
+        flex: none;
+        align-self: auto;
+        justify-content: flex-start;
+    }
+    .photo-thumbs {
+        display: none;
+    }
 }
 

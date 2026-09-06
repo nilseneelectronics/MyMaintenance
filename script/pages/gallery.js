@@ -140,6 +140,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function setPhoto(index) {
         currentIndex = (index + photos.length) % photos.length;
         if (mainImg) mainImg.src = photos[currentIndex].src;
+        renderThumbs();
+    }
+
+    const thumb1 = document.getElementById('thumb-1');
+    const thumb2 = document.getElementById('thumb-2');
+    const thumbsWrap = document.getElementById('photo-thumbs');
+
+    // Show the next 2 photos as preview thumbnails; hide when there aren't enough.
+    function renderThumbs() {
+        if (!thumb1 && !thumb2) return;
+        const imgs = [thumb1, thumb2];
+        imgs.forEach((img, i) => {
+            if (!img) return;
+            const has = photos.length > i + 1;
+            img.style.display = has ? '' : 'none';
+            if (has) img.src = photos[(currentIndex + 1 + i) % photos.length].src;
+        });
+        if (thumbsWrap) thumbsWrap.style.display = photos.length > 1 ? '' : 'none';
+    }
+
+    if (thumbsWrap) {
+        thumbsWrap.addEventListener('click', (e) => {
+            const t = e.target.closest('img');
+            if (!t) return;
+            setPhoto(currentIndex + (t === thumb2 ? 2 : 1));
+        });
     }
 
     function openFullscreen(index, fromGallery) {
@@ -194,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             galleryGrid.appendChild(cell);
         });
+        renderThumbs();
     }
 
     function openGallery() {
@@ -481,4 +508,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.key === 'Escape') closeGallery();
         }
     });
+
+    renderThumbs();
 });

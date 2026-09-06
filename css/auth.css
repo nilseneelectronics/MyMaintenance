@@ -96,13 +96,13 @@
 
 .overlay-panel.overlay-right {
     display: grid;
-    grid-template-columns: 450px;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 1fr 50px;
 }
 
 .auth-container.signup-mode .overlay-panel.overlay-left {
     display: grid;
-    grid-template-columns: 450px;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 1fr 50px;
 }
 
@@ -216,5 +216,111 @@
     .input-group input {
         background-color: var(--bg-primary);
         border-color: var(--border-color);
+    }
+}
+
+/* =======================================
+   Responsive: Auth page
+   On narrow screens the sliding two-panel card stacks vertically:
+   the active form on top, the teal switch strip below.
+   ======================================= */
+@media (max-width: 900px) {
+    .auth-page-wrap {
+        width: 90%;
+    }
+
+    .auth-container {
+        flex-direction: column;
+        height: auto;
+        min-height: 680px;
+    }
+
+    .form-panel {
+        width: 100%;
+        padding: 40px 28px;
+        height: auto;
+        flex: 1;
+    }
+
+    /* Show only the active form */
+    .auth-container:not(.signup-mode) .sign-up-panel,
+    .auth-container.signup-mode .sign-in-panel {
+        display: none;
+    }
+
+    .overlay-container {
+        position: static;
+        width: 100%;
+        height: auto;
+        left: auto;
+        flex: 0 0 auto;
+    }
+
+    .overlay {
+        padding: 24px;
+    }
+
+    .overlay-panel.overlay-right,
+    .auth-container.signup-mode .overlay-panel.overlay-left {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        gap: 10px;
+    }
+
+    .overlay-panel h1 {
+        margin-bottom: 16px;
+        font-size: 1.4em;
+    }
+
+    /* Transition when switching between Sign in / Sign up: the active
+       form slides in from its side, the teal switch strip fades in. */
+    .auth-container:not(.signup-mode) .sign-in-panel {
+        animation: authFormLeft 0.45s ease;
+    }
+    .auth-container.signup-mode .sign-up-panel {
+        animation: authFormRight 0.45s ease;
+    }
+    .overlay-panel.overlay-right,
+    .auth-container.signup-mode .overlay-panel.overlay-left {
+        animation: authOverlayIn 0.45s ease;
+    }
+}
+
+@keyframes authFormLeft {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes authFormRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes authOverlayIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+    .auth-page-wrap {
+        width: 94%;
+    }
+
+    .auth-container {
+        min-height: 640px;
+    }
+
+    .form-panel {
+        padding: 30px 18px;
+    }
+
+    .input-group input {
+        padding: 13px 13px 13px 44px;
+        font-size: 0.95em;
+    }
+
+    .auth-back-btn {
+        padding: 8px 18px;
+        font-size: 0.85rem;
     }
 }

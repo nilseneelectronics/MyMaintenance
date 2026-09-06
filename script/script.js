@@ -5,6 +5,7 @@ const translations = {
     "Sign Out": { en: "Sign Out", no: "Logg ut" },
     "Sign In": { en: "Sign In", no: "Logg inn" },
     "Sign Up": { en: "Sign Up", no: "Registrer deg" },
+    "Sign in/up": { en: "Sign In/Up", no: "Logg inn/registrer" },
     "Go Back": { en: "Go Back", no: "Gå tilbake" },
 
     // Sidebar + headers
@@ -195,8 +196,12 @@ const COMMON_LAYOUT = {
         </header>
     `,
     sidebar: `
-        <aside class="sidebar">
-            <ul>
+        <aside class="sidebar app-sidebar">
+            <button type="button" class="app-sidebar-head" aria-expanded="false">
+                <span class="app-sidebar-current">MyDashboard</span>
+                <svg class="app-sidebar-caret" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <ul class="app-sidebar-menu">
                 <li><a href="dashboard.html">MyDashboard</a></li>
                 <li><a href="myhomes.html">MyHomes</a></li>
                 <li><a href="myneighborhood.html">MyNeighborhood</a></li>
@@ -226,6 +231,43 @@ function insertCommonLayout() {
     const f = document.createElement('div'); f.innerHTML = COMMON_LAYOUT.footer.trim(); document.body.appendChild(f.firstElementChild);
 
     setActiveSidebarLink();
+    initAppSidebar();
+}
+
+function initAppSidebar() {
+    const sb = document.querySelector('.app-sidebar');
+    if (!sb) return;
+    const head = sb.querySelector('.app-sidebar-head');
+    const current = sb.querySelector('.app-sidebar-current');
+
+    const file = decodeURIComponent(location.pathname.split('/').pop() || 'dashboard.html');
+    if (current) {
+        const isTool = /^(mytools|tool-)/.test(file);
+        let link = isTool
+            ? sb.querySelector('.app-sidebar-menu a[href^="mytools"]')
+            : sb.querySelector('.app-sidebar-menu a[href="' + file + '"]');
+        current.textContent = link ? link.textContent : 'MyDashboard';
+    }
+
+    if (head) {
+        head.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = sb.classList.toggle('open');
+            head.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (!sb.contains(e.target)) {
+            sb.classList.remove('open');
+            if (head) head.setAttribute('aria-expanded', 'false');
+        }
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            sb.classList.remove('open');
+            if (head) head.setAttribute('aria-expanded', 'false');
+        }
+    });
 }
 
 function setActiveSidebarLink() {
@@ -304,7 +346,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
 
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    function toggleSidebar() { body.classList.toggle('sidebar-open'); }
+    let lastSidebarToggle = 0;
+    function toggleSidebar() {
+        body.classList.toggle('sidebar-open');
+        lastSidebarToggle = Date.now();
+    }
     if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
 
     let lastScroll = 0;
@@ -314,7 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasToggle = !!document.getElementById('sidebar-toggle');
         const isLoggedIn = body.classList.contains('logged-in');
         if (currentScroll > lastScroll) {
-            if (hasToggle && !isLoggedIn && body.classList.contains('sidebar-open')) toggleSidebar();
+            // Don't instantly close a sidebar the user just opened via the toggle
+            // (a scroll event right after the tap can otherwise undo it).
+            if (Date.now() - lastSidebarToggle > 400 && hasToggle && !isLoggedIn && body.classList.contains('sidebar-open')) toggleSidebar();
             if (!isLoggedIn && currentScroll > 50 && !body.classList.contains('shrunk')) body.classList.add('shrunk');
         } else {
             if (!isLoggedIn && body.classList.contains('shrunk')) body.classList.remove('shrunk');
@@ -330,5 +378,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.MyMaintenanceCommonUi && typeof window.MyMaintenanceCommonUi.initCommonUiInteractions === 'function') {
         window.MyMaintenanceCommonUi.initCommonUiInteractions();
     }
+
+    // === RESPONSIVE NAVBAR: on narrow screens "Sign Up" is hidden by CSS and
+    // the Sign In button is relabeled to "Sign in/up" so both actions stay reachable. ===
+    function updateMarketingNavbar() {
+        const signin = document.getElementById('signin');
+        const signup = document.getElementById('signup');
+        if (!signin || !signup) return;
+        if (document.body.classList.contains('logged-in')) return;
+        const narrow = window.innerWidth <= 560;
+        signup.style.display = narrow ? 'none' : '';
+        if (narrow) {
+            signin.dataset.key = 'Sign in/up';
+            signin.textContent = (translations['Sign in/up'] && translations['Sign in/up'][currentLang]) || 'Sign In/Up';
+        } else {
+            signin.dataset.key = 'Sign In';
+            signin.textContent = translations['Sign In'][currentLang];
+        }
+    }
+    updateMarketingNavbar();
+    window.addEventListener('resize', updateMarketingNavbar);
 
 });

@@ -589,10 +589,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---- Photos ---- */
     function photosFor(nb) { const key = nb ? nb.id : ''; return photoCache[key] || []; }
+    const NB_DEFAULT_PHOTOS = [
+        { dataUrl: 'https://picsum.photos/id/1036/1200/675' },
+        { dataUrl: 'https://picsum.photos/id/1039/1200/675' },
+        { dataUrl: 'https://picsum.photos/id/1011/1200/675' }
+    ];
+    function displayPhotosFor(nb) {
+        const stored = photosFor(nb);
+        return stored.length ? stored : NB_DEFAULT_PHOTOS;
+    }
     function setMainPhoto() {
-        const imgs = photosFor(current());
+        const imgs = displayPhotosFor(current());
         const main = document.getElementById('nb-main-photo');
         if (imgs.length) main.src = imgs[0].dataUrl;
+        renderNbThumbs();
     }
     function renderPhotoThumbs() {
         const nb = current();
@@ -617,7 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function renderGallery() {
         const grid = document.getElementById('nb-gallery-grid');
-        const imgs = photosFor(current());
+        const imgs = displayPhotosFor(current());
         grid.innerHTML = '';
         imgs.forEach((p, i) => {
             const w = document.createElement('div');
@@ -631,17 +641,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     function setMainPhotoTo(idx) {
-        const imgs = photosFor(current());
+        const imgs = displayPhotosFor(current());
         if (!imgs.length) return;
-        document.getElementById('nb-main-photo').src = imgs[idx % imgs.length].dataUrl;
+        photoNavIndex = idx % imgs.length;
+        document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
         document.getElementById('nb-gallery-modal').style.display = 'none';
+        renderNbThumbs();
     }
     let photoNavIndex = 0;
     function nextPhoto(dir) {
-        const imgs = photosFor(current());
+        const imgs = displayPhotosFor(current());
         if (!imgs.length) return;
         photoNavIndex = (photoNavIndex + dir + imgs.length) % imgs.length;
         document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
+        renderNbThumbs();
+    }
+    /* Show the next 2 photos as preview thumbnails in narrow mode */
+    function renderNbThumbs() {
+        const t1 = document.getElementById('nb-thumb-1');
+        const t2 = document.getElementById('nb-thumb-2');
+        const wrap = document.getElementById('nb-photo-thumbs');
+        if (!t1 && !t2) return;
+        const imgs = displayPhotosFor(current());
+        const thumbs = [t1, t2];
+        thumbs.forEach((img, i) => {
+            if (!img) return;
+            const has = imgs.length > i + 1;
+            img.style.display = has ? '' : 'none';
+            if (has) img.src = imgs[(photoNavIndex + 1 + i) % imgs.length].dataUrl;
+        });
+        if (wrap) wrap.style.display = imgs.length > 1 ? '' : 'none';
+    }
+    const nbThumbsWrap = document.getElementById('nb-photo-thumbs');
+    if (nbThumbsWrap) {
+        nbThumbsWrap.addEventListener('click', (e) => {
+            const t = e.target.closest('img');
+            if (!t) return;
+            const imgs = displayPhotosFor(current());
+            if (!imgs.length) return;
+            const off = t === document.getElementById('nb-thumb-2') ? 2 : 1;
+            photoNavIndex = (photoNavIndex + off) % imgs.length;
+            document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
+            renderNbThumbs();
+        });
     }
 
     /* ---- Documents ---- */
@@ -706,6 +748,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderEvents();
         renderDocs();
         setMainPhoto();
+        renderNbThumbs();
     }
 
     /* ---- Wire events ---- */

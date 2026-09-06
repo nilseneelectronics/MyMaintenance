@@ -167,3 +167,165 @@ body:not(.logged-in).shrunk .sidebar,
         color: var(--text-secondary);
     }
 }
+
+/* =======================================
+   App (logged-in) sidebar
+   Wide screens: horizontal nav bar (old style)
+   Narrow screens: dropdown menu
+   ======================================= */
+
+/* --- Wide screens: old horizontal bar --- */
+.sidebar.app-sidebar {
+    overflow: hidden;
+    background-color: var(--bg-primary);
+}
+.sidebar.app-sidebar .app-sidebar-head {
+    display: none;
+}
+.sidebar.app-sidebar ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    height: calc(var(--sidebar-height) - var(--sidebar-padding-top));
+    padding: var(--sidebar-padding-top) 20px 10px;
+    overflow: hidden;
+}
+.sidebar.app-sidebar li {
+    flex: 1;
+    text-align: center;
+    margin-top: -3px;
+}
+.sidebar.app-sidebar a {
+    display: inline-block;
+    font-size: 1.2em;
+    padding: 10px 20px;
+    white-space: nowrap;
+}
+.sidebar.app-sidebar .app-sidebar-menu {
+    position: static;
+    display: flex;
+    box-shadow: none;
+    border-bottom: none;
+}
+
+/* Medium screens: keep the horizontal bar but shrink the text
+   so all links fit before switching to the dropdown. */
+@media (min-width: 901px) and (max-width: 1250px) {
+    .sidebar.app-sidebar a {
+        font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+        padding: 10px calc(10px + 0.6vw);
+    }
+}
+
+/* --- Narrow screens: dropdown menu --- */
+@media (max-width: 900px) {
+    .sidebar.app-sidebar {
+        overflow: visible;
+    }
+    .sidebar.app-sidebar .app-sidebar-head {
+        width: 100%;
+        height: var(--sidebar-height);
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 0 44px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+    }
+    .sidebar.app-sidebar .app-sidebar-caret {
+        display: block;
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--accent-primary);
+        transition: transform 0.25s ease;
+    }
+    .sidebar.app-sidebar.open .app-sidebar-caret {
+        transform: translateY(-50%) rotate(180deg);
+    }
+    .sidebar.app-sidebar ul {
+        display: block;
+        height: auto;
+        justify-content: initial;
+        overflow: visible;
+        padding: 6px 0;
+    }
+    .sidebar.app-sidebar li {
+        flex: none;
+        text-align: left;
+        margin-top: 0;
+    }
+    .sidebar.app-sidebar a {
+        display: block;
+        font-size: 1.05rem;
+        padding: 13px 28px;
+        text-align: center;
+    }
+    .sidebar.app-sidebar .app-sidebar-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin: 0;
+        display: none;
+        background-color: var(--bg-primary);
+        border: none;
+        border-bottom: 2px solid var(--accent-primary);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+        z-index: 1000;
+    }
+    .sidebar.app-sidebar.open .app-sidebar-menu {
+        display: block;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .sidebar.app-sidebar {
+        background-color: var(--bg-secondary);
+    }
+    .sidebar.app-sidebar .app-sidebar-menu {
+        background-color: var(--bg-secondary);
+    }
+}
+
+/* =======================================
+   Responsive: Marketing navbar & sidebar (index, login, etc.)
+   ======================================= */
+@media (max-width: 700px) {
+    .name {
+        font-size: 1.1em;
+    }
+    .sidebar a {
+        font-size: 0.9em;
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 10px;
+    }
+    .logo {
+        width: 30px;
+        height: 30px;
+    }
+    .name {
+        font-size: 0.95em;
+    }
+    .sidebar ul {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    .sidebar a {
+        font-size: 0.78em;
+        padding: 8px 5px;
+    }
+}
