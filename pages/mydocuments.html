@@ -23,7 +23,10 @@
     <main class="main">
         <h1>MyDocuments</h1>
         <div class="grid-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
-            <button type="button" class="add-button" id="doc-add-btn">Add documents</button>
+            <div class="button-group">
+                <button type="button" class="add-button" id="doc-add-btn">Add documents</button>
+                <button type="button" class="add-button" id="doc-scan-btn">Scan documents</button>
+            </div>
             <div class="input-group">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 <input type="text" id="doc-search" placeholder="Search documents..." autocomplete="off">
@@ -87,11 +90,13 @@
                 <div class="doc-file-picker">
                     <button type="button" class="photo-picker-btn" id="doc-pick-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M320-240h320v-80H320v80Zm0-160h320v-80H320v80ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></svg>
-                        Add document
+                        <span id="doc-pick-label">Add document</span>
                     </button>
                     <span class="doc-file-name" id="doc-file-name">No file selected</span>
                 </div>
                 <input type="file" id="doc-file" style="display:none">
+
+                <div class="doc-scan-status" id="doc-scan-status" style="display:none;"></div>
 
                 <label>Name</label>
                 <input type="text" id="doc-name" placeholder="Document name...">
@@ -117,6 +122,26 @@
                     </ul>
                 </div>
                 <input type="text" id="doc-asset-other" placeholder="Specify asset..." style="display:none">
+
+                <label>Doc type</label>
+                <div class="asset-dropdown" id="doc-type-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-type-toggle">
+                        <span class="asset-value">-- Select type --</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-type-menu">
+                        <li><button type="button" data-value="Receipt">Receipt</button></li>
+                        <li><button type="button" data-value="Documentation">Documentation</button></li>
+                        <li><button type="button" data-value="Warranty">Warranty</button></li>
+                        <li><button type="button" data-value="Contract">Contract</button></li>
+                        <li><button type="button" data-value="Invoice">Invoice</button></li>
+                        <li><button type="button" data-value="Manual">Manual</button></li>
+                        <li><button type="button" data-value="Picture">Picture</button></li>
+                        <li><button type="button" data-value="Other">Other</button></li>
+                    </ul>
+                </div>
 
                 <label>Date performed</label>
                 <div class="doc-datepicker">
@@ -170,6 +195,12 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
+        try { env.allowLocalModels = false; } catch (e) {}
+        window.__fpEmbed = { pipeline: pipeline };
+    </script>
     <script src="../script/pages/mydocuments.js"></script>
     <script src="../script/modules/pdfviewer.js"></script>
     <script src="../script/modules/stlviewer.js"></script>
