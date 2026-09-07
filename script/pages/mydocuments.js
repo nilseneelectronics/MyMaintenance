@@ -21,8 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const oldDateConfirm = document.getElementById('doc-old-confirm');
     const oldDateCancel = document.getElementById('doc-old-cancel');
     const privacyRadios = document.querySelectorAll('input[name="doc-privacy"]');
-    const privacyInfo = document.getElementById('doc-privacy-info');
-    const privacyWrap = document.querySelector('.doc-info-wrap');
     const docTypeDropdown = document.getElementById('doc-type-dropdown');
     const docTypeToggle = document.getElementById('doc-type-toggle');
     const docTypeMenu = document.getElementById('doc-type-menu');
@@ -40,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOcrItems = [];
     let currentOcrExpanded = '';
     let currentOcrEmbedding = null;
+    let currentReceiptItems = [];
+    let selectedFile = null;
     let ocrWorkerPromise = null;
     const EMBED_MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
     const SEMANTIC_WEIGHT = 100;
@@ -183,7 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 },
             { key: 'docType', text: normalizeForSearch(it.docType), weight: 40 },
             { key: 'ocr', text: normalizeOcrForSearch(it.ocrText), weight: 60, norm: normalizeOcrForSearch },
-            { key: 'ocrItems', text: ocrItemsSearchText(it), weight: 70, norm: normalizeOcrForSearch }
+            { key: 'ocrItems', text: ocrItemsSearchText(it), weight: 70, norm: normalizeOcrForSearch },
+            { key: 'receiptItems', text: receiptItemsSearchText(it.receiptItems), weight: 80, norm: normalizeOcrForSearch }
         ];
     }
 
@@ -517,6 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFileError();
         if (oldDatePopup) oldDatePopup.style.display = 'none';
         nameInput.value = '';
+        delete nameInput.dataset.userEdited;
         clearNameError();
         performedInput.value = '';
         performedInput.classList.remove('invalid');
@@ -541,6 +543,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentOcrItems = [];
         currentOcrExpanded = '';
         currentOcrEmbedding = null;
+        currentReceiptItems = [];
+        selectedFile = null;
         hideScanStatus();
     }
 
@@ -558,8 +562,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function openScanPopup() {
         resetPopupFields();
         scanMode = true;
-        fileInput.accept = 'image/*';
-        fileInput.setAttribute('capture', 'environment');
+        fileInput.accept = 'image/*,application/pdf';
+        fileInput.removeAttribute('capture');
         setPickLabel('Scan document');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Scan document';
@@ -568,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openEditPopup(it) {
         editingId = it.id;
+        selectedFile = null;
         scanMode = false;
         currentOcrText = '';
         currentOcrItems = [];
@@ -661,12 +666,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return sel ? sel.value : 'private';
     }
 
-    if (privacyInfo) {
-        privacyInfo.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (privacyWrap) privacyWrap.classList.toggle('show');
+    function closeInfoTips(except) {
+        document.querySelectorAll('.doc-info-wrap.show').forEach(function (wrap) {
+            if (wrap !== except) {
+                wrap.classList.remove('show');
+                const button = wrap.querySelector('.doc-info-btn');
+                if (button) button.setAttribute('aria-expanded', 'false');
+            }
         });
     }
+
+    document.querySelectorAll('.doc-info-btn').forEach(function (button) {
+        const wrap = button.closest('.doc-info-wrap');
+        if (!wrap) return;
+        button.setAttribute('aria-expanded', 'false');
+        button.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const opening = !wrap.classList.contains('show');
+            closeInfoTips(wrap);
+            wrap.classList.toggle('show', opening);
+            button.setAttribute('aria-expanded', String(opening));
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.doc-info-wrap')) closeInfoTips();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeInfoTips();
+    });
 
     privacyRadios.forEach(function (r) {
         r.addEventListener('change', function () {
@@ -807,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const img = new Image();
             img.onload = function () {
                 try {
-                    const MAX = 2000;
+                    const MAX = 3000;
                     const maxDim = Math.max(img.width, img.height);
                     let scale = 2;
                     if (maxDim * scale > MAX) scale = MAX / maxDim;
@@ -821,7 +851,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = imageData.data;
                     for (let i = 0; i < d.length; i += 4) {
                         const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-                        const v = g < 128 ? Math.max(0, g - 40) : Math.min(255, g + 40);
+                        // Preserve thin logo lettering; the former hard split erased
+                        // pale/coloured characters on many printed receipts.
+                        const v = Math.max(0, Math.min(255, (g - 128) * 1.45 + 128));
                         d[i] = d[i + 1] = d[i + 2] = v;
                     }
                     ctx.putImageData(imageData, 0, 0);
@@ -847,11 +879,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const text = String((result && result.data && result.data.text) || '').trim();
                 currentOcrText = text;
                 currentOcrItems = extractProductLines(text);
+                currentReceiptItems = extractReceiptItems(text);
                 if (!text) {
                     showScanStatus('Could not read any text. Try a clearer picture, or save the document as-is.', 'error');
                     return;
                 }
                 applyOcrResult(text);
+                verifyStoreName(detectStore(text), text).then(function (store) {
+                    if (store) applyVerifiedStore(store);
+                }).catch(function () {});
                 showScanStatus('Content recognized and searchable. You can adjust the name and date before saving.', 'ok');
                 enrichProductText(currentOcrItems).then(function (expanded) {
                     currentOcrExpanded = expanded;
@@ -941,7 +977,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     function detectStore(text) {
-        const t = String(text || '');
+        const allText = String(text || '');
+        const lines = allText.split(/\r?\n/).filter(Boolean);
+        // Store marks are normally in the first receipt lines. Prioritising them
+        // avoids mistaking a product brand later in the receipt for the shop.
+        const t = lines.slice(0, 12).join('\n') || allText;
         // OBS Bygg: the logo has an exclamation mark inside the "O", so OCR often
         // mangles it (e.g. "ÖBS", "ØBS", "O!BS", "0BS"), or reads only "BYGG"
         // alongside the parent Coop brand. Catch all of those variants first.
@@ -953,9 +993,121 @@ document.addEventListener('DOMContentLoaded', () => {
         // co-occurrence of a lamp fragment and a magasin fragment anywhere.
         if (/lamp/i.test(t) && /magasin/i.test(t)) return 'Lampemagasinet';
         for (let i = 0; i < STORE_PATTERNS.length; i++) {
-            if (STORE_PATTERNS[i][0].test(t)) return STORE_PATTERNS[i][1];
+            if (STORE_PATTERNS[i][0].test(t) || STORE_PATTERNS[i][0].test(allText)) return STORE_PATTERNS[i][1];
+        }
+        const fuzzy = detectFuzzyKnownStore(lines);
+        if (fuzzy) return fuzzy;
+        return detectStoreHeader(lines);
+    }
+
+    function compactStoreText(value) {
+        return String(value || '').toLocaleLowerCase('nb-NO').normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    }
+
+    function editDistance(a, b) {
+        const row = Array.from({ length: b.length + 1 }, function (_, i) { return i; });
+        for (let i = 1; i <= a.length; i++) {
+            let previous = row[0];
+            row[0] = i;
+            for (let j = 1; j <= b.length; j++) {
+                const saved = row[j];
+                row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+                previous = saved;
+            }
+        }
+        return row[b.length];
+    }
+
+    function detectFuzzyKnownStore(lines) {
+        const base = (lines || []).slice(0, 20).map(cleanStoreTitle).filter(Boolean);
+        const candidates = base.slice();
+        for (let i = 0; i < base.length - 1; i++) {
+            candidates.push(base[i] + ' ' + base[i + 1]);
+        }
+        for (let i = 0; i < STORE_PATTERNS.length; i++) {
+            const name = STORE_PATTERNS[i][1];
+            const target = compactStoreText(name);
+            if (target.length < 4) continue;
+            const allowed = target.length <= 5 ? 1 : Math.max(1, Math.floor(target.length * 0.2));
+            for (let j = 0; j < candidates.length; j++) {
+                const seen = compactStoreText(candidates[j]);
+                if (seen === target || (Math.abs(seen.length - target.length) <= allowed && editDistance(seen, target) <= allowed)) return name;
+            }
         }
         return '';
+    }
+
+    function cleanStoreTitle(value) {
+        return String(value || '')
+            .replace(/\b(a\.?s\.?|asa|nuf|org\.?\s*nr\.?)\b.*$/i, '')
+            .replace(/[^a-zæøåäöü'&.\-\s]/gi, ' ')
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    function isStoreHeaderNoise(value) {
+        const line = String(value || '').trim();
+        if (!line || line.length < 3 || line.length > 52) return true;
+        if (/\d/.test(line)) return true;
+        return /\b(kvittering|receipt|faktura|invoice|dato|date|tid|time|org\.?\s*nr|mva|vat|www|http|e-?post|epost|telefon|tlf|kunde|customer|terminal|kasse|cash|card|visa|mastercard|vipps|takk|velkommen|handelen|betaling|betalt|total|sum)\b/i.test(line);
+    }
+
+    function titleCaseStore(value) {
+        const keepUpper = new Set(['IKEA', 'XXL', 'OBS', 'XL', 'AS']);
+        return cleanStoreTitle(value).split(' ').map(function (word) {
+            if (keepUpper.has(word.toUpperCase())) return word.toUpperCase();
+            const lower = word.toLocaleLowerCase('nb-NO');
+            return lower.charAt(0).toLocaleUpperCase('nb-NO') + lower.slice(1);
+        }).join(' ');
+    }
+
+    function detectStoreHeader(lines) {
+        const candidates = [];
+        const header = (lines || []).slice(0, 10).map(function (line) { return cleanStoreTitle(line); });
+        for (let i = 0; i < header.length; i++) {
+            const options = [header[i]];
+            // Logos are often split across two OCR lines, e.g. "TØNSBERG" + "UR".
+            if (header[i + 1]) options.push(header[i] + ' ' + header[i + 1]);
+            options.forEach(function (candidate) {
+                if (isStoreHeaderNoise(candidate)) return;
+                const words = candidate.split(' ').filter(Boolean);
+                if (words.length > 5) return;
+                if (words.length >= 3 && words.filter(function (word) { return word.length <= 2; }).length >= 2) return;
+                const upper = (candidate.match(/[A-ZÆØÅÄÖÜ]/g) || []).length;
+                const letters = (candidate.match(/[A-Za-zÆØÅÄÖÜæøåäöü]/g) || []).length || 1;
+                let score = 40 - (i * 4);
+                if (words.length >= 2) score += 16;
+                if (upper / letters > 0.55) score += 12;
+                if (/\b(ur|gull|optikk|bygg|elektro|apotek|interiør|møbler|sport|jernvare|blomster|klær|sko)\b/i.test(candidate)) score += 8;
+                candidates.push({ value: titleCaseStore(candidate), score: score });
+            });
+        }
+        candidates.sort(function (a, b) { return b.score - a.score; });
+        return candidates.length ? candidates[0].value : '';
+    }
+
+    function applyVerifiedStore(store) {
+        if (!store || !nameInput || nameInput.dataset.userEdited === 'true') return;
+        const date = detectReceiptDate(currentOcrText);
+        nameInput.value = store + (date ? ' ' + pad2(date.day) + '.' + pad2(date.month) + '.' + date.year : '');
+        clearNameError();
+    }
+
+    function verifyStoreName(candidate, text) {
+        const config = window.MyMaintenanceConfig || {};
+        const endpoint = config.receiptStoreVerificationUrl;
+        if (!candidate || !endpoint) return Promise.resolve(candidate);
+        const context = String(text || '').split(/\r?\n/).slice(0, 12).join('\n').slice(0, 1200);
+        return fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ candidate: candidate, receiptHeader: context })
+        }).then(function (response) {
+            if (!response.ok) throw new Error('Store verification failed');
+            return response.json();
+        }).then(function (data) {
+            return data && data.verified && typeof data.storeName === 'string' ? data.storeName.trim() : candidate;
+        });
     }
 
     const DOC_TYPE_PATTERNS = [
@@ -965,6 +1117,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function detectDocType(text) {
         const t = String(text || '');
+        const lines = t.split(/\r?\n/);
+        const pricedLines = lines.filter(function (line) {
+            return /[a-zæøå]/i.test(line) && /\b\d{1,5}(?:[,.]\d{2})\b/.test(line);
+        }).length;
+        if (pricedLines >= 2 && /\b(sum|total|totalt|mva|vat|kort|card|kontant|cash|betaling|betalt)\b/i.test(t)) return 'Receipt';
         for (let i = 0; i < DOC_TYPE_PATTERNS.length; i++) {
             if (DOC_TYPE_PATTERNS[i][0].test(t)) return DOC_TYPE_PATTERNS[i][1];
         }
@@ -1019,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function detectDate(text) {
         const t = String(text || '');
-        const sep = '[.\\/-]';
+        const sep = '[.\\/\\-\\s]';
         const dmy4 = new RegExp('(^|[^\\d])' + '(\\d{1,2})' + sep + '(\\d{1,2})' + sep + '((?:19|20)\\d{2})' + '([^\\d]|$)', 'g');
         const ymd = new RegExp('(^|[^\\d])' + '((?:19|20)\\d{2})' + sep + '(\\d{1,2})' + sep + '(\\d{1,2})' + '([^\\d]|$)', 'g');
         const dmy2 = new RegExp('(^|[^\\d])' + '(\\d{2})' + sep + '(\\d{2})' + sep + '(\\d{2})' + '([^\\d]|$)', 'g');
@@ -1040,12 +1197,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return null;
         };
+        const compact = t.match(/\b((?:19|20)\d{2})(\d{2})(\d{2})\b/);
+        if (compact) {
+            const year = +compact[1], month = +compact[2], day = +compact[3];
+            const dt = new Date(year, month - 1, day);
+            if (dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day) {
+                return { day: day, month: month, year: year };
+            }
+        }
         return run(dmy4, 'dmy') || detectSpelledDate(t) || run(ymd, 'ymd') || run(dmy2, 'dmy');
+    }
+
+    function detectReceiptDate(text) {
+        const lines = String(text || '').split(/\r?\n/);
+        let best = null;
+        let bestScore = -1;
+        lines.slice(0, 30).forEach(function (line, index) {
+            const date = detectDate(line);
+            if (!date) return;
+            let score = 30 - index;
+            if (/\b(date|dato|kjøpsdato|kjopsdato|purchase|transaction|tid)\b/i.test(line)) score += 50;
+            if (/\b(due|forfall|expiry|utløp|utlop)\b/i.test(line)) score -= 50;
+            if (score > bestScore) { best = date; bestScore = score; }
+        });
+        return best || detectDate(text);
     }
 
     function applyOcrResult(text) {
         const store = detectStore(text);
-        const date = detectDate(text);
+        const date = detectReceiptDate(text);
         const docType = detectDocType(text);
         if (!nameInput.value.trim()) {
             const parts = [];
@@ -1116,6 +1296,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cleaned.length >= 2) out.push(cleaned);
         }
         return out;
+    }
+
+    function extractReceiptItems(text) {
+        return String(text || '').split(/\r?\n/).map(function (raw) {
+            const line = raw.replace(/\s+/g, ' ').trim();
+            if (!line || isReceiptNoiseLine(line) || !/[a-zæøå]/i.test(line)) return null;
+            const price = line.match(/(?:kr\.?\s*)?(\d{1,3}(?:[ .]\d{3})*(?:[,.]\d{2})?)\s*$/i);
+            if (!price) return null;
+            const quantity = line.match(/^\s*(\d+(?:[,.]\d+)?)\s*[x×]\s*/i);
+            const description = line.slice(0, price.index).replace(/^\s*\d+(?:[,.]\d+)?\s*[x×]\s*/i, '').trim();
+            if (description.length < 2) return null;
+            return { description: description, price: price[1].replace(/\s/g, '').replace(',', '.'), quantity: quantity ? quantity[1].replace(',', '.') : '1', raw: line };
+        }).filter(Boolean);
+    }
+
+    function receiptItemsSearchText(receiptItems) {
+        return (Array.isArray(receiptItems) ? receiptItems : []).map(function (item) {
+            const description = item.description || item.raw || '';
+            return description + ' ' + (item.price || '') + ' ' + (item.quantity || '') + ' ' + productCategoryText(description);
+        }).join(' ');
     }
 
     function termInText(norm, term) {
@@ -1289,14 +1489,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    fileInput.addEventListener('change', () => {
+    function handleFileSelection(file) {
         clearFileError();
-        const file = fileInput.files[0];
         if (!file) {
+            selectedFile = null;
             if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
             sizeInput.value = '';
             return;
         }
+        selectedFile = file;
         sizeInput.value = formatSize(file.size);
         if (fileNameLabel) fileNameLabel.textContent = file.name;
         if (!scanMode && !nameInput.value.trim()) {
@@ -1310,9 +1511,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showScanStatus('This file type cannot be scanned. It will be saved without scanned content.', 'error');
             }
         }
-    });
+    }
+
+    fileInput.addEventListener('change', function () { handleFileSelection(fileInput.files[0]); });
 
     nameInput.addEventListener('input', () => {
+        nameInput.dataset.userEdited = 'true';
         if (nameInput.value.trim()) clearNameError();
     });
 
@@ -1381,6 +1585,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function closeCalendar() {
+        if (cal) cal.classList.remove('open');
+    }
+
     if (performedInput) {
         performedInput.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1410,6 +1618,23 @@ document.addEventListener('DOMContentLoaded', () => {
             performedInput.classList.toggle('invalid', isClearlyInvalid(formatted));
             if (dt) buildCalendar();
         });
+        performedInput.addEventListener('blur', function () {
+            // Let a calendar button receive focus before deciding whether to close.
+            window.setTimeout(function () {
+                if (!cal || !cal.contains(document.activeElement)) closeCalendar();
+            }, 0);
+        });
+
+        // iOS may hide its keyboard while keeping the input focused. Its visual
+        // viewport grows again when that happens, so close the companion calendar.
+        if (window.visualViewport) {
+            let previousViewportHeight = window.visualViewport.height;
+            window.visualViewport.addEventListener('resize', function () {
+                const currentViewportHeight = window.visualViewport.height;
+                if (currentViewportHeight > previousViewportHeight + 60) closeCalendar();
+                previousViewportHeight = currentViewportHeight;
+            });
+        }
     }
 
     if (cal) {
@@ -1452,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
         function commitSave() {
-        const file = fileInput.files[0];
+        const file = selectedFile;
         if (!file && !editingId) {
             markFileError();
             return;
@@ -1489,6 +1714,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         rec.ocrItems = currentOcrItems;
                         rec.ocrExpanded = currentOcrExpanded;
                         rec.ocrEmbedding = currentOcrEmbedding;
+                        rec.receiptItems = currentReceiptItems;
                     }
                 }
             } else {
@@ -1508,7 +1734,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ocrText: currentOcrText || '',
                     ocrItems: currentOcrItems,
                     ocrExpanded: currentOcrExpanded,
-                    ocrEmbedding: currentOcrEmbedding
+                    ocrEmbedding: currentOcrEmbedding,
+                    receiptItems: currentReceiptItems
                 };
                 items.push(rec);
             }
@@ -1536,7 +1763,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     saveBtn.addEventListener('click', () => {
-        const file = fileInput.files[0];
+        const file = selectedFile;
         if (!file && !editingId) {
             markFileError();
             return;

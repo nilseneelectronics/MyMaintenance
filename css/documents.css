@@ -287,8 +287,6 @@
     pointer-events: none;
 }
 
-.doc-info-wrap:hover .doc-tooltip,
-.doc-info-wrap:focus-within .doc-tooltip,
 .doc-info-wrap.show .doc-tooltip {
     opacity: 1;
     visibility: visible;
@@ -1150,6 +1148,19 @@ main:has(#doc-groups) .grid-container > * {
     margin-top: 0;
 }
 
+/* Dashboard document actions share the same dimensions and alignment. */
+.dashboard-grid .documents-box .button-group > #doc-add-btn,
+.dashboard-grid .documents-box .button-group > .view-button {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.dashboard-grid .documents-box .button-group > #doc-add-btn {
+    margin-top: 10px;
+}
+
 .doc-scan-status {
     font-size: 0.9em;
     line-height: 1.4;
@@ -1174,6 +1185,22 @@ main:has(#doc-groups) .grid-container > * {
 .doc-scan-status.error {
     color: var(--delete-red);
 }
+
+/* On phones, anchored tooltips can be clipped by a scrolling popup. Use a
+   bottom sheet instead so each help text is fully visible and tap-friendly. */
+@media (max-width: 700px) {
+    .doc-tooltip,
+    .doc-format-info-wrap .doc-tooltip {
+        position: fixed;
+        inset: auto 16px 16px;
+        width: auto;
+        max-width: none;
+        max-height: min(60dvh, 460px);
+        overflow-y: auto;
+        z-index: 3000;
+    }
+}
+
 
 #doc-name.invalid {
     border-color: #e74c3c;
