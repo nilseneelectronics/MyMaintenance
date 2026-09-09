@@ -1,5 +1,19 @@
 window.MyMaintenanceCommonUi = {
     initCommonUiInteractions() {
+        // Browsers change focused number fields when the user scrolls. Blur first
+        // so the scroll keeps moving the page/modal instead of changing a value.
+        document.addEventListener('wheel', function (event) {
+            const input = event.target.closest('input[type="number"]');
+            if (input && document.activeElement === input) input.blur();
+        }, { passive: true });
+
+        document.addEventListener('click', function (event) {
+            const active = event.target.closest('.asset-dropdown');
+            document.querySelectorAll('.asset-dropdown.open').forEach(function (dropdown) {
+                if (dropdown !== active) dropdown.classList.remove('open');
+            });
+        }, true);
+
         document.querySelectorAll('.collapse-toggle').forEach((toggle) => {
             if (toggle.closest('#doc-groups')) return;
             const subgroup = toggle.closest('.subgroup');

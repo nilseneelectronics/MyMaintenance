@@ -95,7 +95,7 @@
         .ad-badge { font-size: 0.8rem; background: var(--accent-primary); color: #fff; padding: 3px 10px; border-radius: 20px; font-weight: 500; flex-shrink: 0; }
 
         @media (max-width: 768px) {
-            .year-grid { grid-template-columns: repeat(2, 1fr); }
+            .year-grid { grid-template-columns: 1fr; }
             .month-view td { height: 70px; }
             .month-view .date-circle { width: 28px; height: 28px; font-size: 0.8rem; }
         }
@@ -234,8 +234,7 @@
         return window.MyMaintenanceEvents.load();
     }
     function saveEvents() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(EVENTS));
-        window.dispatchEvent(new CustomEvent('myevents:changed'));
+        window.MyMaintenanceEvents.save(EVENTS);
     }
     let EVENTS = loadEvents();
 
@@ -440,7 +439,8 @@
         const asset = isPlanned ? selectedEvAsset : '';
         if (editingKey && editingIdx >= 0) {
             if (!EVENTS[editingKey]) EVENTS[editingKey] = [];
-            EVENTS[editingKey][editingIdx] = { name, startDate, finishDate, startTime, finishTime, location, description, isPlannedMaintenance: isPlanned, asset, tools: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().tools : []), materials: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().materials : []) };
+            const previous = EVENTS[editingKey][editingIdx];
+            EVENTS[editingKey][editingIdx] = { name, startDate, finishDate, startTime, finishTime, location, description, isPlannedMaintenance: isPlanned, asset, tools: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().tools : []), materials: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().materials : []), _dbId: previous && previous._dbId };
         } else {
             if (!EVENTS[startDate]) EVENTS[startDate] = [];
             EVENTS[startDate].push({ name, startDate, finishDate, startTime, finishTime, location, description, isPlannedMaintenance: isPlanned, asset, tools: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().tools : []), materials: (window.MyMaintenanceEventTools ? window.MyMaintenanceEventTools.getItems().materials : []) });
@@ -613,6 +613,11 @@
     });
 
     render();
+
+    window.addEventListener('myevents:changed', () => {
+        EVENTS = loadEvents();
+        render();
+    });
 
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('date');

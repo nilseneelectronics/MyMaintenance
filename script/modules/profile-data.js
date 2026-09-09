@@ -6,6 +6,7 @@ window.MyMaintenanceProfileData = (function () {
     var NOTIF_KEY = 'mymaintenance_notifications';
     var USER_KEY = 'mymaintenance_user';
     var PASSWORD_KEY = 'mymaintenance_password';
+    var syncTimer = null;
 
     var ACCESS_AREAS = [
         { key: 'dashboard', label: 'Dashboard' },
@@ -32,15 +33,7 @@ window.MyMaintenanceProfileData = (function () {
     ];
 
     function defaultProfile() {
-        return {
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+47 123 45 678',
-            address: 'Street 123',
-            zip: '5000',
-            city: 'City',
-            avatar: ''
-        };
+        return { name: '', email: '', phone: '', address: '', zip: '', city: '', avatar: '' };
     }
 
     function presetAccess(role) {
@@ -51,12 +44,7 @@ window.MyMaintenanceProfileData = (function () {
     }
 
     function defaultFamily() {
-        var p = defaultProfile();
-        return [
-            { id: 'fam_owner', name: p.name, email: p.email, role: 'Owner', status: 'active', access: presetAccess('Owner') },
-            { id: 'fam_1', name: 'Jane Doe', email: 'jane.doe@example.com', role: 'Member', status: 'active', access: presetAccess('Member') },
-            { id: 'fam_2', name: 'Alex Doe', email: 'alex.doe@example.com', role: 'Viewer', status: 'invited', access: presetAccess('Viewer') }
-        ];
+        return [];
     }
 
     function defaultNotifications() {
@@ -77,15 +65,26 @@ window.MyMaintenanceProfileData = (function () {
     }
 
     function getProfile() {
-        return load(PROFILE_KEY, defaultProfile);
+        var profile = load(PROFILE_KEY, defaultProfile);
+        if (profile && profile.email === 'john.doe@example.com') {
+            profile = defaultProfile();
+            saveProfile(profile);
+        }
+        return profile;
     }
 
     function saveProfile(profile) {
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile || {}));
+        queueCloudSync();
     }
 
     function getFamily() {
-        return load(FAMILY_KEY, defaultFamily);
+        var family = load(FAMILY_KEY, defaultFamily);
+        if (Array.isArray(family) && family.some(function (member) { return String(member.id || '').indexOf('fam_') === 0; })) {
+            family = defaultFamily();
+            saveFamily(family);
+        }
+        return family;
     }
 
     function saveFamily(family) {
@@ -111,6 +110,69 @@ window.MyMaintenanceProfileData = (function () {
 
     function saveNotifications(notifications) {
         localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications || {}));
+        queueCloudSync();
+    }
+
+    function sessionEmail() {
+        try {
+            var session = JSON.parse(localStorage.getItem('mymaintenance.supabaseSession') || 'null');
+            return session && session.user && session.user.email ? session.user.email : '';
+        } catch (_) { return ''; }
+    }
+
+    async function syncCloud() {
+        var db = window.MyMaintenanceData;
+        if (!db) return;
+        try {
+            var userId = await db.userId();
+            if (!userId) return;
+            var profile = getProfile();
+            var notifications = getNotifications();
+            await db.request('profiles', {
+                method: 'POST',
+                body: {
+                    id: userId,
+                    display_name: profile.name || null,
+                    details: { profile: profile, notifications: notifications }
+                },
+                prefer: 'resolution=merge-duplicates,return=minimal'
+            });
+        } catch (error) {
+            console.error('Could not save profile:', error);
+        }
+    }
+
+    function queueCloudSync() {
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(syncCloud, 80);
+    }
+
+    async function hydrate() {
+        var db = window.MyMaintenanceData;
+        if (!db) return;
+        try {
+            var userId = await db.userId();
+            if (!userId) return;
+            var rows = await db.request('profiles', {
+                query: { select: 'id,display_name,details', id: 'eq.' + userId }
+            });
+            var row = rows && rows[0];
+            var localProfile = getProfile();
+            var cloudProfile = row && row.details && row.details.profile;
+            var nextProfile = Object.assign(defaultProfile(), localProfile, cloudProfile || {});
+            nextProfile.name = (row && row.display_name) || nextProfile.name || '';
+            nextProfile.email = nextProfile.email || sessionEmail();
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
+
+            var cloudNotifications = row && row.details && row.details.notifications;
+            if (cloudNotifications && cloudNotifications.channels && cloudNotifications.types) {
+                localStorage.setItem(NOTIF_KEY, JSON.stringify(cloudNotifications));
+            }
+            window.dispatchEvent(new CustomEvent('profile:changed'));
+            if (!row) queueCloudSync();
+        } catch (error) {
+            console.error('Could not load profile:', error);
+        }
     }
 
     function getUser() {
@@ -154,6 +216,7 @@ window.MyMaintenanceProfileData = (function () {
         saveFamily: saveFamily,
         getNotifications: getNotifications,
         saveNotifications: saveNotifications,
+        hydrate: hydrate,
         getUser: getUser,
         saveUser: saveUser,
         hasPassword: hasPassword,

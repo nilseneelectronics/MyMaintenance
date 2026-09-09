@@ -96,6 +96,9 @@
                 </div>
                 <input type="file" id="doc-file" style="display:none">
 
+                <label>File format</label>
+                <input type="text" id="doc-format" readonly>
+
                 <div class="doc-scan-status" id="doc-scan-status" style="display:none;"></div>
 
                 <label>Name</label>
@@ -201,6 +204,7 @@
         try { env.allowLocalModels = false; } catch (e) {}
         window.__fpEmbed = { pipeline: pipeline };
     </script>
+    <script src="../script/modules/assets.js"></script>
     <script src="../script/pages/mydocuments.js"></script>
     <script src="../script/modules/pdfviewer.js"></script>
     <script src="../script/modules/stlviewer.js"></script>

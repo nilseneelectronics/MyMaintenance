@@ -1,10 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const NB_KEY = 'floorplan_user_neighborhoods';
-    const NB_PHOTO_KEY = 'floorplan_neighborhood_photos';
-
-    let neighborhoods = loadNeighborhoods();
-    let currentId = getParam('id') || (neighborhoods[0] ? neighborhoods[0].id : null);
-    let photoCache = loadPhotos();
+    let neighborhoods = [];
+    let currentId = getParam('id');
 
     /* current logged-in user (creator becomes admin) */
     const me = {
@@ -29,19 +25,76 @@ document.addEventListener('DOMContentLoaded', () => {
         return p.get(name);
     }
 
-    function loadNeighborhoods() {
-        try {
-            const raw = localStorage.getItem(NB_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch (e) { return []; }
-    }
-    function saveNeighborhoods() { localStorage.setItem(NB_KEY, JSON.stringify(neighborhoods)); }
-    function loadPhotos() {
-        try { const raw = localStorage.getItem(NB_PHOTO_KEY); return raw ? JSON.parse(raw) : {}; }
-        catch (e) { return {}; }
-    }
-    function savePhotos() { localStorage.setItem(NB_PHOTO_KEY, JSON.stringify(photoCache)); }
     function current() { return neighborhoods.find(n => n.id === currentId) || null; }
+
+    function rowToNeighborhood(row) {
+        const details = row && row.details && typeof row.details === 'object' ? row.details : {};
+        return Object.assign({}, details, { id: row.id, _dbId: row.id, name: row.name || details.name || '' });
+    }
+
+    function neighborhoodDetails(nb) {
+        const copy = JSON.parse(JSON.stringify(nb || {}));
+        delete copy.id;
+        delete copy._dbId;
+        delete copy.name;
+        delete copy._deletedAddresses;
+        ['photos', 'docs'].forEach(function (key) {
+            if (Array.isArray(copy[key])) copy[key].forEach(function (item) {
+                delete item.dataUrl;
+                delete item.data;
+                delete item.loading;
+            });
+        });
+        return copy;
+    }
+
+    async function persistNeighborhood(nb) {
+        const db = window.MyMaintenanceData;
+        if (!db) throw new Error('Please sign in again.');
+        const body = { name: nb.name, details: neighborhoodDetails(nb) };
+        let saved;
+        if (nb._dbId) {
+            saved = await db.request('neighborhoods', {
+                method: 'PATCH', query: { id: 'eq.' + nb._dbId }, body: body, prefer: 'return=representation'
+            });
+        } else {
+            const ownerId = await db.userId();
+            if (!ownerId) throw new Error('Please sign in again.');
+            body.owner_id = ownerId;
+            saved = await db.request('neighborhoods', {
+                method: 'POST', body: body, prefer: 'return=representation'
+            });
+        }
+        const cloud = rowToNeighborhood(Array.isArray(saved) ? saved[0] : saved);
+        Object.assign(nb, cloud);
+        return nb;
+    }
+
+    function saveNeighborhoods() {
+        const nb = current();
+        if (!nb) return Promise.resolve();
+        return persistNeighborhood(nb).catch(function (error) {
+            console.error(error);
+            alert(error.message || 'Could not save neighborhood.');
+            return null;
+        });
+    }
+
+    async function loadNeighborhoods() {
+        const db = window.MyMaintenanceData;
+        if (!db) return;
+        try {
+            const rows = await db.request('neighborhoods', {
+                query: { select: 'id,name,details', order: 'name.asc' }
+            });
+            neighborhoods = (rows || []).map(rowToNeighborhood);
+            if (!currentId || !current()) currentId = neighborhoods[0] ? neighborhoods[0].id : null;
+            render();
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Could not load neighborhoods.');
+        }
+    }
 
     /* ---- Neighborhood selector ---- */
     const selectorMenu = document.getElementById('nb-selector-menu');
@@ -310,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nb-info-popup-title').textContent = nb ? 'Edit Neighborhood' : 'Register a neighborhood';
         isAdmin = isMeAdmin(nb);
         builderModel = nb ? JSON.parse(JSON.stringify(nb)) : {
-            id: 'nb_' + Date.now(),
+            id: null,
             name: '',
             country: '',
             zip: '',
@@ -383,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('nb-info-cancel').addEventListener('click', closeInfoPopup);
 
-    function saveNeighborhoodForm() {
+    async function saveNeighborhoodForm() {
         readBuilderIntoModel(builderModel);
         cleanupBuilderModel(builderModel);
         // Validate all required fields at once so they all turn red together.
@@ -434,14 +487,15 @@ document.addEventListener('DOMContentLoaded', () => {
         builderModel.roles = roles;
         builderModel.houses = parseInt(document.getElementById('nb-houses').value, 10) || (builderModel.addresses || []).length;
         const existing = current();
-        if (existing && existing.id === builderModel.id) {
-            Object.assign(existing, builderModel);
-            currentId = existing.id;
-        } else {
-            neighborhoods.push(builderModel);
-            currentId = builderModel.id;
+        try {
+            await persistNeighborhood(builderModel);
+        } catch (error) {
+            alert(error.message || 'Could not save neighborhood.');
+            return;
         }
-        saveNeighborhoods();
+        if (existing && existing.id === builderModel.id) Object.assign(existing, builderModel);
+        else neighborhoods.push(builderModel);
+        currentId = builderModel.id;
         document.getElementById('nb-info-popup').style.display = 'none';
         builderModel = null;
         history.replaceState(null, '', 'myneighborhood.html?id=' + encodeURIComponent(currentId));
@@ -451,12 +505,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nb-info-save').addEventListener('click', saveNeighborhoodForm);
 
     /* Delete neighborhood (admin only, edit mode) */
-    document.getElementById('nb-info-delete').addEventListener('click', () => {
+    document.getElementById('nb-info-delete').addEventListener('click', async () => {
         if (!builderModel) return;
         const id = builderModel.id;
         if (!confirm('Delete this neighborhood? This cannot be undone.')) return;
+        try {
+            await window.MyMaintenanceData.request('neighborhoods', {
+                method: 'DELETE', query: { id: 'eq.' + id }
+            });
+        } catch (error) {
+            alert(error.message || 'Could not delete neighborhood.');
+            return;
+        }
         neighborhoods = neighborhoods.filter(n => n.id !== id);
-        saveNeighborhoods();
         if (currentId === id) currentId = neighborhoods.length ? neighborhoods[0].id : null;
         document.getElementById('nb-info-popup').style.display = 'none';
         builderModel = null;
@@ -588,7 +649,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---- Photos ---- */
-    function photosFor(nb) { const key = nb ? nb.id : ''; return photoCache[key] || []; }
+    function photosFor(nb) {
+        if (!nb) return [];
+        if (!Array.isArray(nb.photos)) nb.photos = [];
+        return nb.photos;
+    }
+    function loadPrivateFile(item, onReady) {
+        if (!item || item.dataUrl || item.loading || !item.filePath) return;
+        const db = window.MyMaintenanceData;
+        if (!db) return;
+        item.loading = true;
+        db.downloadDataUrl(item.filePath, item.type).then(function (dataUrl) {
+            item.dataUrl = dataUrl;
+            item.loading = false;
+            if (typeof onReady === 'function') onReady();
+        }).catch(function () { item.loading = false; });
+    }
+    function photoSource(photo) {
+        loadPrivateFile(photo, function () { render(); });
+        return photo && photo.dataUrl ? photo.dataUrl : '';
+    }
     const NB_DEFAULT_PHOTOS = [
         { dataUrl: 'https://picsum.photos/id/1036/1200/675' },
         { dataUrl: 'https://picsum.photos/id/1039/1200/675' },
@@ -601,7 +681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setMainPhoto() {
         const imgs = displayPhotosFor(current());
         const main = document.getElementById('nb-main-photo');
-        if (imgs.length) main.src = imgs[0].dataUrl;
+        if (imgs.length) main.src = photoSource(imgs[0]);
         renderNbThumbs();
     }
     function renderPhotoThumbs() {
@@ -615,12 +695,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const w = document.createElement('div');
             w.className = 'done-photo-thumb';
             const img = document.createElement('img');
-            img.src = p.dataUrl;
+            img.src = photoSource(p);
             w.appendChild(img);
             const del = document.createElement('button');
             del.className = 'done-photo-del';
             del.textContent = '×';
-            del.addEventListener('click', () => { imgs.splice(i, 1); savePhotos(); renderPhotoThumbs(); setMainPhoto(); });
+            del.addEventListener('click', async () => {
+                const removed = imgs.splice(i, 1)[0];
+                if (removed && removed.filePath) await window.MyMaintenanceData.removeFile(removed.filePath).catch(function () {});
+                saveNeighborhoods(); renderPhotoThumbs(); setMainPhoto();
+            });
             w.appendChild(del);
             grid.appendChild(w);
         });
@@ -633,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const w = document.createElement('div');
             w.className = 'gallery-thumb';
             const img = document.createElement('img');
-            img.src = p.dataUrl;
+            img.src = photoSource(p);
             img.style.cursor = 'pointer';
             img.addEventListener('click', () => setMainPhotoTo(i));
             w.appendChild(img);
@@ -644,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgs = displayPhotosFor(current());
         if (!imgs.length) return;
         photoNavIndex = idx % imgs.length;
-        document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
+        document.getElementById('nb-main-photo').src = photoSource(imgs[photoNavIndex]);
         document.getElementById('nb-gallery-modal').style.display = 'none';
         renderNbThumbs();
     }
@@ -653,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgs = displayPhotosFor(current());
         if (!imgs.length) return;
         photoNavIndex = (photoNavIndex + dir + imgs.length) % imgs.length;
-        document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
+        document.getElementById('nb-main-photo').src = photoSource(imgs[photoNavIndex]);
         renderNbThumbs();
     }
     /* Show the next 2 photos as preview thumbnails in narrow mode */
@@ -668,7 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!img) return;
             const has = imgs.length > i + 1;
             img.style.display = has ? '' : 'none';
-            if (has) img.src = imgs[(photoNavIndex + 1 + i) % imgs.length].dataUrl;
+            if (has) img.src = photoSource(imgs[(photoNavIndex + 1 + i) % imgs.length]);
         });
         if (wrap) wrap.style.display = imgs.length > 1 ? '' : 'none';
     }
@@ -681,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!imgs.length) return;
             const off = t === document.getElementById('nb-thumb-2') ? 2 : 1;
             photoNavIndex = (photoNavIndex + off) % imgs.length;
-            document.getElementById('nb-main-photo').src = imgs[photoNavIndex].dataUrl;
+            document.getElementById('nb-main-photo').src = photoSource(imgs[photoNavIndex]);
             renderNbThumbs();
         });
     }
@@ -707,7 +791,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const del = document.createElement('button');
             del.className = 'view-button';
             del.textContent = 'Remove';
-            del.addEventListener('click', (e) => { e.stopPropagation(); nb.docs.splice(idx, 1); saveNeighborhoods(); renderDocs(); });
+            del.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const removed = nb.docs.splice(idx, 1)[0];
+                if (removed && removed.filePath) await window.MyMaintenanceData.removeFile(removed.filePath).catch(function () {});
+                saveNeighborhoods(); renderDocs();
+            });
             row.appendChild(name);
             row.appendChild(meta);
             row.appendChild(del);
@@ -715,10 +804,18 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(row);
         });
     }
-    function previewDoc(d) {
+    async function previewDoc(d) {
         const ov = document.getElementById('nb-doc-preview');
         if (!ov) return;
         const body = ov.querySelector('.preview-body');
+        body.innerHTML = '<div class="preview-note">Loading document…</div>';
+        ov.style.display = 'flex';
+        try {
+            if (!d.data && d.filePath) d.data = await window.MyMaintenanceData.downloadDataUrl(d.filePath, d.type);
+        } catch (error) {
+            body.innerHTML = '<div class="preview-note">Could not load document.</div>';
+            return;
+        }
         body.innerHTML = '';
         const info = fileTypeInfo(d);
         if (info.cls === 'file-image') {
@@ -730,7 +827,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             body.innerHTML = '<div class="preview-note">This file type cannot be previewed here.</div>';
         }
-        ov.style.display = 'flex';
     }
     function fileTypeInfo(d) {
         const fn = String(d.fileName || d.name || '');
@@ -804,17 +900,38 @@ document.addEventListener('DOMContentLoaded', () => {
     photoInput.style.display = 'none';
     document.body.appendChild(photoInput);
     document.getElementById('nbp-picture-btn').addEventListener('click', () => photoInput.click());
-    photoInput.addEventListener('change', () => {
+    photoInput.addEventListener('change', async () => {
         const nb = current();
         const files = Array.prototype.slice.call(photoInput.files || []);
-        const key = nb.id;
-        if (!photoCache[key]) photoCache[key] = [];
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = () => { photoCache[key].push({ dataUrl: reader.result, text: '' }); savePhotos(); renderPhotoThumbs(); setMainPhoto(); };
-            reader.readAsDataURL(file);
-        });
         photoInput.value = '';
+        if (!nb || !files.length) return;
+        const db = window.MyMaintenanceData;
+        const userId = db && await db.userId();
+        if (!db || !userId) return alert('Please sign in again.');
+        const photos = photosFor(nb);
+        try {
+            await Promise.all(files.map(async function (file) {
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const photo = {
+                    filePath: `${userId}/neighborhoods/${nb.id}/photos/${crypto.randomUUID()}-${safeName}`,
+                    fileName: file.name,
+                    type: db.fileMime ? db.fileMime(file) : file.type
+                };
+                await db.upload(photo.filePath, file);
+                const reader = new FileReader();
+                photo.dataUrl = await new Promise(function (resolve, reject) {
+                    reader.onload = function () { resolve(reader.result); };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                photos.push(photo);
+            }));
+            await saveNeighborhoods();
+            renderPhotoThumbs();
+            setMainPhoto();
+        } catch (error) {
+            alert(error.message || 'Could not upload picture.');
+        }
     });
 
     /* Documents */
@@ -835,21 +952,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!document.getElementById('nb-doc-name').value.trim()) document.getElementById('nb-doc-name').value = file.name.replace(/\.[^.]+$/, '');
         }
     });
-    document.getElementById('nb-doc-save').addEventListener('click', () => {
+    document.getElementById('nb-doc-save').addEventListener('click', async () => {
         const nb = current();
         const file = document.getElementById('nb-doc-file').files[0];
         if (!file) return;
         const name = document.getElementById('nb-doc-name').value.trim() || file.name;
         const performed = document.getElementById('nb-doc-performed').value;
-        const reader = new FileReader();
-        reader.onload = () => {
+        const db = window.MyMaintenanceData;
+        const userId = db && await db.userId();
+        if (!db || !userId) return alert('Please sign in again.');
+        try {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const doc = {
+                name: name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed: performed,
+                type: db.fileMime ? db.fileMime(file) : file.type, uploaded: new Date().toISOString(),
+                filePath: `${userId}/neighborhoods/${nb.id}/documents/${crypto.randomUUID()}-${safeName}`
+            };
+            await db.upload(doc.filePath, file);
             if (!nb.docs) nb.docs = [];
-            nb.docs.push({ name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed, data: reader.result, type: file.type, uploaded: new Date().toISOString() });
-            saveNeighborhoods();
+            nb.docs.push(doc);
+            await saveNeighborhoods();
             document.getElementById('nb-doc-add-popup').style.display = 'none';
             renderDocs();
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            alert(error.message || 'Could not upload document.');
+        }
     });
     document.getElementById('nb-show-all-docs').addEventListener('click', () => {
         const nb = current();
@@ -883,4 +1010,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* "Add people" via roles - a small add-role button is useful */
     render();
+    loadNeighborhoods();
 });

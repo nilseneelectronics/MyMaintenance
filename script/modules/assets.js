@@ -1,91 +1,35 @@
-/* assets.js - Registered homes / vehicles storage */
+/* assets.js - homes and vehicles stored per signed-in Supabase user */
 
 (function () {
     const HOMES_KEY = 'mymaintenance_homes';
     const VEHICLES_KEY = 'mymaintenance_vehicles';
+    let homesCache = [];
+    let vehiclesCache = [];
 
-    function defaultHomes() {
-        return [
-            {
-                id: 'home_1',
-                name: 'Address 1',
-                country: 'Norway',
-                address: 'Street 123',
-                zip: '5000',
-                city: 'City',
-                buildYear: '1998',
-                houseType: 'House',
-                houseTypeComment: '',
-                floors: '2',
-                internalSize: '180',
-                externalSize: '220'
-            },
-            {
-                id: 'home_2',
-                name: 'Address 2 - Cabin',
-                country: 'Norway',
-                address: 'Mountain Road 45',
-                zip: '6000',
-                city: 'City',
-                buildYear: '2005',
-                houseType: 'Cabin',
-                houseTypeComment: '',
-                floors: '1',
-                internalSize: '60',
-                externalSize: '90'
-            }
-        ];
-    }
-
-    function defaultVehicles() {
-        return [
-            { id: 'vehicle_1', name: 'Car 1', type: 'Car', typeComment: '', registration: 'AB12345', make: 'Tesla', model: 'Model Y', year: '2021', distance: '15000', vin: '5YJY3EEB7MF123456', fuel: 'Electric' },
-            { id: 'vehicle_2', name: 'Car 2', type: 'Car', typeComment: '', registration: 'CD67890', make: 'Volvo', model: 'XC90', year: '2019', distance: '185000', vin: 'YV4A22PK3K1234567', fuel: 'Diesel' },
-            { id: 'vehicle_3', name: 'Boat', type: 'Boat', typeComment: '', registration: '', make: 'Bayliner', model: '255', year: '2015', distance: '450', fuel: 'Petrol' }
-        ];
-    }
-
-    function load(key, fallback) {
-        try {
-            const raw = localStorage.getItem(key);
-            if (raw !== null) return JSON.parse(raw);
-        } catch (_) {}
-        const seed = fallback();
-        try { localStorage.setItem(key, JSON.stringify(seed)); } catch (_) {}
-        return seed;
-    }
-
-    function loadHomes() {
-        return load(HOMES_KEY, defaultHomes);
-    }
+    function loadHomes() { return homesCache.slice(); }
 
     function loadVehicles() {
-        return load(VEHICLES_KEY, defaultVehicles).map(function (v) {
-            if (v.distance == null && v.engineHours != null) {
-                v.distance = v.engineHours;
-            }
+        return vehiclesCache.slice().map(function (v) {
+            if (v.distance == null && v.engineHours != null) v.distance = v.engineHours;
             delete v.engineHours;
             return v;
         });
     }
 
     function saveHomes(homes) {
-        localStorage.setItem(HOMES_KEY, JSON.stringify(homes));
+        homesCache = Array.isArray(homes) ? homes.slice() : [];
+        refreshAssetMenus();
         window.dispatchEvent(new CustomEvent('assets:changed'));
     }
 
     function saveVehicles(vehicles) {
-        localStorage.setItem(VEHICLES_KEY, JSON.stringify(vehicles));
+        vehiclesCache = Array.isArray(vehicles) ? vehicles.slice() : [];
+        refreshAssetMenus();
         window.dispatchEvent(new CustomEvent('assets:changed'));
     }
 
-    function getHomes() {
-        return loadHomes();
-    }
-
-    function getVehicles() {
-        return loadVehicles();
-    }
+    function getHomes() { return loadHomes(); }
+    function getVehicles() { return loadVehicles(); }
 
     function homeLabel(h) {
         const parts = [];
@@ -107,11 +51,86 @@
         return parts.join(' - ');
     }
 
+    function newId() { return crypto.randomUUID(); }
+    function database() { return window.MyMaintenanceData; }
+
+    function asHome(row) {
+        return Object.assign({ id: row.id, name: row.name, address: row.address || '' }, row.details || {});
+    }
+
+    function asVehicle(row) {
+        return Object.assign({ id: row.id, name: row.name, registration: row.registration_number || '' }, row.details || {});
+    }
+
+    function persistHome(home, updating) {
+        const db = database();
+        if (!db) return;
+        const details = Object.assign({}, home);
+        delete details.id;
+        db.request('homes', {
+            method: updating ? 'PATCH' : 'POST',
+            query: updating ? { id: `eq.${home.id}` } : undefined,
+            body: { id: home.id, name: home.name, address: home.address || '', details: details },
+            prefer: 'return=representation'
+        }).catch(function (error) { console.error('Could not save home:', error); });
+    }
+
+    function persistVehicle(vehicle, updating) {
+        const db = database();
+        if (!db) return;
+        const details = Object.assign({}, vehicle);
+        delete details.id;
+        db.request('vehicles', {
+            method: updating ? 'PATCH' : 'POST',
+            query: updating ? { id: `eq.${vehicle.id}` } : undefined,
+            body: { id: vehicle.id, name: vehicle.name, registration_number: vehicle.registration || '', details: details },
+            prefer: 'return=representation'
+        }).catch(function (error) { console.error('Could not save vehicle:', error); });
+    }
+
+    function persistDelete(table, id) {
+        const db = database();
+        if (!db) return;
+        db.request(table, { method: 'DELETE', query: { id: `eq.${id}` } })
+            .catch(function (error) { console.error(`Could not delete ${table}:`, error); });
+    }
+
+    function refreshAssetMenus() {
+        document.querySelectorAll('#doc-asset-menu, #done-asset-menu, #ev-asset-menu').forEach(function (menu) {
+            const fragment = document.createDocumentFragment();
+            function addGroup(label, records, labelFor) {
+                if (!records.length) return;
+                const group = document.createElement('li');
+                group.className = 'asset-optgroup';
+                group.textContent = label;
+                fragment.appendChild(group);
+                records.forEach(function (record) {
+                    const item = document.createElement('li');
+                    const button = document.createElement('button');
+                    const value = labelFor(record);
+                    button.type = 'button';
+                    button.dataset.value = value;
+                    button.textContent = value;
+                    item.appendChild(button);
+                    fragment.appendChild(item);
+                });
+            }
+            addGroup('Addresses', homesCache, homeLabel);
+            addGroup('Vehicles', vehiclesCache, vehicleLabel);
+            const divider = document.createElement('li');
+            divider.className = 'asset-optgroup';
+            fragment.appendChild(divider);
+            const other = document.createElement('li');
+            other.innerHTML = '<button type="button" data-value="__other__">Other</button>';
+            fragment.appendChild(other);
+            menu.replaceChildren(fragment);
+        });
+    }
+
     function addHome(home) {
-        const homes = loadHomes();
-        const h = Object.assign({ id: 'home_' + Date.now() }, home);
-        homes.push(h);
-        saveHomes(homes);
+        const h = Object.assign({ id: newId() }, home);
+        saveHomes(loadHomes().concat(h));
+        persistHome(h, false);
         return h;
     }
 
@@ -121,19 +140,19 @@
         if (idx === -1) return null;
         homes[idx] = Object.assign({}, homes[idx], fields);
         saveHomes(homes);
+        persistHome(homes[idx], true);
         return homes[idx];
     }
 
     function deleteHome(id) {
-        const homes = loadHomes().filter(function (h) { return h.id !== id; });
-        saveHomes(homes);
+        saveHomes(loadHomes().filter(function (h) { return h.id !== id; }));
+        persistDelete('homes', id);
     }
 
     function addVehicle(vehicle) {
-        const vehicles = loadVehicles();
-        const v = Object.assign({ id: 'vehicle_' + Date.now() }, vehicle);
-        vehicles.push(v);
-        saveVehicles(vehicles);
+        const v = Object.assign({ id: newId() }, vehicle);
+        saveVehicles(loadVehicles().concat(v));
+        persistVehicle(v, false);
         return v;
     }
 
@@ -143,8 +162,34 @@
         if (idx === -1) return null;
         vehicles[idx] = Object.assign({}, vehicles[idx], fields);
         saveVehicles(vehicles);
+        persistVehicle(vehicles[idx], true);
         return vehicles[idx];
     }
+
+    function deleteVehicle(id) {
+        saveVehicles(loadVehicles().filter(function (v) { return v.id !== id; }));
+        persistDelete('vehicles', id);
+    }
+
+    async function hydrate() {
+        const db = database();
+        if (!db) return;
+        refreshAssetMenus();
+        try {
+            const rows = await Promise.all([
+                db.request('homes', { query: { select: '*', order: 'created_at.asc' } }),
+                db.request('vehicles', { query: { select: '*', order: 'created_at.asc' } })
+            ]);
+            homesCache = (rows[0] || []).map(asHome);
+            vehiclesCache = (rows[1] || []).map(asVehicle);
+            refreshAssetMenus();
+            window.dispatchEvent(new CustomEvent('assets:changed'));
+        } catch (error) {
+            console.error('Could not load saved assets:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', hydrate);
 
     window.MyMaintenanceAssets = {
         HOMES_KEY: HOMES_KEY,
@@ -161,6 +206,9 @@
         updateHome: updateHome,
         deleteHome: deleteHome,
         addVehicle: addVehicle,
-        updateVehicle: updateVehicle
+        updateVehicle: updateVehicle,
+        deleteVehicle: deleteVehicle,
+        refreshAssetMenus: refreshAssetMenus,
+        hydrate: hydrate
     };
 })();
