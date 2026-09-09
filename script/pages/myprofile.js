@@ -871,5 +871,10 @@
         renderMembers('access-list');
         renderAssets('home');
         renderAssets('vehicle');
+        window.addEventListener('profile:changed', function () {
+            loadAll();
+            renderHeader();
+        });
+        PD.hydrate();
     });
 })();

@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const performedInput = document.getElementById('doc-performed');
     const uploadedInput = document.getElementById('doc-uploaded');
     const sizeInput = document.getElementById('doc-size');
+    const formatInput = document.getElementById('doc-format');
     const cancelBtn = document.getElementById('doc-cancel');
     const saveBtn = document.getElementById('doc-save');
     const assetDropdown = document.getElementById('doc-asset-dropdown');
@@ -49,16 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let semanticReady = false;
 
     function seedDocs() {
-        return [
-            { id: 'd_seed_1', name: 'Example', asset: 'Address 1, Street 123, 5000 City', performed: '2026-01-01', uploaded: '2026-01-01', size: null, sizeLabel: '', data: '', type: 'application/pdf', fileName: 'example.pdf', privacy: 'private' }
-        ];
+        return [];
     }
 
     function load() {
-        try {
-            const raw = localStorage.getItem(KEY);
-            if (raw !== null) return JSON.parse(raw);
-        } catch (e) {}
         return seedDocs();
     }
 
@@ -68,16 +63,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function store() {
-        const meta = items.map(function (it) {
-            const copy = Object.assign({}, it);
-            if (it.payloadInDB) {
-                delete copy.data;
-                delete copy.payloadInDB;
-            }
-            return copy;
-        });
-        localStorage.setItem(KEY, JSON.stringify(meta));
+        items.forEach(persistDocument);
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
+    }
+
+    function documentRow(item) {
+        const extra = Object.assign({}, item);
+        delete extra.id;
+        delete extra.name;
+        delete extra.performed;
+        delete extra.filePath;
+        delete extra.data;
+        delete extra.payloadInDB;
+        return {
+            id: item.id,
+            title: item.name,
+            document_type: item.docType || null,
+            document_date: item.performed || null,
+            file_path: item.filePath || null,
+            extracted_data: extra
+        };
+    }
+
+    function persistDocument(item) {
+        const db = window.MyMaintenanceData;
+        if (!db || !item?.id) return;
+        db.request('documents', {
+            method: 'POST',
+            query: { on_conflict: 'id' },
+            body: documentRow(item),
+            prefer: 'resolution=merge-duplicates,return=representation'
+        }).catch(function (error) { console.error('Could not save document:', error); });
+    }
+
+    function documentFromRow(row) {
+        const extra = row.extracted_data || {};
+        return Object.assign({}, extra, {
+            id: row.id,
+            name: row.title,
+            docType: row.document_type || extra.docType || '',
+            performed: row.document_date || '',
+            filePath: row.file_path || '',
+            uploaded: extra.uploaded || String(row.created_at || '').slice(0, 10),
+            created: extra.created || new Date(row.created_at || Date.now()).getTime()
+        });
+    }
+
+    async function hydrateDocuments() {
+        const db = window.MyMaintenanceData;
+        if (!db) return;
+        try {
+            const rows = await db.request('documents', { query: { select: '*', order: 'created_at.desc' } });
+            items = (rows || []).map(documentFromRow);
+            updateView();
+        } catch (error) {
+            console.error('Could not load documents:', error);
+        }
     }
 
     const DB_NAME = 'floorplan_user_doc_payloads';
@@ -123,6 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getPayload(it) {
         if (it.data) return Promise.resolve(it.data);
+        if (it.filePath && window.MyMaintenanceData) {
+            return window.MyMaintenanceData.downloadDataUrl(it.filePath, it.type).catch(function () { return ''; });
+        }
         return payloadGet(it.id).then(function (data) { return data || ''; });
     }
 
@@ -497,8 +541,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ov.style.display = 'flex';
     }
 
-    function doDelete() {
+    async function doDelete() {
         if (!editingId) return;
+        const deleted = items.find(function (item) { return item.id === editingId; });
+        try {
+            if (window.MyMaintenanceData && deleted) {
+                if (deleted.filePath) await window.MyMaintenanceData.removeFile(deleted.filePath);
+                await window.MyMaintenanceData.request('documents', { method: 'DELETE', query: { id: `eq.${editingId}` } });
+            }
+        } catch (error) {
+            alert(error.message || 'Could not delete document.');
+            return;
+        }
         payloadDelete(editingId);
         items = items.filter(function (i) { return i.id !== editingId; });
         store();
@@ -524,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
         performedInput.classList.remove('invalid');
         uploadedInput.value = toInputDate(new Date());
         sizeInput.value = '';
+        if (formatInput) formatInput.value = '';
         if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
         selectedAssetValue = '';
         if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
@@ -591,6 +646,7 @@ document.addEventListener('DOMContentLoaded', () => {
         performedInput.classList.remove('invalid');
         uploadedInput.value = formatDateLabel(it.uploaded) || '';
         sizeInput.value = formatSize(it.size);
+        if (formatInput) formatInput.value = fileTypeInfo(it).label;
         if (fileNameLabel) fileNameLabel.textContent = it.fileName || 'No file selected';
         if (assetMenu) {
             const known = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
@@ -648,12 +704,16 @@ document.addEventListener('DOMContentLoaded', () => {
         popup.style.display = 'none';
     }
 
+    function confirmClosePopup() {
+        if (window.confirm('Cancel adding? Your unsaved changes will be lost.')) closePopup();
+    }
+
     addBtn.addEventListener('click', openPopup);
     const scanBtn = document.getElementById('doc-scan-btn');
     if (scanBtn) scanBtn.addEventListener('click', openScanPopup);
     cancelBtn.addEventListener('click', closePopup);
     popup.addEventListener('click', (e) => {
-        if (e.target === popup) closePopup();
+        if (e.target === popup) confirmClosePopup();
     });
 
     function setPrivacy(value) {
@@ -1499,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         selectedFile = file;
         sizeInput.value = formatSize(file.size);
+        if (formatInput) formatInput.value = fileTypeInfo({ fileName: file.name, type: file.type }).label;
         if (fileNameLabel) fileNameLabel.textContent = file.name;
         if (!scanMode && !nameInput.value.trim()) {
             const base = file.name.replace(/\.[^.]+$/, '');
@@ -1676,7 +1737,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-        function commitSave() {
+    async function commitSave() {
         const file = selectedFile;
         if (!file && !editingId) {
             markFileError();
@@ -1692,74 +1753,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 : selectedAssetValue;
         const performedDt = parseDateStr(performedInput.value);
         const privacy = privacyValue();
-        const apply = (dataUrl) => {
-            let rec = null;
-            const docTypeVal = selectedDocType;
-            if (editingId) {
-                rec = items.find((i) => i.id === editingId);
-                if (rec) {
-                    rec.name = name;
-                    rec.asset = asset;
-                    rec.privacy = privacy;
-                    rec.docType = docTypeVal;
-                    rec.performed = performedDt ? toISO(performedDt) : '';
-                    if (dataUrl) {
-                        rec.type = file.type;
-                        rec.fileName = file.name;
-                        rec.size = file.size;
-                        rec.sizeLabel = formatSize(file.size);
-                        rec.uploaded = toISO(new Date());
-                        rec.created = Date.now();
-                        rec.ocrText = currentOcrText || '';
-                        rec.ocrItems = currentOcrItems;
-                        rec.ocrExpanded = currentOcrExpanded;
-                        rec.ocrEmbedding = currentOcrEmbedding;
-                        rec.receiptItems = currentReceiptItems;
-                    }
-                }
-            } else {
-                rec = {
-                    id: 'd_' + Date.now(),
-                    name: name,
-                    asset: asset,
-                    privacy: privacy,
-                    docType: docTypeVal,
-                    performed: performedDt ? toISO(performedDt) : '',
-                    uploaded: toISO(new Date()),
-                    created: Date.now(),
-                    size: file.size,
-                    sizeLabel: formatSize(file.size),
-                    type: file.type,
-                    fileName: file.name,
-                    ocrText: currentOcrText || '',
-                    ocrItems: currentOcrItems,
-                    ocrExpanded: currentOcrExpanded,
-                    ocrEmbedding: currentOcrEmbedding,
-                    receiptItems: currentReceiptItems
-                };
-                items.push(rec);
-            }
-            const finish = () => { store(); updateView(); closePopup(); };
-            if (dataUrl && rec) {
-                payloadSet(rec.id, dataUrl).then(function () {
-                    rec.payloadInDB = true;
-                    delete rec.data;
-                    finish();
-                }).catch(function () {
-                    rec.data = dataUrl;
-                    finish();
-                });
-            } else {
-                finish();
-            }
-        };
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = () => apply(reader.result);
-            reader.readAsDataURL(file);
-        } else {
-            apply(null);
+        let rec = editingId ? items.find(function (item) { return item.id === editingId; }) : null;
+        const isNewRecord = !rec;
+        if (!rec) {
+            rec = { id: crypto.randomUUID() };
+            items.push(rec);
         }
+        rec.name = name;
+        rec.asset = asset;
+        rec.privacy = privacy;
+        rec.docType = selectedDocType;
+        rec.performed = performedDt ? toISO(performedDt) : '';
+
+        if (file) {
+            try {
+                const db = window.MyMaintenanceData;
+                const userId = db && await db.userId();
+                if (!db || !userId) throw new Error('Please sign in again.');
+                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                rec.filePath = `${userId}/${rec.id}/${safeName}`;
+                await db.upload(rec.filePath, file);
+                rec.type = db.fileMime ? db.fileMime(file) : file.type;
+                rec.fileName = file.name;
+                rec.size = file.size;
+                rec.sizeLabel = formatSize(file.size);
+                rec.uploaded = toISO(new Date());
+                rec.created = Date.now();
+                rec.ocrText = currentOcrText || '';
+                rec.ocrItems = currentOcrItems;
+                rec.ocrExpanded = currentOcrExpanded;
+                rec.ocrEmbedding = currentOcrEmbedding;
+                rec.receiptItems = currentReceiptItems;
+            } catch (error) {
+                if (isNewRecord) items = items.filter(function (item) { return item !== rec; });
+                alert(error.message || 'Could not upload document.');
+                return;
+            }
+        }
+
+        store();
+        updateView();
+        closePopup();
     }
 
     saveBtn.addEventListener('click', () => {
@@ -2237,6 +2271,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initDocSort();
     updateView();
+    hydrateDocuments();
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },

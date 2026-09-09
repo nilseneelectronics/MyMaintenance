@@ -419,6 +419,8 @@
                 materials: (isPlanned && window.MyMaintenanceEventTools) ? window.MyMaintenanceEventTools.getItems().materials : []
             };
             if (state.editingKey && state.editingIndex >= 0) {
+                const previous = events[state.editingKey] && events[state.editingKey][state.editingIndex];
+                if (previous && previous._dbId) ev._dbId = previous._dbId;
                 if (state.editingKey === startDate) {
                     if (events[state.editingKey] && events[state.editingKey][state.editingIndex]) {
                         events[state.editingKey][state.editingIndex] = ev;
@@ -436,7 +438,9 @@
             window.MyMaintenanceEvents.save(events);
             close();
         });
-        if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+        if (modal) modal.addEventListener('click', function (e) {
+            if (e.target === modal && window.confirm('Cancel adding? Your unsaved changes will be lost.')) close();
+        });
         if (evName) evName.addEventListener('keydown', function (e) { if (e.key === 'Enter' && evAdd) evAdd.click(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal && modal.classList.contains('open')) close(); });
 

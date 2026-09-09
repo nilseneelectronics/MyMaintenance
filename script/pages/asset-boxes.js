@@ -269,6 +269,25 @@
         renderAssetInfo();
     }
 
+    function syncSelectedAsset() {
+        const list = assetList();
+        let record = currentAssetId
+            ? list.find(function (item) { return item.id === currentAssetId; })
+            : list.find(function (item) { return assetLabel(item) === currentAssetName; });
+        if (!record) record = list[0] || null;
+
+        currentAssetId = record ? record.id : null;
+        currentAssetName = record ? assetLabel(record) : '';
+        const toggle = document.querySelector('.address-selector .dropdown-toggle span');
+        if (toggle) {
+            toggle.textContent = currentAssetName || (pageAssetType() === 'homes' ? '-- Select an address --' : '-- Select a vehicle --');
+        }
+        const menu = document.querySelector('.address-selector .dropdown-menu');
+        if (menu) menu.querySelectorAll('button').forEach(function (button) {
+            button.classList.toggle('selected', Boolean(record) && button.getAttribute('data-id') === record.id);
+        });
+    }
+
     function fieldDisplay(field, rec) {
         if (field.kind === 'dropdown') {
             const v = rec[field.prop] || '';
@@ -646,6 +665,7 @@
             currentAssetName = initial;
         }
         buildAssetMenu();
+        syncSelectedAsset();
         wireAddressMenu();
         wireAddMaintenance();
         wireShowAllDocs();
@@ -664,6 +684,7 @@
         window.addEventListener('assets:changed', function () {
             infoEditMode = false;
             buildAssetMenu();
+            syncSelectedAsset();
             renderPlanned();
             renderDocs();
             renderAssetInfo();

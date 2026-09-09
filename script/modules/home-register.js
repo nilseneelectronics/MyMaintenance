@@ -103,6 +103,10 @@
             popup.style.display = 'none';
         }
 
+        function confirmClose() {
+            if (window.confirm('Cancel adding? Your unsaved changes will be lost.')) close();
+        }
+
         function selectHouseType(value, label) {
             houseType = value;
             if (typeValue) typeValue.textContent = label;
@@ -156,7 +160,7 @@
 
         if (cancel) cancel.addEventListener('click', close);
         if (confirmBtn) confirmBtn.addEventListener('click', save);
-        popup.addEventListener('click', function (e) { if (e.target === popup) close(); });
+        popup.addEventListener('click', function (e) { if (e.target === popup) confirmClose(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && popup.style.display === 'flex') close(); });
 
         if (typeToggle) {

@@ -6,10 +6,9 @@
     const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    const ASSET_GROUPS = [
-        { group: 'Addresses', options: ['Address 1, Street 123, 5000 City', 'Address 2 - Cabin, Mountain Road 45, 6000 City'] },
-        { group: 'Vehicles', options: ['Car 1 - Tesla Model Y', 'Car 2 - Volvo XC90', 'Boat - Bayliner 255'] }
-    ];
+    const ASSET_GROUPS = [];
+    let eventsCache = {};
+    let knownEventIds = new Set();
 
     function getAssetGroups() {
         const groups = [];
@@ -29,10 +28,6 @@
                 });
             }
         }
-        if (!groups.length) {
-            groups.push(ASSET_GROUPS[0]);
-            groups.push(ASSET_GROUPS[1]);
-        }
         return groups;
     }
 
@@ -44,30 +39,100 @@
     }
 
     function defaultData() {
-        return {
-            '2026-08-17': [{ name: 'Going home', startDate: '2026-08-17', finishDate: '2026-08-17', startTime: '14:00', finishTime: '16:00', location: 'Cabin', description: 'Pack up and head back to the city' }],
-            '2026-08-20': [{ name: 'Cabin air filter replacement', startDate: '2026-08-20', finishDate: '2026-08-20', startTime: '09:00', finishTime: '10:00', location: 'City Auto', description: '', isPlannedMaintenance: true, asset: 'Car 1 - Tesla Model Y' }],
-            '2026-09-15': [{ name: 'Roof inspection', startDate: '2026-09-15', finishDate: '2026-09-15', startTime: '10:00', finishTime: '12:00', location: 'Address 1, Street 123, 5000 City', description: '', isPlannedMaintenance: true, asset: 'Address 1, Street 123, 5000 City' }],
-            '2026-10-02': [{ name: 'HVAC filter change', startDate: '2026-10-02', finishDate: '2026-10-02', startTime: '08:00', finishTime: '09:00', location: 'Address 1, Street 123, 5000 City', description: '', isPlannedMaintenance: true, asset: 'Address 1, Street 123, 5000 City' }],
-            '2026-10-30': [{ name: 'Winterize boat', startDate: '2026-10-30', finishDate: '2026-10-30', startTime: '10:00', finishTime: '14:00', location: 'Harbour', description: '', isPlannedMaintenance: true, asset: 'Boat - Bayliner 255' }],
-            '2026-11-10': [{ name: 'Tire rotation', startDate: '2026-11-10', finishDate: '2026-11-10', startTime: '14:00', finishTime: '15:00', location: 'City Auto', description: '', isPlannedMaintenance: true, asset: 'Car 1 - Tesla Model Y' }]
-        };
+        return {};
     }
 
     function load() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw !== null) return JSON.parse(raw);
-        } catch (_) {}
-        const seed = defaultData();
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seed)); } catch (_) {}
-        return seed;
+        return eventsCache;
     }
 
     function save(events) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+        eventsCache = events || {};
+        persist(eventsCache);
         window.dispatchEvent(new CustomEvent('myevents:changed'));
     }
+
+    function newId() { return crypto.randomUUID(); }
+
+    function eventRow(key, event) {
+        const startDate = event.startDate || key;
+        const finishDate = event.finishDate || startDate;
+        const startTime = event.startTime || '00:00';
+        const finishTime = event.finishTime || startTime;
+        const details = Object.assign({}, event, { startDate: startDate, finishDate: finishDate, startTime: startTime, finishTime: finishTime });
+        delete details._dbId;
+        return {
+            id: event._dbId || (event._dbId = newId()),
+            title: event.name || 'Untitled event',
+            description: JSON.stringify(details),
+            starts_at: `${startDate}T${startTime}:00`,
+            ends_at: `${finishDate}T${finishTime}:00`
+        };
+    }
+
+    function eventFromRow(row) {
+        let details = {};
+        try { details = JSON.parse(row.description || '{}'); } catch (_) { details = { description: row.description || '' }; }
+        const start = String(row.starts_at || '').slice(0, 10);
+        const end = String(row.ends_at || row.starts_at || '').slice(0, 10);
+        const startTime = String(row.starts_at || '').slice(11, 16);
+        const endTime = String(row.ends_at || row.starts_at || '').slice(11, 16);
+        return Object.assign(details, {
+            _dbId: row.id,
+            name: row.title,
+            startDate: details.startDate || start,
+            finishDate: details.finishDate || end,
+            startTime: details.startTime || startTime,
+            finishTime: details.finishTime || endTime
+        });
+    }
+
+    async function persist(events) {
+        const db = window.MyMaintenanceData;
+        if (!db) return;
+        const rows = [];
+        Object.keys(events || {}).forEach(function (key) {
+            (events[key] || []).forEach(function (event) { rows.push(eventRow(key, event)); });
+        });
+        const currentIds = new Set(rows.map(function (row) { return row.id; }));
+        try {
+            if (rows.length) {
+                await db.request('planning_events', {
+                    method: 'POST',
+                    query: { on_conflict: 'id' },
+                    body: rows,
+                    prefer: 'resolution=merge-duplicates,return=representation'
+                });
+            }
+            await Promise.all(Array.from(knownEventIds).filter(function (id) { return !currentIds.has(id); })
+                .map(function (id) { return db.request('planning_events', { method: 'DELETE', query: { id: `eq.${id}` } }); }));
+            knownEventIds = currentIds;
+        } catch (error) {
+            console.error('Could not save events:', error);
+        }
+    }
+
+    async function hydrate() {
+        const db = window.MyMaintenanceData;
+        if (!db) return;
+        try {
+            const rows = await db.request('planning_events', { query: { select: '*', order: 'starts_at.asc' } });
+            const result = {};
+            (rows || []).forEach(function (row) {
+                const event = eventFromRow(row);
+                const key = event.startDate || String(row.starts_at).slice(0, 10);
+                if (!result[key]) result[key] = [];
+                result[key].push(event);
+            });
+            eventsCache = result;
+            knownEventIds = new Set((rows || []).map(function (row) { return row.id; }));
+            window.dispatchEvent(new CustomEvent('myevents:changed'));
+        } catch (error) {
+            console.error('Could not load events:', error);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', hydrate);
 
     function getAll() {
         const events = load();
