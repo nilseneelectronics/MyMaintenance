@@ -924,9 +924,9 @@
 }
 
 .doc-cal-day.today {
-    background: var(--accent-primary);
+    background: transparent;
     border-color: var(--accent-primary);
-    color: #FFFFFF;
+    color: var(--accent-primary);
 }
 
 .doc-cal-day.selected {
@@ -1029,7 +1029,9 @@
     z-index: 10000;
     align-items: center;
     justify-content: center;
-    overflow-y: auto;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 
 .popup-content {
@@ -1042,6 +1044,10 @@
     text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     margin: auto;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 
 .popup-content h3 {
@@ -1065,9 +1071,15 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
+    margin-right: -16px;
+    padding-right: 16px;
+    margin-bottom: 20px;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 .popup-content:has(.done-fields) .done-fields::-webkit-scrollbar { width: 8px; }
 .popup-content:has(.done-fields) .done-fields::-webkit-scrollbar-track { background: transparent; }
@@ -1257,6 +1269,9 @@
     z-index: 10000;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 .event-modal-overlay.open { display: flex; }
 .event-modal-card {
@@ -1273,6 +1288,9 @@
     max-height: calc(96vh / var(--ui-zoom) - 16px);
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 .event-modal-card h3,
 .event-modal-card .popup-buttons,
@@ -1285,12 +1303,15 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
     margin-right: -16px;
     padding-right: 16px;
+    margin-bottom: 20px;
+    touch-action: pan-y pinch-zoom;
 }
 /* Description grows to fill the remaining space when the modal is at its
    locked (Planned Maintenance) height. */
@@ -1340,6 +1361,146 @@ body:has(.event-modal-overlay.open) {
     color: var(--accent-primary);
 }
 .event-modal-field { margin-bottom: 12px; }
+.event-modal-field:has(.event-date-field),
+.event-modal-field:has(.event-time-field) { position: relative; }
+.done-fields .event-modal-field .event-date-field[readonly],
+.done-fields .event-modal-field .event-time-field[readonly] {
+    background: var(--bg-primary);
+    border-color: var(--accent-primary);
+    cursor: pointer;
+}
+.event-modal-field .event-date-field,
+.event-modal-field .event-time-field {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* Event time picker: an iOS-inspired pair of scroll wheels. */
+.event-time-picker {
+    display: none;
+    position: fixed;
+    width: 100%;
+    max-width: calc(100vw - 24px);
+    padding: 10px;
+    box-sizing: border-box;
+    background: var(--bg-primary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+    z-index: 310;
+}
+
+.event-time-picker.open { display: block; }
+
+/* A date chooser uses the full two-field row; its notch identifies the field
+   whose value will change. */
+.event-date-calendar {
+    width: calc(200% + 12px);
+    max-width: none;
+}
+
+.event-date-calendar.event-date-calendar-finish {
+    left: auto;
+    right: 0;
+}
+
+.event-date-calendar::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 25%;
+    width: 12px;
+    height: 12px;
+    background: var(--bg-secondary);
+    border-top: 2px solid var(--accent-primary);
+    border-left: 2px solid var(--accent-primary);
+    transform: translateX(-50%) rotate(45deg);
+    box-sizing: border-box;
+}
+
+.event-date-calendar.event-date-calendar-finish::before { left: 75%; }
+
+.event-date-calendar.opens-above::before {
+    top: auto;
+    bottom: -8px;
+    transform: translateX(-50%) rotate(225deg);
+}
+
+.event-time-wheels {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.event-time-wheel {
+    position: relative;
+    flex: 1;
+    height: 288px;
+    overflow: hidden;
+}
+
+.event-time-divider {
+    color: var(--text-primary);
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.event-time-wheel::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+    box-sizing: border-box;
+}
+
+.event-time-wheel-scroll {
+    height: 288px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    touch-action: pan-y;
+}
+
+.event-time-wheel-scroll::-webkit-scrollbar { display: none; }
+
+.event-time-wheel-spacer { height: 128px; }
+
+.event-time-wheel-item {
+    display: block;
+    width: 100%;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.82rem;
+    line-height: 32px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.28;
+    scroll-snap-align: center;
+    transform: scale(0.64);
+    transition: transform 0.12s ease, opacity 0.12s ease, color 0.12s ease;
+}
+
+.event-time-wheel-item.selected {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    opacity: 1;
+}
 .event-modal-field label {
     display: flex;
     align-items: center;
@@ -1422,9 +1583,44 @@ body:has(.event-modal-overlay.open) {
     border-color: var(--accent-primary);
 }
 .event-modal-field textarea { resize: vertical; min-height: 44px; }
-.event-modal-row { display: flex; gap: 12px; }
-.event-modal-row .event-modal-field { flex: 1; }
-@media (max-width: 480px) { .event-modal-row { flex-direction: column; } }
+.event-modal-row {
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+}
+.event-modal-row .event-modal-field {
+    flex: 1;
+    min-width: 0;
+}
+.event-modal-row input[type="date"],
+.event-modal-row input[type="time"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+@media (max-width: 700px) {
+    .event-modal-row { display: block; }
+    .event-modal-row .event-modal-field { margin-bottom: 12px; }
+    .event-date-calendar { width: 100%; }
+    .event-date-calendar.event-date-calendar-finish { left: 0; right: auto; }
+    .event-date-calendar::before,
+    .event-date-calendar.event-date-calendar-finish::before { left: 50%; }
+}
+
+/* iOS gives date/time controls a larger intrinsic width than text inputs.
+   Remove that native minimum so these fields follow the popup column width. */
+@supports (-webkit-touch-callout: none) {
+    .event-modal-row input[type="date"],
+    .event-modal-row input[type="time"] {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        inline-size: 100% !important;
+        min-inline-size: 0 !important;
+        max-inline-size: 100% !important;
+    }
+}
+
 
 /* =======================================
    Responsive: My Planning page

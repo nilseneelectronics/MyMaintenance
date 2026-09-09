@@ -108,6 +108,9 @@
     max-width: 720px;
     max-height: calc(100vh / var(--ui-zoom) - 40px);
     overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 
 .profile-popup-hint {

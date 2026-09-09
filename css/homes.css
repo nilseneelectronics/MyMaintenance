@@ -741,6 +741,52 @@ main h1 {
     flex-direction: column;
 }
 
+/* Asset pages have a narrower maintenance card than the planning page.
+   Let each column shrink here, then omit the redundant asset column on phones. */
+#asset-planned-list .ev-row {
+    gap: 10px;
+}
+
+#asset-planned-list .ev-row-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 10px;
+}
+
+#asset-planned-list .ev-cell-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#asset-planned-list .ev-cell-asset {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 38%;
+    text-align: left;
+}
+
+#asset-planned-list .ev-row-right {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 10px;
+}
+
+#asset-planned-list .ev-cell-date,
+#asset-planned-list .ev-cell-time {
+    width: auto;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 745px) {
+    #asset-planned-list .ev-cell-asset {
+        display: none;
+    }
+}
+
 .asset-list-empty {
     color: var(--text-secondary);
     font-size: 1em;
@@ -858,12 +904,15 @@ main h1 {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
     margin-right: -16px;
     padding-right: 16px;
     margin-bottom: 20px;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
 }
 
 #register-home-popup .done-fields::-webkit-scrollbar,

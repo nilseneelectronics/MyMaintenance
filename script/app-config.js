@@ -1,6 +1,9 @@
 window.MyMaintenanceConfig = {
     authTokenKey: 'mymaintenance.authToken',
     apiBaseUrl: 'http://localhost:3000',
+    // Optional same-origin backend route. When set, the receipt scanner sends only
+    // its proposed store name and the first receipt lines for verification.
+    receiptStoreVerificationUrl: '',
     loggedInPages: [
         'dashboard.html',
         'myhomes.html',
