@@ -1,4 +1,20 @@
 window.MyMaintenanceCommonUi = {
+    confirmDiscard: function (onDiscard) {
+        let overlay = document.getElementById('discard-changes-popup');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'discard-changes-popup';
+            overlay.className = 'popup-overlay';
+            overlay.style.zIndex = '40000';
+            overlay.innerHTML = '<div class="popup-content discard-changes-content" role="dialog" aria-modal="true" aria-labelledby="discard-changes-title"><h3 id="discard-changes-title">Discard changes?</h3><p>Your unsaved changes will be lost.</p><div class="popup-buttons"><button type="button" class="popup-btn cancel">Keep editing</button><button type="button" class="popup-btn confirm">Discard</button></div></div>';
+            document.body.appendChild(overlay);
+        }
+        const dismiss = function () { overlay.style.display = 'none'; };
+        overlay.querySelector('.cancel').onclick = dismiss;
+        overlay.querySelector('.confirm').onclick = function () { dismiss(); onDiscard(); };
+        overlay.onclick = function (event) { if (event.target === overlay) dismiss(); };
+        overlay.style.display = 'flex';
+    },
     initCommonUiInteractions() {
         // Browsers change focused number fields when the user scrolls. Blur first
         // so the scroll keeps moving the page/modal instead of changing a value.

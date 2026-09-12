@@ -27,6 +27,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function current() { return neighborhoods.find(n => n.id === currentId) || null; }
 
+    function todayLabel() {
+        const date = new Date();
+        return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0') + '/' + date.getFullYear();
+    }
+
+    function fileFormat(file) {
+        if (!file) return '';
+        const extension = (file.name.split('.').pop() || '').toUpperCase();
+        return extension || file.type || 'File';
+    }
+
     function rowToNeighborhood(row) {
         const details = row && row.details && typeof row.details === 'object' ? row.details : {};
         return Object.assign({}, details, { id: row.id, _dbId: row.id, name: row.name || details.name || '' });
@@ -649,6 +660,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---- Photos ---- */
+    let pendingPhotoUploads = [];
+    let photoPickerOpen = false;
     function photosFor(nb) {
         if (!nb) return [];
         if (!Array.isArray(nb.photos)) nb.photos = [];
@@ -669,41 +682,48 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPrivateFile(photo, function () { render(); });
         return photo && photo.dataUrl ? photo.dataUrl : '';
     }
-    const NB_DEFAULT_PHOTOS = [
-        { dataUrl: 'https://picsum.photos/id/1036/1200/675' },
-        { dataUrl: 'https://picsum.photos/id/1039/1200/675' },
-        { dataUrl: 'https://picsum.photos/id/1011/1200/675' }
-    ];
     function displayPhotosFor(nb) {
-        const stored = photosFor(nb);
-        return stored.length ? stored : NB_DEFAULT_PHOTOS;
+        return photosFor(nb);
     }
     function setMainPhoto() {
         const imgs = displayPhotosFor(current());
         const main = document.getElementById('nb-main-photo');
-        if (imgs.length) main.src = photoSource(imgs[0]);
+        const container = document.getElementById('nb-big-photo-container');
+        const empty = !imgs.length;
+        if (container) container.classList.toggle('is-empty', empty);
+        if (container) container.classList.toggle('has-multiple-photos', imgs.length > 1);
+        if (main) {
+            main.hidden = empty;
+            if (empty) main.removeAttribute('src');
+            else main.src = photoSource(imgs[0]);
+        }
+        ['nb-prev-arrow', 'nb-next-arrow'].forEach(function (id) {
+            const control = document.getElementById(id);
+            if (control) control.hidden = imgs.length < 2;
+        });
+        const viewAll = document.getElementById('nb-view-all-photos');
+        if (viewAll) viewAll.hidden = empty;
         renderNbThumbs();
     }
     function renderPhotoThumbs() {
         const nb = current();
         const grid = document.getElementById('nbp-photo-grid');
         const noPhotos = document.getElementById('nbp-no-photos');
-        const imgs = photosFor(nb);
+        const imgs = pendingPhotoUploads;
         grid.innerHTML = '';
         if (noPhotos) noPhotos.style.display = imgs.length ? 'none' : 'block';
         imgs.forEach((p, i) => {
             const w = document.createElement('div');
             w.className = 'done-photo-thumb';
             const img = document.createElement('img');
-            img.src = photoSource(p);
+            img.src = p.dataUrl;
             w.appendChild(img);
             const del = document.createElement('button');
             del.className = 'done-photo-del';
             del.textContent = '×';
-            del.addEventListener('click', async () => {
-                const removed = imgs.splice(i, 1)[0];
-                if (removed && removed.filePath) await window.MyMaintenanceData.removeFile(removed.filePath).catch(function () {});
-                saveNeighborhoods(); renderPhotoThumbs(); setMainPhoto();
+            del.addEventListener('click', () => {
+                imgs.splice(i, 1);
+                renderPhotoThumbs();
             });
             w.appendChild(del);
             grid.appendChild(w);
@@ -751,16 +771,30 @@ document.addEventListener('DOMContentLoaded', () => {
         thumbs.forEach((img, i) => {
             if (!img) return;
             const has = imgs.length > i + 1;
-            img.style.display = has ? '' : 'none';
-            if (has) img.src = photoSource(imgs[(photoNavIndex + 1 + i) % imgs.length]);
+            img.style.display = '';
+            if (has) {
+                delete img.dataset.photoPlaceholder;
+                img.src = photoSource(imgs[(photoNavIndex + 1 + i) % imgs.length]);
+                img.alt = 'More photo';
+            } else {
+                const label = imgs.length ? 'Not enough pictures added' : 'No pictures added yet';
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><svg x="60" y="24" width="60" height="60" viewBox="0 -960 960 960"><path fill="#20B2AA" d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg><text x="90" y="137" text-anchor="middle" fill="#20B2AA" font-family="Arial" font-size="13">${label}</text></svg>`;
+                img.dataset.photoPlaceholder = 'true';
+                img.src = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+                img.alt = 'Add photo';
+            }
         });
-        if (wrap) wrap.style.display = imgs.length > 1 ? '' : 'none';
+        if (wrap) wrap.style.display = '';
     }
     const nbThumbsWrap = document.getElementById('nb-photo-thumbs');
     if (nbThumbsWrap) {
         nbThumbsWrap.addEventListener('click', (e) => {
             const t = e.target.closest('img');
             if (!t) return;
+            if (t.dataset.photoPlaceholder === 'true') {
+                document.getElementById('nb-add-photo-btn').click();
+                return;
+            }
             const imgs = displayPhotosFor(current());
             if (!imgs.length) return;
             const off = t === document.getElementById('nb-thumb-2') ? 2 : 1;
@@ -771,6 +805,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---- Documents ---- */
+    function documentDateLabel(value) {
+        const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : String(value || '');
+    }
+
+    function neighborhoodDocumentIcon() {
+        return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M450-154v-309L180-619v309l270 156Zm60 0 270-156v-310L510-463.16V-154Zm-30-360 266-155-266-154-267 154 267 155ZM150-258q-14.25-8.43-22.12-22.21Q120-294 120-310v-340q0-16 7.88-29.79Q135.75-693.57 150-702l300-173q14.33-8 30.16-8 15.84 0 29.84 8l300 173q14.25 8.43 22.13 22.21Q840-666 840-650v340q0 16-7.87 29.79Q824.25-266.43 810-258L510-85q-14.33 8-30.16 8Q464-77 450-85L150-258Zm330-222Z"/></svg>';
+    }
     function renderDocs() {
         const nb = current();
         const list = document.getElementById('nb-docs-list');
@@ -778,28 +820,36 @@ document.addEventListener('DOMContentLoaded', () => {
             list.innerHTML = '<div class="nb-empty">No documents registered.</div>';
             return;
         }
-        list.innerHTML = '';
+        list.innerHTML = '<div class="doc-row doc-header-row"><div class="doc-row-left"><span class="doc-cell doc-cell-icon"></span><span class="doc-cell doc-cell-name doc-col-label">Document</span></div><div class="doc-row-right"><span class="doc-cell doc-cell-performed doc-col-label">Performed</span><span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span><span class="doc-cell doc-cell-size doc-col-label">Size</span><span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span></div></div>';
         nb.docs.forEach((d, idx) => {
             const row = document.createElement('div');
             row.className = 'doc-row doc-row-open';
             row.style.cursor = 'pointer';
+            const left = document.createElement('div');
+            left.className = 'doc-row-left';
+            left.innerHTML = neighborhoodDocumentIcon();
             const name = document.createElement('span');
+            name.className = 'doc-cell doc-cell-name';
             name.textContent = d.name || d.fileName || 'Document';
-            const meta = document.createElement('span');
-            meta.className = 'planned-item-info';
-            meta.textContent = (d.performed || '') + (d.sizeLabel ? ' · ' + d.sizeLabel : '');
-            const del = document.createElement('button');
-            del.className = 'view-button';
-            del.textContent = 'Remove';
-            del.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const removed = nb.docs.splice(idx, 1)[0];
-                if (removed && removed.filePath) await window.MyMaintenanceData.removeFile(removed.filePath).catch(function () {});
-                saveNeighborhoods(); renderDocs();
+            left.appendChild(name);
+            const right = document.createElement('div');
+            right.className = 'doc-row-right';
+            [['doc-cell-performed', documentDateLabel(d.performed)], ['doc-cell-uploaded', documentDateLabel(d.uploaded)], ['doc-cell-size', d.sizeLabel || formatBytes(d.size)]].forEach((item) => {
+                const cell = document.createElement('span');
+                cell.className = 'doc-cell ' + item[0];
+                cell.textContent = item[1];
+                right.appendChild(cell);
             });
-            row.appendChild(name);
-            row.appendChild(meta);
-            row.appendChild(del);
+            const privacy = document.createElement('span');
+            privacy.className = 'doc-cell doc-cell-privacy';
+            const tag = document.createElement('span');
+            const isNeighborhood = d.privacy === 'neighborhood';
+            tag.className = 'doc-privacy-tag ' + (isNeighborhood ? 'neighborhood' : 'private');
+            tag.textContent = isNeighborhood ? 'Neighborhood' : 'Private';
+            privacy.appendChild(tag);
+            right.appendChild(privacy);
+            row.appendChild(left);
+            row.appendChild(right);
             row.addEventListener('click', () => previewDoc(d));
             list.appendChild(row);
         });
@@ -878,16 +928,77 @@ document.addEventListener('DOMContentLoaded', () => {
     /* Photos */
     document.getElementById('nb-add-photo-btn').addEventListener('click', () => {
         if (!current()) return openInfoPopup(null);
+        pendingPhotoUploads = [];
         renderPhotoThumbs();
         document.getElementById('nb-add-photos-popup').style.display = 'flex';
     });
+    const nbEmptyPhotoState = document.querySelector('#nb-big-photo-container .photo-empty-state');
+    if (nbEmptyPhotoState) {
+        const addFromEmptyState = () => document.getElementById('nb-add-photo-btn').click();
+        nbEmptyPhotoState.addEventListener('click', addFromEmptyState);
+        nbEmptyPhotoState.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                addFromEmptyState();
+            }
+        });
+    }
     document.getElementById('nb-gallery-add-photo').addEventListener('click', () => {
+        pendingPhotoUploads = [];
         renderPhotoThumbs();
         document.getElementById('nb-gallery-modal').style.display = 'none';
         document.getElementById('nb-add-photos-popup').style.display = 'flex';
     });
-    document.getElementById('nbp-cancel').addEventListener('click', () => { document.getElementById('nb-add-photos-popup').style.display = 'none'; });
-    document.getElementById('nbp-save').addEventListener('click', () => { document.getElementById('nb-add-photos-popup').style.display = 'none'; render(); });
+    const nbPhotoPopup = document.getElementById('nb-add-photos-popup');
+    function closePhotoUploadPopup() {
+        pendingPhotoUploads = [];
+        photoPickerOpen = false;
+        nbPhotoPopup.style.display = 'none';
+    }
+    document.getElementById('nbp-cancel').addEventListener('click', closePhotoUploadPopup);
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('#nbp-cancel')) return;
+        event.preventDefault();
+        closePhotoUploadPopup();
+    }, true);
+    nbPhotoPopup.addEventListener('click', (event) => {
+        if (event.target === nbPhotoPopup) closePhotoUploadPopup();
+    });
+    document.getElementById('nbp-save').addEventListener('click', async () => {
+        const nb = current();
+        if (!nb || !pendingPhotoUploads.length) {
+            document.getElementById('nb-add-photos-popup').style.display = 'none';
+            return;
+        }
+        const db = window.MyMaintenanceData;
+        const userId = db && await db.userId();
+        if (!db || !userId) return alert('Please sign in again.');
+        try {
+            const photos = photosFor(nb);
+            for (const pending of pendingPhotoUploads) {
+                const safeName = pending.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const photo = {
+                    filePath: `${userId}/neighborhoods/${nb.id}/photos/${crypto.randomUUID()}-${safeName}`,
+                    fileName: pending.file.name,
+                    type: db.fileMime ? db.fileMime(pending.file) : pending.file.type,
+                    dataUrl: pending.dataUrl
+                };
+                await db.upload(photo.filePath, pending.file);
+                photos.push(photo);
+            }
+            await saveNeighborhoods();
+            pendingPhotoUploads = [];
+            document.getElementById('nb-add-photos-popup').style.display = 'none';
+            render();
+        } catch (error) {
+            alert(error.message || 'Could not upload picture.');
+        }
+    });
+    nbPhotoPopup.addEventListener('keyup', (event) => {
+        if (event.key !== 'Enter' || event.target.id === 'nbp-save') return;
+        event.preventDefault();
+        document.getElementById('nbp-save').click();
+    });
     document.getElementById('nb-view-all-photos').addEventListener('click', () => { renderGallery(); document.getElementById('nb-gallery-modal').style.display = 'flex'; });
     document.getElementById('nb-gallery-close').addEventListener('click', () => { document.getElementById('nb-gallery-modal').style.display = 'none'; });
     document.getElementById('nb-prev-arrow').addEventListener('click', () => nextPhoto(-1));
@@ -899,36 +1010,39 @@ document.addEventListener('DOMContentLoaded', () => {
     photoInput.multiple = true;
     photoInput.style.display = 'none';
     document.body.appendChild(photoInput);
-    document.getElementById('nbp-picture-btn').addEventListener('click', () => photoInput.click());
+    function closeAfterCancelledPhotoPicker() {
+        if (!photoPickerOpen) return;
+        window.setTimeout(() => {
+            if (!photoPickerOpen) return;
+            if (!photoInput.files || !photoInput.files.length) closePhotoUploadPopup();
+        }, 250);
+    }
+    document.getElementById('nbp-picture-btn').addEventListener('click', () => {
+        photoPickerOpen = true;
+        photoInput.value = '';
+        photoInput.click();
+    });
+    window.addEventListener('focus', closeAfterCancelledPhotoPicker);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) closeAfterCancelledPhotoPicker();
+    });
     photoInput.addEventListener('change', async () => {
         const nb = current();
         const files = Array.prototype.slice.call(photoInput.files || []);
+        photoPickerOpen = false;
         photoInput.value = '';
         if (!nb || !files.length) return;
-        const db = window.MyMaintenanceData;
-        const userId = db && await db.userId();
-        if (!db || !userId) return alert('Please sign in again.');
-        const photos = photosFor(nb);
         try {
             await Promise.all(files.map(async function (file) {
-                const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                const photo = {
-                    filePath: `${userId}/neighborhoods/${nb.id}/photos/${crypto.randomUUID()}-${safeName}`,
-                    fileName: file.name,
-                    type: db.fileMime ? db.fileMime(file) : file.type
-                };
-                await db.upload(photo.filePath, file);
                 const reader = new FileReader();
-                photo.dataUrl = await new Promise(function (resolve, reject) {
+                const dataUrl = await new Promise(function (resolve, reject) {
                     reader.onload = function () { resolve(reader.result); };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 });
-                photos.push(photo);
+                pendingPhotoUploads.push({ file: file, dataUrl: dataUrl });
             }));
-            await saveNeighborhoods();
             renderPhotoThumbs();
-            setMainPhoto();
         } catch (error) {
             alert(error.message || 'Could not upload picture.');
         }
@@ -936,12 +1050,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* Documents */
     document.getElementById('nb-add-document').addEventListener('click', () => {
-        if (!current()) return openInfoPopup(null);
+        const nb = current();
+        if (!nb) return openInfoPopup(null);
         document.getElementById('nb-doc-file-name').textContent = 'No file selected';
         document.getElementById('nb-doc-name').value = '';
+        document.getElementById('nb-doc-asset').value = nb.name || 'Neighborhood';
         document.getElementById('nb-doc-performed').value = '';
+        document.getElementById('nb-doc-uploaded').value = todayLabel();
+        document.getElementById('nb-doc-size').value = '';
+        document.getElementById('nb-doc-format').value = '';
         document.getElementById('nb-doc-file').value = '';
+        document.querySelectorAll('input[name="nb-doc-privacy"]').forEach((input) => {
+            input.checked = input.value === 'neighborhood';
+        });
         document.getElementById('nb-doc-add-popup').style.display = 'flex';
+    });
+    document.querySelectorAll('input[name="nb-doc-privacy"]').forEach((input) => {
+        input.addEventListener('change', () => {
+            if (!input.checked) return;
+            document.querySelectorAll('input[name="nb-doc-privacy"]').forEach((other) => { other.checked = other === input; });
+        });
     });
     document.getElementById('nb-doc-cancel').addEventListener('click', () => { document.getElementById('nb-doc-add-popup').style.display = 'none'; });
     document.getElementById('nb-doc-pick-btn').addEventListener('click', () => document.getElementById('nb-doc-file').click());
@@ -950,6 +1078,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (file) {
             document.getElementById('nb-doc-file-name').textContent = file.name;
             if (!document.getElementById('nb-doc-name').value.trim()) document.getElementById('nb-doc-name').value = file.name.replace(/\.[^.]+$/, '');
+            document.getElementById('nb-doc-size').value = formatBytes(file.size);
+            document.getElementById('nb-doc-format').value = fileFormat(file);
         }
     });
     document.getElementById('nb-doc-save').addEventListener('click', async () => {
@@ -958,6 +1088,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!file) return;
         const name = document.getElementById('nb-doc-name').value.trim() || file.name;
         const performed = document.getElementById('nb-doc-performed').value;
+        const privacy = (document.querySelector('input[name="nb-doc-privacy"]:checked') || {}).value || 'private';
         const db = window.MyMaintenanceData;
         const userId = db && await db.userId();
         if (!db || !userId) return alert('Please sign in again.');
@@ -965,6 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
             const doc = {
                 name: name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed: performed,
+                asset: nb.name || 'Neighborhood', privacy: privacy,
                 type: db.fileMime ? db.fileMime(file) : file.type, uploaded: new Date().toISOString(),
                 filePath: `${userId}/neighborhoods/${nb.id}/documents/${crypto.randomUUID()}-${safeName}`
             };

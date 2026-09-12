@@ -314,6 +314,9 @@ window.MyMaintenanceAuth = {
         const switchToSignin = document.getElementById('switch-to-signin');
         const signinForm = document.getElementById('signin-form');
         const signupForm = document.getElementById('signup-form');
+        const forgotPasswordButton = document.getElementById('forgot-password');
+        const signinMessage = document.getElementById('signin-message');
+        const signupMessage = document.getElementById('signup-message');
         const urlParams = new URLSearchParams(window.location.search);
 
         if (urlParams.get('mode') === 'signup') {
@@ -345,6 +348,52 @@ window.MyMaintenanceAuth = {
         wireEnterSubmit(signinForm);
         wireEnterSubmit(signupForm);
 
+        const clearSigninMessage = () => {
+            if (signinMessage) {
+                signinMessage.textContent = '';
+                signinMessage.classList.remove('success');
+            }
+            if (signinForm) signinForm.querySelectorAll('input').forEach((input) => input.classList.remove('signin-invalid'));
+        };
+
+        const showSigninMessage = (message, success) => {
+            if (signinMessage) {
+                signinMessage.textContent = message;
+                signinMessage.classList.toggle('success', !!success);
+            }
+        };
+
+        const showInvalidLogin = () => {
+            if (signinForm) signinForm.querySelectorAll('input').forEach((input) => {
+                input.classList.remove('signin-invalid');
+                void input.offsetWidth;
+                input.classList.add('signin-invalid');
+            });
+            showSigninMessage('Invalid login credentials.');
+        };
+
+        const clearSignupMessage = () => {
+            if (signupMessage) signupMessage.textContent = '';
+            if (signupForm) signupForm.querySelectorAll('input').forEach((input) => input.classList.remove('signin-invalid'));
+        };
+
+        const showSignupError = (message, invalidInputs = []) => {
+            invalidInputs.forEach((input) => {
+                if (!input) return;
+                input.classList.remove('signin-invalid');
+                void input.offsetWidth;
+                input.classList.add('signin-invalid');
+            });
+            if (signupMessage) signupMessage.textContent = message;
+        };
+
+        if (signinForm) signinForm.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('input', clearSigninMessage);
+        });
+        if (signupForm) signupForm.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('input', clearSignupMessage);
+        });
+
         document.querySelectorAll('.password-toggle').forEach((button) => {
             const input = button.closest('.input-group')?.querySelector('input');
             if (!input) return;
@@ -375,6 +424,11 @@ window.MyMaintenanceAuth = {
                 const email = (inputs[0]?.value || '').trim();
                 const password = inputs[1]?.value || '';
 
+                if (!email || !password) {
+                    showInvalidLogin();
+                    return;
+                }
+
                 try {
                     if (this.hasSupabase()) {
                         const { response, data } = await this._supabaseRequest('token?grant_type=password', {
@@ -382,7 +436,7 @@ window.MyMaintenanceAuth = {
                             body: { email, password }
                         });
                         if (!response.ok || !data?.access_token) {
-                            alert(data?.msg || data?.message || 'Invalid email or password.');
+                            showInvalidLogin();
                             return;
                         }
                         this._storeSupabaseSession(data);
@@ -397,7 +451,7 @@ window.MyMaintenanceAuth = {
                         { email, password }
                     );
                     if (!response.ok || !data?.token) {
-                        alert(data?.message || 'Invalid credentials.');
+                        showInvalidLogin();
                         return;
                     }
                     localStorage.setItem(tokenKey, data.token);
@@ -405,6 +459,10 @@ window.MyMaintenanceAuth = {
                     const next = params.get('next') || 'dashboard.html';
                     window.location.href = this.resolvePageUrl(next);
                 } catch (_) {
+                    if (this.hasSupabase()) {
+                        showSigninMessage('Could not sign in. Please try again.');
+                        return;
+                    }
                     localStorage.setItem(tokenKey, 'offline-token');
                     const params = new URLSearchParams(window.location.search);
                     const next = params.get('next') || 'dashboard.html';
@@ -421,9 +479,22 @@ window.MyMaintenanceAuth = {
                 const email = (inputs[1]?.value || '').trim();
                 const password = inputs[2]?.value || '';
                 const confirmPassword = inputs[3]?.value || '';
+                const emailIsValid = !!email && !!inputs[1]?.validity.valid;
+                const messages = [];
+                const invalidInputs = [];
 
-                if (password !== confirmPassword) {
-                    alert('Passwords do not match.');
+                if (!name || !email || !password || !confirmPassword) messages.push('Please complete all fields.');
+                if (!name) invalidInputs.push(inputs[0]);
+                if (!emailIsValid) {
+                    messages.push('Invalid email.');
+                    invalidInputs.push(inputs[1]);
+                }
+                if (!password || !confirmPassword || password !== confirmPassword) {
+                    if (password && confirmPassword && password !== confirmPassword) messages.push('Passwords do not match.');
+                    invalidInputs.push(inputs[2], inputs[3]);
+                }
+                if (messages.length) {
+                    showSignupError(messages.join(' '), invalidInputs);
                     return;
                 }
 
@@ -444,14 +515,40 @@ window.MyMaintenanceAuth = {
                         }
                     });
                     if (!response.ok) {
-                        alert(data?.msg || data?.message || 'Could not create account.');
+                        const detail = String(data?.msg || data?.message || '').toLowerCase();
+                        const invalidEmail = detail.includes('email') && (detail.includes('invalid') || detail.includes('valid'));
+                        showSignupError(invalidEmail ? 'Invalid email.' : 'Could not create account.', invalidEmail ? [inputs[1]] : []);
                         return;
                     }
                     if (data?.access_token) this._storeSupabaseSession(data);
                     alert('Check your email to confirm your account.');
                     container.classList.remove('signup-mode');
                 } catch (_) {
-                    alert('Could not connect. Please try again.');
+                    showSignupError('Could not connect. Please try again.');
+                }
+            });
+        }
+
+        if (forgotPasswordButton) {
+            forgotPasswordButton.addEventListener('click', async () => {
+                const email = (signinForm?.querySelector('input[type="email"]')?.value || '').trim();
+                if (!email) {
+                    showSigninMessage('Enter your email address first.');
+                    return;
+                }
+                if (!this.hasSupabase()) {
+                    showSigninMessage('Password reset is not configured.');
+                    return;
+                }
+                try {
+                    const redirectTo = new URL(this.resolvePageUrl('login.html'), window.location.href).href;
+                    const { response } = await this._supabaseRequest('recover', {
+                        method: 'POST', body: { email: email, redirect_to: redirectTo }
+                    });
+                    if (!response.ok) throw new Error('Reset failed');
+                    showSigninMessage('If that account exists, a reset email was sent.', true);
+                } catch (_) {
+                    showSigninMessage('Could not send reset email. Please try again.');
                 }
             });
         }

@@ -27,6 +27,11 @@
 
         let houseType = '';
         let editingId = null;
+        let initialState = '';
+
+        function stateSnapshot() {
+            return JSON.stringify(Object.keys(inputs).map(function (key) { return inputs[key] ? inputs[key].value : ''; }).concat(houseType));
+        }
 
         function setInvalid(el, invalid) {
             if (!el) return;
@@ -96,6 +101,7 @@
                 }
             }
             popup.style.display = 'flex';
+            initialState = stateSnapshot();
             if (inputs.name) inputs.name.focus();
         }
 
@@ -103,8 +109,9 @@
             popup.style.display = 'none';
         }
 
-        function confirmClose() {
-            if (window.confirm('Cancel adding? Your unsaved changes will be lost.')) close();
+        function requestClose() {
+            if (stateSnapshot() === initialState) return close();
+            window.MyMaintenanceCommonUi.confirmDiscard(close);
         }
 
         function selectHouseType(value, label) {
@@ -119,6 +126,31 @@
             if (inputs.otherType) {
                 inputs.otherType.style.display = value === 'Other' ? '' : 'none';
                 if (value === 'Other') inputs.otherType.focus();
+            }
+        }
+
+        async function setProfileAddressFromFirstHome(home) {
+            const db = window.MyMaintenanceData;
+            if (!db) return;
+            try {
+                const userId = await db.userId();
+                if (!userId) return;
+                const rows = await db.request('profiles', {
+                    query: { select: 'details', id: 'eq.' + userId }
+                });
+                const details = rows && rows[0] && rows[0].details ? rows[0].details : {};
+                const profile = Object.assign({}, details.profile || {}, {
+                    address: home.address || '', zip: home.zip || '', city: home.city || ''
+                });
+                await db.request('profiles', {
+                    method: 'PATCH', query: { id: 'eq.' + userId },
+                    body: { details: Object.assign({}, details, { profile: profile }) },
+                    prefer: 'return=minimal'
+                });
+                localStorage.setItem('mymaintenance_profile', JSON.stringify(profile));
+                window.dispatchEvent(new CustomEvent('profile:changed'));
+            } catch (error) {
+                console.error('Could not update profile address:', error);
             }
         }
 
@@ -149,19 +181,21 @@
                 externalSize: valueOf('rh-external')
             };
             let saved;
+            const isFirstHome = !editingId && window.MyMaintenanceAssets.getHomes().length === 0;
             if (editingId) {
                 saved = window.MyMaintenanceAssets.updateHome(editingId, home);
             } else {
                 saved = window.MyMaintenanceAssets.addHome(home);
             }
+            if (isFirstHome && saved && (saved.houseType === 'House' || saved.houseType === 'Apartment')) setProfileAddressFromFirstHome(saved);
             close();
             window.dispatchEvent(new CustomEvent('home:registered', { detail: { home: saved, record: saved } }));
         }
 
-        if (cancel) cancel.addEventListener('click', close);
+        if (cancel) cancel.addEventListener('click', requestClose);
         if (confirmBtn) confirmBtn.addEventListener('click', save);
-        popup.addEventListener('click', function (e) { if (e.target === popup) confirmClose(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && popup.style.display === 'flex') close(); });
+        popup.addEventListener('click', function (e) { if (e.target === popup) requestClose(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && popup.style.display === 'flex') requestClose(); });
 
         if (typeToggle) {
             typeToggle.addEventListener('click', function (e) {

@@ -41,7 +41,12 @@
             <div class="photo-box" id="nb-photo-box">
                 <h3>Neighborhood Photos</h3>
                 <div class="big-photo-container" id="nb-big-photo-container">
-                    <img id="nb-main-photo" src="https://picsum.photos/id/1036/1200/675" alt="Neighborhood photo">
+                    <img id="nb-main-photo" alt="Neighborhood photo" hidden>
+                    <div class="photo-empty-state" role="button" tabindex="0" aria-label="Add photos">
+                        <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg>
+                        <strong>No pictures added yet</strong>
+                        <span>Press to add photo</span>
+                    </div>
                     <div class="photo-arrows">
                         <button class="arrow left" id="nb-prev-arrow"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         <button class="arrow right" id="nb-next-arrow"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -181,8 +186,21 @@
                     <input type="file" id="nb-doc-file" style="display:none">
                     <label>Name</label>
                     <input type="text" id="nb-doc-name" placeholder="Document name...">
+                    <label>Connected Asset</label>
+                    <input type="text" id="nb-doc-asset" readonly>
                     <label>Date performed</label>
                     <input type="text" class="doc-date-field" id="nb-doc-performed" placeholder="dd/mm/yyyy" autocomplete="off">
+                    <label>Date uploaded</label>
+                    <input type="text" class="doc-date-field" id="nb-doc-uploaded" readonly>
+                    <label>Size</label>
+                    <input type="text" id="nb-doc-size" readonly>
+                    <label>File format</label>
+                    <input type="text" id="nb-doc-format" readonly>
+                    <label>Visibility</label>
+                    <div class="doc-privacy-options">
+                        <label class="doc-check"><input type="checkbox" name="nb-doc-privacy" value="private"><span>Private</span></label>
+                        <label class="doc-check"><input type="checkbox" name="nb-doc-privacy" value="neighborhood" checked><span>Neighborhood relevant</span></label>
+                    </div>
                 </div>
                 <div class="popup-buttons">
                     <button type="button" class="popup-btn cancel" id="nb-doc-cancel">Cancel</button>
@@ -212,7 +230,7 @@
             <div class="popup-content">
                 <h3>Add photos</h3>
                 <div class="done-fields">
-                    <label>Pictures</label>
+                    <label>New pictures</label>
                     <div class="done-pictures">
                         <p class="done-no-photos" id="nbp-no-photos">No pictures added</p>
                         <div class="done-photo-grid" id="nbp-photo-grid"></div>
@@ -227,8 +245,8 @@
                     </div>
                 </div>
                 <div class="popup-buttons">
-                    <button id="nbp-cancel" class="popup-btn cancel">Cancel</button>
-                    <button id="nbp-save" class="popup-btn confirm">Save</button>
+                    <button type="button" id="nbp-cancel" class="popup-btn cancel">Cancel</button>
+                    <button type="button" id="nbp-save" class="popup-btn confirm">Save</button>
                 </div>
             </div>
         </div>

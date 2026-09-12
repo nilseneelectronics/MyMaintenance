@@ -356,6 +356,7 @@
 
     var editingKey = null;
     var editingIdx = -1;
+    var initialEventState = '';
     var pendingDelete = null;
 
     const confirmModal = document.getElementById('confirm-modal');
@@ -400,6 +401,7 @@
             evDesc.value = '';
             resetPlannedFields();
         }
+        initialEventState = eventStateSnapshot();
         evName.focus();
     }
 
@@ -409,7 +411,18 @@
         editingIdx = -1;
     }
 
-    evCancel.addEventListener('click', closeModal);
+    function eventStateSnapshot() {
+        return JSON.stringify({ name: evName.value, start: evStartDate.value, finish: evFinishDate.value,
+            startTime: evStartTime.value, finishTime: evFinishTime.value, location: evLocation.value,
+            description: evDesc.value, planned: !!(evPlanned && evPlanned.checked), asset: selectedEvAsset });
+    }
+
+    function requestCloseModal() {
+        if (eventStateSnapshot() === initialEventState) return closeModal();
+        window.MyMaintenanceCommonUi.confirmDiscard(closeModal);
+    }
+
+    evCancel.addEventListener('click', requestCloseModal);
     evDelete.addEventListener('click', () => {
         if (!editingKey || editingIdx < 0) return;
         confirmMsg.textContent = 'Delete "' + (EVENTS[editingKey][editingIdx].name || 'event') + '"? This cannot be undone.';
@@ -449,9 +462,9 @@
         closeModal();
         render();
     });
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) requestCloseModal(); });
     evName.addEventListener('keydown', (e) => { if (e.key === 'Enter') evAdd.click(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) requestCloseModal(); });
 
     function renderYear() {
         navLabel.textContent = viewYear;

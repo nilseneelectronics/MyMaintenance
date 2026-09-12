@@ -26,6 +26,11 @@
 
         let vehicleType = '';
         let editingId = null;
+        let initialState = '';
+
+        function stateSnapshot() {
+            return JSON.stringify(Object.keys(inputs).map(function (key) { return inputs[key] ? inputs[key].value : ''; }).concat(vehicleType));
+        }
 
         function setInvalid(el, invalid) {
             if (!el) return;
@@ -120,6 +125,7 @@
                 }
             }
             popup.style.display = 'flex';
+            initialState = stateSnapshot();
             if (inputs.name) inputs.name.focus();
         }
 
@@ -127,8 +133,9 @@
             popup.style.display = 'none';
         }
 
-        function confirmClose() {
-            if (window.confirm('Cancel adding? Your unsaved changes will be lost.')) close();
+        function requestClose() {
+            if (stateSnapshot() === initialState) return close();
+            window.MyMaintenanceCommonUi.confirmDiscard(close);
         }
 
         function selectType(value, label) {
@@ -183,10 +190,10 @@
             window.dispatchEvent(new CustomEvent('vehicle:registered', { detail: { vehicle: saved, record: saved } }));
         }
 
-        if (cancel) cancel.addEventListener('click', close);
+        if (cancel) cancel.addEventListener('click', requestClose);
         if (confirmBtn) confirmBtn.addEventListener('click', save);
-        popup.addEventListener('click', function (e) { if (e.target === popup) confirmClose(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && popup.style.display === 'flex') close(); });
+        popup.addEventListener('click', function (e) { if (e.target === popup) requestClose(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && popup.style.display === 'flex') requestClose(); });
 
         if (typeToggle) {
             typeToggle.addEventListener('click', function (e) {

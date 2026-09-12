@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOcrEmbedding = null;
     let currentReceiptItems = [];
     let selectedFile = null;
+    let initialDocState = '';
     let ocrWorkerPromise = null;
     const EMBED_MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
     const SEMANTIC_WEIGHT = 100;
@@ -603,8 +604,27 @@ document.addEventListener('DOMContentLoaded', () => {
         hideScanStatus();
     }
 
+    function selectAsset(value) {
+        const asset = String(value || '').trim();
+        if (!asset || !assetMenu) return;
+        const buttons = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
+        const match = buttons.find(function (button) { return button.dataset.value === asset; });
+        selectedAssetValue = match ? asset : '__other__';
+        if (assetValueEl) assetValueEl.textContent = asset;
+        buttons.forEach(function (button) { button.classList.remove('selected'); });
+        const selectedButton = match || buttons.find(function (button) { return button.dataset.value === '__other__'; });
+        if (selectedButton) selectedButton.classList.add('selected');
+        if (docAssetOther) {
+            docAssetOther.style.display = match ? 'none' : '';
+            docAssetOther.value = match ? '' : asset;
+        }
+    }
+
     function openPopup() {
         resetPopupFields();
+        const context = window.MyMaintenanceDocumentContext;
+        window.MyMaintenanceDocumentContext = null;
+        if (context && context.asset) selectAsset(context.asset);
         scanMode = false;
         fileInput.accept = '';
         fileInput.removeAttribute('capture');
@@ -612,6 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Add document';
         popup.style.display = 'flex';
+        initialDocState = documentStateSnapshot();
     }
 
     function openScanPopup() {
@@ -623,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Scan document';
         popup.style.display = 'flex';
+        initialDocState = documentStateSnapshot();
     }
 
     function openEditPopup(it) {
@@ -698,22 +720,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
+        initialDocState = documentStateSnapshot();
     }
 
     function closePopup() {
         popup.style.display = 'none';
     }
 
-    function confirmClosePopup() {
-        if (window.confirm('Cancel adding? Your unsaved changes will be lost.')) closePopup();
+    function documentStateSnapshot() {
+        return JSON.stringify({
+            name: nameInput.value, performed: performedInput.value, asset: selectedAssetValue,
+            otherAsset: docAssetOther ? docAssetOther.value : '', type: selectedDocType,
+            privacy: privacyValue(), file: selectedFile ? selectedFile.name + ':' + selectedFile.size : ''
+        });
+    }
+
+    function requestClosePopup() {
+        if (documentStateSnapshot() === initialDocState) return closePopup();
+        window.MyMaintenanceCommonUi.confirmDiscard(closePopup);
     }
 
     addBtn.addEventListener('click', openPopup);
     const scanBtn = document.getElementById('doc-scan-btn');
     if (scanBtn) scanBtn.addEventListener('click', openScanPopup);
-    cancelBtn.addEventListener('click', closePopup);
+    cancelBtn.addEventListener('click', requestClosePopup);
     popup.addEventListener('click', (e) => {
-        if (e.target === popup) confirmClosePopup();
+        if (e.target === popup) requestClosePopup();
     });
 
     function setPrivacy(value) {

@@ -625,6 +625,9 @@
         const btn = document.getElementById('asset-add-document');
         if (!btn) return;
         btn.addEventListener('click', function () {
+            // The document modal is shared with MyDocuments. Pass the active
+            // asset once so the user never has to select it again.
+            window.MyMaintenanceDocumentContext = { asset: currentAsset() };
             const trigger = document.getElementById('doc-add-btn');
             if (trigger) {
                 trigger.click();

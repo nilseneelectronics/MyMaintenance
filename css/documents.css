@@ -338,6 +338,14 @@
     border: 1px solid var(--accent-secondary);
 }
 
+.doc-privacy-tag.neighborhood {
+    color: #fff;
+    background: var(--accent-secondary);
+    border: 1px solid var(--accent-secondary);
+    font-size: 0.6em;
+    padding: 3px 6px;
+}
+
 .doc-privacy-tag.private {
     color: var(--text-secondary);
     background: var(--bg-primary);
