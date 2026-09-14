@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyVehicles - MyMaintenance</title>
+    <title>Vedlikeholdt</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
         <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/header.css">
@@ -44,7 +44,12 @@
                 <h3>Vehicle Photos</h3>
                 
                 <div class="big-photo-container" id="big-photo-container">
-                    <img id="main-home-photo" src="https://picsum.photos/id/1015/1200/675" alt="Vehicle photo">
+                    <img id="main-home-photo" alt="Vehicle photo" hidden>
+                    <div class="photo-empty-state" role="button" tabindex="0" aria-label="Add photos">
+                        <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg>
+                        <strong>No pictures added yet</strong>
+                        <span>Press to add photo</span>
+                    </div>
                     
                     <div class="photo-arrows">
                         <button class="arrow left" id="prev-arrow">
@@ -262,11 +267,6 @@
                             <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H180v600h600v-335q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h58v-58q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v58h57q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-57v57q0 12.75-8.68 21.37-8.67 8.63-21.5 8.63-12.82 0-21.32-8.63-8.5-8.62-8.5-21.37v-57Z"/></svg>
                             Add pictures
                         </button>
-                        <div class="photo-picker-options" id="ap-photo-options">
-                            <button type="button" data-source="camera">Take picture</button>
-                            <button type="button" data-source="library">Select from library</button>
-                            <button type="button" data-source="documents">Select from documents</button>
-                        </div>
                     </div>
                 </div>
 
@@ -511,16 +511,7 @@
     
     
     
-    <script>
-        window.GALLERY_IMAGES = [
-            'https://picsum.photos/id/1015/1200/675',
-            'https://picsum.photos/id/111/1200/675',
-            'https://picsum.photos/id/112/1200/675',
-            'https://picsum.photos/id/113/1200/675',
-            'https://picsum.photos/id/114/1200/675'
-        ];
-        window.GALLERY_STORAGE_KEY = 'floorplan_vehicle_photos';
-    </script>
+    <script>window.GALLERY_STORAGE_KEY = 'floorplan_vehicle_photos';</script>
     <script src="../script/modules/events.js"></script>
     <script src="../script/modules/assets.js"></script>
     <script src="../script/modules/event-tools.js"></script>

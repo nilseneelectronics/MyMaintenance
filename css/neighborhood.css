@@ -9,12 +9,100 @@
     overflow: hidden;
 }
 
-/* MyNeighborhood: stretch photo / events / docs boxes to full width */
-#nb-photo-box,
-.planned-box:has(#nb-events-list),
-.docs-box:has(#nb-docs-list) {
-    grid-column: span 18;
-    grid-row: auto;
+/* Uses the shared MyHomes/MyVehicles grid rules. */
+
+/* Neighborhood becomes a full-width single column sooner on narrow screens. */
+@media (max-width: 747px) {
+    .homes-content-grid:has(#nb-photo-box) {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        padding: 0 10px;
+    }
+
+    .homes-content-grid:has(#nb-photo-box) > * {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    /* Match the shared compact photo arrangement before stacking it. */
+    #nb-photo-box {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    #nb-photo-box h3 {
+        flex: 1 1 100%;
+        margin-bottom: 4px;
+    }
+
+    #nb-photo-box .big-photo-container {
+        flex: 0 1 48%;
+        align-self: stretch;
+        min-width: 0;
+    }
+
+    #nb-photo-box .photo-box-side {
+        flex: 1 1 0%;
+        align-self: stretch;
+        justify-content: space-between;
+    }
+
+    #nb-photo-box .photo-thumbs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    #nb-photo-box .photo-thumbs img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 25px;
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        background-color: #e8f5e9;
+        min-width: 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #nb-photo-box .photo-thumbs img[data-photo-placeholder="true"] {
+        object-fit: contain;
+        padding: 9px;
+        box-sizing: border-box;
+        background: var(--bg-primary);
+        border-color: var(--accent-primary);
+    }
+}
+
+/* Override the earlier Neighborhood compact layout on actual phone widths. */
+@media (max-width: 520px) {
+    #nb-photo-box {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    #nb-photo-box h3 {
+        flex: none;
+        margin-bottom: 8px;
+    }
+
+    #nb-photo-box .big-photo-container {
+        flex: 1 1 auto;
+        align-self: auto;
+        width: 100%;
+    }
+
+    #nb-photo-box .photo-box-side {
+        flex: none;
+        align-self: auto;
+        justify-content: flex-start;
+    }
+
+    #nb-photo-box .photo-thumbs { display: none; }
 }
 
 .neighbor-list {
@@ -494,6 +582,13 @@
 #nb-doc-add-popup,
 #nb-doc-preview {
     z-index: 30000;
+}
+
+#nbp-cancel {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+    text-decoration: none;
 }
 
 /* ---- Required field marker ---- */

@@ -1,4 +1,73 @@
+const commonDialogs = (function () {
+    const stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = new URL('../../css/dialogs.css', document.currentScript.src).href;
+    document.head.appendChild(stylesheet);
+    const queue = [];
+    let active = null;
+    function next() {
+        if (active || !queue.length) return;
+        const request = queue.shift();
+        const previousFocus = document.activeElement;
+        const dialog = document.createElement('dialog');
+        dialog.className = 'mm-message-dialog';
+        dialog.setAttribute('aria-labelledby', 'mm-message-title');
+        dialog.setAttribute('aria-describedby', 'mm-message-body');
+        dialog.innerHTML = '<h3 id="mm-message-title"></h3><p id="mm-message-body"></p><div class="mm-message-actions"><button type="button" class="mm-message-cancel"></button><button type="button" class="mm-message-confirm"></button></div>';
+        dialog.querySelector('h3').textContent = request.title || (request.confirm ? 'Please confirm' : 'MyMaintenance');
+        dialog.querySelector('p').textContent = String(request.message);
+        const cancel = dialog.querySelector('.mm-message-cancel');
+        const confirm = dialog.querySelector('.mm-message-confirm');
+        cancel.textContent = request.cancelLabel || 'Cancel';
+        confirm.textContent = request.confirmLabel || (request.confirm ? 'Confirm' : 'OK');
+        cancel.hidden = !request.confirm;
+        function finish(value) {
+            if (!active || active.dialog !== dialog) return;
+            active = null;
+            dialog.close();
+            dialog.remove();
+            if (previousFocus && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+            request.resolve(value);
+            next();
+        }
+        active = { dialog, finish };
+        cancel.onclick = () => finish(false);
+        confirm.onclick = () => finish(true);
+        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
+        document.body.appendChild(dialog);
+        dialog.showModal();
+        (request.confirm ? cancel : confirm).focus();
+    }
+    // Keep keyboard events from reaching popups underneath this dialog.
+    let suppressKeyUp = null;
+    window.addEventListener('keydown', event => {
+        if (!active) return;
+        if (event.key === 'Escape' || event.key === 'Enter') {
+            event.preventDefault();
+            suppressKeyUp = event.key;
+            if (!event.repeat) active.finish(event.key === 'Enter' && document.activeElement === active.dialog.querySelector('.mm-message-confirm'));
+        }
+        event.stopImmediatePropagation();
+    }, true);
+    window.addEventListener('keyup', event => {
+        if (active || event.key === suppressKeyUp) {
+            event.stopImmediatePropagation();
+            if (event.key === suppressKeyUp) { event.preventDefault(); suppressKeyUp = null; }
+        }
+    }, true);
+    return function (message, options) {
+        return new Promise(resolve => { queue.push(Object.assign({}, options, { message, resolve })); next(); });
+    };
+})();
+
 window.MyMaintenanceCommonUi = {
+    alert: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: false })); },
+    confirm: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: true })); },
+    confirmDiscard: function (onDiscard) {
+        return this.confirm('Your unsaved changes will be lost.', {
+            title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard'
+        }).then(discard => { if (discard) onDiscard(); });
+    },
     initCommonUiInteractions() {
         // Browsers change focused number fields when the user scrolls. Blur first
         // so the scroll keeps moving the page/modal instead of changing a value.

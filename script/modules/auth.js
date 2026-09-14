@@ -1,5 +1,32 @@
 window.MyMaintenanceAuth = {
     _config: null,
+    emailActionUrl() { return this._getConfig().emailActionUrl; },
+
+    async sendRecovery(email) {
+        const { response } = await this._supabaseRequest('recover?redirect_to=' + encodeURIComponent(this.emailActionUrl()), {
+            method: 'POST', body: { email }
+        });
+        if (!response.ok) throw new Error(response.status === 429 ? 'Too many emails requested. Please try again later.' : 'Could not send reset email. Please try again.');
+    },
+
+    async familyRequest(action, payload = {}) {
+        const session = await this._getSupabaseSession();
+        if (!session) throw new Error('Please sign in first.');
+        const config = this._getConfig();
+        const response = await fetch(config.supabaseUrl + '/functions/v1/family-invitations', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', apikey: config.supabasePublishableKey, Authorization: 'Bearer ' + session.access_token },
+            body: JSON.stringify({ ...payload, action })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Invitation service unavailable. Please try again later.');
+        return data;
+    },
+
+    safeNext() {
+        const next = new URLSearchParams(location.search).get('next') || 'dashboard.html';
+        const file = next.split('?')[0];
+        return [...this._getLoggedInPages(), 'email-action.html'].includes(file) ? next : 'dashboard.html';
+    },
 
     _getConfig() {
         if (this._config) return this._config;
@@ -45,6 +72,7 @@ window.MyMaintenanceAuth = {
 
     _storeSupabaseSession(session) {
         if (!session?.access_token) return;
+        if (!session.expires_at && session.expires_in) session = { ...session, expires_at: Math.floor(Date.now() / 1000) + Number(session.expires_in) };
         localStorage.setItem(this._getTokenKey(), session.access_token);
         localStorage.setItem(this._getSessionKey(), JSON.stringify(session));
     },
@@ -193,7 +221,7 @@ window.MyMaintenanceAuth = {
             if (!requiresAuth) {
                 if (publicOnlyPages.has(page) && user) {
                     document.body.classList.add('logged-in');
-                    window.location.href = this.resolvePageUrl('dashboard.html');
+                    window.location.href = this.resolvePageUrl(this.safeNext());
                 }
                 return;
             }
@@ -314,6 +342,29 @@ window.MyMaintenanceAuth = {
         const switchToSignin = document.getElementById('switch-to-signin');
         const signinForm = document.getElementById('signin-form');
         const signupForm = document.getElementById('signup-form');
+        const forgotPasswordButton = document.getElementById('forgot-password');
+        const resendButton = document.createElement('button');
+        resendButton.type = 'button';
+        resendButton.className = 'auth-forgot-password';
+        resendButton.textContent = 'Resend verification email';
+        signupForm?.querySelector('button[type="submit"]')?.after(resendButton);
+        resendButton.addEventListener('click', async () => {
+            const emailInput = signupForm?.querySelector('input[type="email"]');
+            clearSignupMessage();
+            if (!emailInput?.value || !emailInput.validity.valid) return showSignupError('Enter a valid email address first.', [emailInput]);
+            resendButton.disabled = true;
+            try {
+                const { response } = await this._supabaseRequest('resend?redirect_to=' + encodeURIComponent(this.emailActionUrl()), { method: 'POST', body: { type: 'signup', email: emailInput.value.trim() } });
+                if (!response.ok) throw new Error('Could not resend. Please wait before trying again.');
+                if (signupMessage) {
+                    signupMessage.textContent = 'If verification is needed, an email has been sent. Check your inbox and spam folder.';
+                    signupMessage.classList.add('success');
+                }
+            } catch (error) { showSignupError(error.message); }
+            finally { resendButton.disabled = false; }
+        });
+        const signinMessage = document.getElementById('signin-message');
+        const signupMessage = document.getElementById('signup-message');
         const urlParams = new URLSearchParams(window.location.search);
 
         if (urlParams.get('mode') === 'signup') {
@@ -345,6 +396,58 @@ window.MyMaintenanceAuth = {
         wireEnterSubmit(signinForm);
         wireEnterSubmit(signupForm);
 
+        const clearSigninMessage = () => {
+            if (signinMessage) {
+                signinMessage.textContent = '';
+                signinMessage.classList.remove('success');
+            }
+            if (signinForm) signinForm.querySelectorAll('input').forEach((input) => input.classList.remove('signin-invalid'));
+        };
+
+        const showSigninMessage = (message, success) => {
+            if (signinMessage) {
+                signinMessage.textContent = message;
+                signinMessage.classList.toggle('success', !!success);
+            }
+        };
+
+        const showInvalidLogin = () => {
+            if (signinForm) signinForm.querySelectorAll('input').forEach((input) => {
+                input.classList.remove('signin-invalid');
+                void input.offsetWidth;
+                input.classList.add('signin-invalid');
+            });
+            showSigninMessage('Invalid login credentials.');
+        };
+
+        const clearSignupMessage = () => {
+            if (signupMessage) {
+                signupMessage.textContent = '';
+                signupMessage.classList.remove('success');
+            }
+            if (signupForm) signupForm.querySelectorAll('input').forEach((input) => input.classList.remove('signin-invalid'));
+        };
+
+        const showSignupError = (message, invalidInputs = []) => {
+            invalidInputs.forEach((input) => {
+                if (!input) return;
+                input.classList.remove('signin-invalid');
+                void input.offsetWidth;
+                input.classList.add('signin-invalid');
+            });
+            if (signupMessage) {
+                signupMessage.textContent = message;
+                signupMessage.classList.remove('success');
+            }
+        };
+
+        if (signinForm) signinForm.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('input', clearSigninMessage);
+        });
+        if (signupForm) signupForm.querySelectorAll('input').forEach((input) => {
+            input.addEventListener('input', clearSignupMessage);
+        });
+
         document.querySelectorAll('.password-toggle').forEach((button) => {
             const input = button.closest('.input-group')?.querySelector('input');
             if (!input) return;
@@ -375,6 +478,11 @@ window.MyMaintenanceAuth = {
                 const email = (inputs[0]?.value || '').trim();
                 const password = inputs[1]?.value || '';
 
+                if (!email || !password) {
+                    showInvalidLogin();
+                    return;
+                }
+
                 try {
                     if (this.hasSupabase()) {
                         const { response, data } = await this._supabaseRequest('token?grant_type=password', {
@@ -382,12 +490,16 @@ window.MyMaintenanceAuth = {
                             body: { email, password }
                         });
                         if (!response.ok || !data?.access_token) {
-                            alert(data?.msg || data?.message || 'Invalid email or password.');
+                            if (data?.error_code === 'email_not_confirmed' || data?.code === 'email_not_confirmed') {
+                                showSigninMessage('Please verify your email first. You can resend the verification email under Sign up.');
+                                return;
+                            }
+                            showInvalidLogin();
                             return;
                         }
                         this._storeSupabaseSession(data);
                         const params = new URLSearchParams(window.location.search);
-                        const next = params.get('next') || 'dashboard.html';
+                        const next = this.safeNext();
                         window.location.href = this.resolvePageUrl(next);
                         return;
                     }
@@ -397,17 +509,21 @@ window.MyMaintenanceAuth = {
                         { email, password }
                     );
                     if (!response.ok || !data?.token) {
-                        alert(data?.message || 'Invalid credentials.');
+                        showInvalidLogin();
                         return;
                     }
                     localStorage.setItem(tokenKey, data.token);
                     const params = new URLSearchParams(window.location.search);
-                    const next = params.get('next') || 'dashboard.html';
+                    const next = this.safeNext();
                     window.location.href = this.resolvePageUrl(next);
                 } catch (_) {
+                    if (this.hasSupabase()) {
+                        showSigninMessage('Could not sign in. Please try again.');
+                        return;
+                    }
                     localStorage.setItem(tokenKey, 'offline-token');
                     const params = new URLSearchParams(window.location.search);
-                    const next = params.get('next') || 'dashboard.html';
+                    const next = this.safeNext();
                     window.location.href = this.resolvePageUrl(next);
                 }
             });
@@ -421,38 +537,74 @@ window.MyMaintenanceAuth = {
                 const email = (inputs[1]?.value || '').trim();
                 const password = inputs[2]?.value || '';
                 const confirmPassword = inputs[3]?.value || '';
+                const emailIsValid = !!email && !!inputs[1]?.validity.valid;
+                const messages = [];
+                const invalidInputs = [];
 
-                if (password !== confirmPassword) {
-                    alert('Passwords do not match.');
+                if (!name || !email || !password || !confirmPassword) messages.push('Please complete all fields.');
+                if (!name) invalidInputs.push(inputs[0]);
+                if (!emailIsValid) {
+                    messages.push('Invalid email.');
+                    invalidInputs.push(inputs[1]);
+                }
+                if (!password || !confirmPassword || password !== confirmPassword) {
+                    if (password && confirmPassword && password !== confirmPassword) messages.push('Passwords do not match.');
+                    invalidInputs.push(inputs[2], inputs[3]);
+                }
+                if (messages.length) {
+                    showSignupError(messages.join(' '), invalidInputs);
                     return;
                 }
 
                 if (!this.hasSupabase()) {
-                    alert('Sign up is not configured yet.');
+                    window.MyMaintenanceCommonUi.alert('Sign up is not configured yet.');
                     return;
                 }
 
                 try {
-                    const emailRedirectTo = new URL(this.resolvePageUrl('login.html'), window.location.href).href;
-                    const { response, data } = await this._supabaseRequest('signup', {
+                    const emailRedirectTo = this.emailActionUrl();
+                    const { response, data } = await this._supabaseRequest('signup?redirect_to=' + encodeURIComponent(emailRedirectTo), {
                         method: 'POST',
                         body: {
                             email,
                             password,
-                            data: { display_name: name },
-                            options: { emailRedirectTo }
+                            data: { display_name: name }
                         }
                     });
                     if (!response.ok) {
-                        alert(data?.msg || data?.message || 'Could not create account.');
+                        const detail = String(data?.msg || data?.message || '').toLowerCase();
+                        const invalidEmail = detail.includes('email') && (detail.includes('invalid') || detail.includes('valid'));
+                        showSignupError(invalidEmail ? 'Invalid email.' : 'Could not create account.', invalidEmail ? [inputs[1]] : []);
                         return;
                     }
                     if (data?.access_token) this._storeSupabaseSession(data);
-                    alert('Check your email to confirm your account.');
+                    await window.MyMaintenanceCommonUi.alert(data?.access_token ? 'Your account is ready. You can sign in.' : 'Check your email to confirm your account before signing in.');
                     container.classList.remove('signup-mode');
                 } catch (_) {
-                    alert('Could not connect. Please try again.');
+                    showSignupError('Could not connect. Please try again.');
                 }
+            });
+        }
+
+        if (forgotPasswordButton) {
+            forgotPasswordButton.addEventListener('click', async () => {
+                if (forgotPasswordButton.disabled) return;
+                const email = (signinForm?.querySelector('input[type="email"]')?.value || '').trim();
+                if (!email) {
+                    showSigninMessage('Enter your email address first.');
+                    return;
+                }
+                if (!this.hasSupabase()) {
+                    showSigninMessage('Password reset is not configured.');
+                    return;
+                }
+                forgotPasswordButton.disabled = true;
+                try {
+                    await this.sendRecovery(email);
+                    showSigninMessage('If that account exists, a reset email was sent.', true);
+                } catch (error) {
+                    showSigninMessage(error.message || 'Could not send reset email. Please try again.');
+                } finally { forgotPasswordButton.disabled = false; }
             });
         }
     }

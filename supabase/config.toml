@@ -1,0 +1,5 @@
+project_id = "MyMaintenance"
+
+[functions.family-invitations]
+# JWTs are validated with Auth's get-user endpoint inside the function.
+verify_jwt = false

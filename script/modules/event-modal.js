@@ -26,6 +26,7 @@
         const cardEl = modal.querySelector('.event-modal-card');
 
         let state = { planned: false, asset: '', editingKey: null, editingIndex: -1 };
+        let initialEventState = '';
         let eventCalendar = null;
         let eventCalendarTarget = null;
         let eventTimePicker = null;
@@ -371,6 +372,7 @@
                     if (opts.asset) selectAsset(opts.asset);
                 }
             }
+            initialEventState = eventStateSnapshot();
             if (evName) evName.focus();
         }
 
@@ -380,6 +382,20 @@
             closeEventTimePicker();
             state.editingKey = null;
             state.editingIndex = -1;
+        }
+
+        function eventStateSnapshot() {
+            return JSON.stringify({
+                name: evName ? evName.value : '', start: eventDateValue(evStartDate), finish: eventDateValue(evFinishDate),
+                startTime: evStartTime ? evStartTime.value : '', finishTime: evFinishTime ? evFinishTime.value : '',
+                location: evLocation ? evLocation.value : '', description: evDesc ? evDesc.value : '',
+                planned: state.planned, asset: state.asset
+            });
+        }
+
+        function requestClose() {
+            if (eventStateSnapshot() === initialEventState) return close();
+            window.MyMaintenanceCommonUi.confirmDiscard(close);
         }
 
         [evStartDate, evFinishDate].forEach(function (field) {
@@ -396,7 +412,7 @@
                 openEventTimePicker(field);
             });
         });
-        if (evCancel) evCancel.addEventListener('click', close);
+        if (evCancel) evCancel.addEventListener('click', requestClose);
         if (evAdd) evAdd.addEventListener('click', function () {
             if (!window.MyMaintenanceEvents) return;
             const name = evName ? evName.value.trim() : '';
@@ -439,10 +455,10 @@
             close();
         });
         if (modal) modal.addEventListener('click', function (e) {
-            if (e.target === modal && window.confirm('Cancel adding? Your unsaved changes will be lost.')) close();
+            if (e.target === modal) requestClose();
         });
         if (evName) evName.addEventListener('keydown', function (e) { if (e.key === 'Enter' && evAdd) evAdd.click(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal && modal.classList.contains('open')) close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && modal && modal.classList.contains('open')) requestClose(); });
 
         if (evPlanned) {
             evPlanned.addEventListener('change', function () {
