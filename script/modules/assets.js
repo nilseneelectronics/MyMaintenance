@@ -55,11 +55,11 @@
     function database() { return window.MyMaintenanceData; }
 
     function asHome(row) {
-        return Object.assign({ id: row.id, name: row.name, address: row.address || '' }, row.details || {});
+        return Object.assign({}, row.details || {}, { id: row.id, name: row.name, address: row.address || '', ownerId: row.owner_id, registeredBy: row.registered_by, familyId: row.family_id });
     }
 
     function asVehicle(row) {
-        return Object.assign({ id: row.id, name: row.name, registration: row.registration_number || '' }, row.details || {});
+        return Object.assign({}, row.details || {}, { id: row.id, name: row.name, registration: row.registration_number || '', ownerId: row.owner_id, registeredBy: row.registered_by, familyId: row.family_id });
     }
 
     function persistHome(home, updating) {
@@ -70,7 +70,7 @@
         db.request('homes', {
             method: updating ? 'PATCH' : 'POST',
             query: updating ? { id: `eq.${home.id}` } : undefined,
-            body: { id: home.id, name: home.name, address: home.address || '', details: details },
+            body: { id: home.id, name: home.name, address: home.address || '', owner_id: home.ownerId, details: details },
             prefer: 'return=representation'
         }).catch(function (error) { console.error('Could not save home:', error); });
     }
@@ -83,7 +83,7 @@
         db.request('vehicles', {
             method: updating ? 'PATCH' : 'POST',
             query: updating ? { id: `eq.${vehicle.id}` } : undefined,
-            body: { id: vehicle.id, name: vehicle.name, registration_number: vehicle.registration || '', details: details },
+            body: { id: vehicle.id, name: vehicle.name, registration_number: vehicle.registration || '', owner_id: vehicle.ownerId, details: details },
             prefer: 'return=representation'
         }).catch(function (error) { console.error('Could not save vehicle:', error); });
     }
@@ -110,6 +110,8 @@
                     const value = labelFor(record);
                     button.type = 'button';
                     button.dataset.value = value;
+                    button.dataset.assetId = record.id;
+                    button.dataset.assetKind = label === 'Addresses' ? 'home' : 'vehicle';
                     button.textContent = value;
                     item.appendChild(button);
                     fragment.appendChild(item);

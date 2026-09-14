@@ -215,6 +215,10 @@
         return ['invited', 'pending', 'draft'].includes(member.status);
     }
 
+    function isIncomingInvite(member) {
+        return !!member.incomingInvitation;
+    }
+
     function renderMembers(listId) {
         var listEl = $(listId);
         if (!listEl) return;
@@ -222,7 +226,8 @@
 
         family.forEach(function (m) {
             var pending = isPendingInvite(m);
-            if (pending && listId === 'access-list') return;
+            var incoming = isIncomingInvite(m);
+            if ((pending || incoming) && listId === 'access-list') return;
             var row = document.createElement('div');
             row.className = 'profile-list-row';
             row.setAttribute('role', 'button');
@@ -242,7 +247,7 @@
 
             var title = document.createElement('div');
             title.className = 'profile-row-title';
-            title.textContent = m.name || 'Unnamed';
+            title.textContent = incoming ? (pending ? 'Family invitation' : 'Your family membership') : (m.name || 'Unnamed');
             var badge = document.createElement('span');
             badge.className = 'role-badge ' + (pending ? 'pending' : String(m.role || 'Member').toLowerCase());
             badge.textContent = pending ? 'Invite pending' : (m.role || 'Member');
@@ -250,14 +255,29 @@
 
             var sub = document.createElement('div');
             sub.className = 'profile-row-sub';
-            sub.textContent = m.email + (pending ? (m.sentAt ? ' — Awaiting acceptance' : ' — Email not sent') : '');
+            sub.textContent = incoming
+                ? (pending ? 'Accept this invitation to join the family.' : 'You are an active member of this family.')
+                : m.email + (pending ? (m.sentAt ? ' — Awaiting acceptance' : ' — Email not sent') : '');
 
             main.appendChild(title);
             main.appendChild(sub);
 
             var actions = document.createElement('div');
             actions.className = 'profile-row-actions';
-            if (pending) {
+            if (incoming && pending) {
+                var acceptInvite = document.createElement('button');
+                acceptInvite.type = 'button'; acceptInvite.className = 'profile-row-btn'; acceptInvite.textContent = 'Accept invite';
+                acceptInvite.onclick = async function (event) {
+                    event.stopPropagation(); acceptInvite.disabled = true;
+                    try {
+                        await window.MyMaintenanceAuth.familyRequest('accept', { id: m.id });
+                        await PD.hydrateFamily();
+                        toast('Invitation accepted. You are now a family member.');
+                    } catch (error) { toast(error.message, true); }
+                    finally { acceptInvite.disabled = false; }
+                };
+                actions.appendChild(acceptInvite);
+            } else if (pending) {
                 var cancelInvite = document.createElement('button');
                 cancelInvite.type = 'button'; cancelInvite.className = 'profile-row-btn'; cancelInvite.textContent = 'Cancel invite';
                 cancelInvite.onclick = async function (event) {
@@ -285,7 +305,9 @@
             row.appendChild(main);
             row.appendChild(actions);
 
-            if (pending) {
+            if (incoming && pending) {
+                row.addEventListener('click', function () { toast('Use Accept invite to join this family.'); });
+            } else if (pending) {
                 row.addEventListener('click', function () {
                     toast(m.sentAt ? 'Waiting for this person to accept the invitation.' : 'This invitation has not been emailed. Email sending must be configured first.', !m.sentAt);
                 });
@@ -414,11 +436,19 @@
 
     /* ===================== CONNECTED ASSETS ===================== */
     function ownerLine(asset) {
-        var owner = ownerMember();
-        if (!asset.ownerId || asset.ownerId === (owner && owner.id)) return 'Owner: You';
+        var me = family.find(function (m) { return String(m.email || '').toLowerCase() === String(profile.email || '').toLowerCase(); });
+        if (!asset.ownerId || asset.ownerId === (me && me.id)) return 'Owner: You';
         var found = family.find(function (m) { return m.id === asset.ownerId; });
         if (found) return 'Owner: ' + found.name;
-        return asset.ownerName ? 'Owner: ' + asset.ownerName : 'Owner: Someone else';
+        return asset.ownerName ? 'Owner: ' + asset.ownerName : 'Owner: Family member';
+    }
+
+    function registeredByLine(asset) {
+        var me = family.find(function (m) { return String(m.email || '').toLowerCase() === String(profile.email || '').toLowerCase(); });
+        var registeredBy = asset.registeredBy || asset.ownerId;
+        if (!registeredBy || registeredBy === (me && me.id)) return 'Registered by: You';
+        var found = family.find(function (m) { return m.id === registeredBy; });
+        return found ? 'Registered by: ' + found.name : 'Registered by: Family member';
     }
 
     function labelOf(kind, asset) {
@@ -465,7 +495,7 @@
             var sub = document.createElement('div');
             sub.className = 'profile-row-sub';
             var typeAttr = kind === 'home' ? asset.houseType : asset.type;
-            sub.textContent = ownerLine(asset) + (typeAttr ? ' - ' + typeAttr : '');
+            sub.textContent = ownerLine(asset) + ' · ' + registeredByLine(asset) + (typeAttr ? ' - ' + typeAttr : '');
 
             main.appendChild(title);
             main.appendChild(sub);

@@ -30,19 +30,31 @@ async function main() {
     nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
     fetch:async(url,options)=>{
       if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({id:'owner',email:'owner@example.test',email_confirmed_at:verified?'2026-01-01':null}));
+      if(url.includes('family_members?')) return new Response(JSON.stringify([]));
+      if(url.endsWith('/rest/v1/families')) return new Response(JSON.stringify([{id:'44444444-4444-4444-8444-444444444444'}]));
+      if(url.endsWith('/rest/v1/family_members')) return new Response(JSON.stringify([]));
+      if(url.includes('/rest/v1/homes?') || url.includes('/rest/v1/vehicles?')) return new Response(JSON.stringify([]));
+      if(url.includes('/rest/v1/profiles?')) return new Response(JSON.stringify([]));
+      if(url.includes('family_invitations?') && options.method==='GET') {
+        operations.push('list');
+        if(url.includes('email=eq.')) return new Response(JSON.stringify([{...row,id:'22222222-2222-4222-8222-222222222222',status:'pending'}]));
+        if(url.includes('recipient_id=eq.')) return new Response(JSON.stringify([{...row,id:'33333333-3333-4333-8333-333333333333',status:'accepted'}]));
+        return new Response(JSON.stringify([]));
+      }
       if(url.includes('reserve_family_invitation')){operations.push('reserve');return new Response(JSON.stringify(row));}
       if(url.includes('accept_family_invitation'))return new Response(JSON.stringify({code:'P0001',message:'Invitation not found for your email address.'}),{status:400});
-      const body=JSON.parse(options.body);operations.push(body.status);return new Response(JSON.stringify([{...row,...body}]));
+      const body=JSON.parse(options.body);operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
     }
   };
-  vm.runInNewContext(require('node:module').stripTypeScriptTypes(read('supabase/functions/family-invitations/index.ts').replace(/^import .*\n/,'')),backend);
+  vm.runInNewContext(require('node:module').stripTypeScriptTypes(read('supabase/functions/family-invitations/index.ts').replace(/^import[^\r\n]*\r?\n/,'')),backend);
   const request = body=>new Request('https://test.invalid/functions/v1/family-invitations',{method:'POST',headers:{authorization:'Bearer test','Content-Type':'application/json',origin:'http://127.0.0.1:5500'},body:JSON.stringify(body)});
   const send={action:'send',name:'Recipient',email:'recipient@example.test',role:'Member'};
   verified=false;assert.equal((await handler(request(send))).status,401);assert.equal(operations.length,0);
-  verified=true;const result=await (await handler(request(send))).json();assert.equal(result.member.status,'invited');assert(result.member.sentAt);assert.deepEqual(operations,['reserve','smtp','pending']);
-  operations.length=0;smtpFails=true;assert.equal((await handler(request(send))).status,400);assert.deepEqual(operations,['reserve','smtp','failed']);
+  verified=true;const result=await (await handler(request(send))).json();assert.equal(result.member.status,'invited');assert(result.member.sentAt);assert.deepEqual(operations,['reserve','family','smtp','pending']);
+  operations.length=0;smtpFails=true;assert.equal((await handler(request(send))).status,400);assert.deepEqual(operations,['reserve','family','smtp','failed']);
   assert.equal((await handler(request({action:'send',...send,role:'Owner'}))).status,400);
   assert.equal((await handler(request({action:'accept',id}))).status,400);
+  operations.length=0;const listed=await (await handler(request({action:'list'}))).json();assert.deepEqual(listed.members,[]);assert.equal(listed.familyId,'44444444-4444-4444-8444-444444444444');
 
   // Test reset landing-page flow without a real session or password change.
   const elements={};

@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const KEY = 'floorplan_user_docs';
     let selectedAssetValue = '';
+    let selectedAssetId = '';
+    let selectedAssetKind = '';
     let selectedDocType = '';
     let docSort = 'uploaded';
     let docReverse = false;
@@ -76,12 +78,16 @@ document.addEventListener('DOMContentLoaded', () => {
         delete extra.filePath;
         delete extra.data;
         delete extra.payloadInDB;
+        delete extra.homeId;
+        delete extra.vehicleId;
         return {
             id: item.id,
             title: item.name,
             document_type: item.docType || null,
             document_date: item.performed || null,
             file_path: item.filePath || null,
+            home_id: item.homeId || null,
+            vehicle_id: item.vehicleId || null,
             extracted_data: extra
         };
     }
@@ -105,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
             docType: row.document_type || extra.docType || '',
             performed: row.document_date || '',
             filePath: row.file_path || '',
+            homeId: row.home_id || '',
+            vehicleId: row.vehicle_id || '',
             uploaded: extra.uploaded || String(row.created_at || '').slice(0, 10),
             created: extra.created || new Date(row.created_at || Date.now()).getTime()
         });
@@ -582,6 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (formatInput) formatInput.value = '';
         if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
         selectedAssetValue = '';
+        selectedAssetId = ''; selectedAssetKind = '';
         if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
         if (assetDropdown) assetDropdown.classList.remove('open');
         if (assetMenu) assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
@@ -817,6 +826,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = e.target.closest('button[data-value]');
             if (!btn) return;
             selectedAssetValue = btn.dataset.value;
+            selectedAssetId = btn.dataset.assetId || '';
+            selectedAssetKind = btn.dataset.assetKind || '';
             if (assetValueEl) assetValueEl.textContent = btn.textContent;
             assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
             btn.classList.add('selected');
@@ -1793,6 +1804,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         rec.name = name;
         rec.asset = asset;
+        rec.homeId = selectedAssetKind === 'home' ? selectedAssetId : '';
+        rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
         rec.performed = performedDt ? toISO(performedDt) : '';
