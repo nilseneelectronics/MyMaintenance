@@ -80,11 +80,7 @@ window.MyMaintenanceProfileData = (function () {
 
     function getFamily() {
         var family = load(FAMILY_KEY, defaultFamily);
-        if (Array.isArray(family) && family.some(function (member) { return String(member.id || '').indexOf('fam_') === 0; })) {
-            family = defaultFamily();
-            saveFamily(family);
-        }
-        return family;
+        return Array.isArray(family) ? family : [];
     }
 
     function saveFamily(family) {
@@ -147,6 +143,16 @@ window.MyMaintenanceProfileData = (function () {
         syncTimer = setTimeout(syncCloud, 80);
     }
 
+    async function hydrateFamily() {
+        try {
+            var result = await window.MyMaintenanceAuth.familyRequest('list');
+            var legacy = getFamily().filter(member => !member.serverInvitation &&
+                !result.members.some(remote => remote.email.toLowerCase() === String(member.email || '').toLowerCase()));
+            saveFamily(legacy.concat(result.members));
+            window.dispatchEvent(new CustomEvent('profile:changed'));
+        } catch (error) { console.warn('Could not refresh family invitations:', error.message); }
+    }
+
     async function hydrate() {
         var db = window.MyMaintenanceData;
         if (!db) return;
@@ -169,6 +175,7 @@ window.MyMaintenanceProfileData = (function () {
                 localStorage.setItem(NOTIF_KEY, JSON.stringify(cloudNotifications));
             }
             window.dispatchEvent(new CustomEvent('profile:changed'));
+            await hydrateFamily();
             if (!row) queueCloudSync();
         } catch (error) {
             console.error('Could not load profile:', error);
@@ -217,6 +224,7 @@ window.MyMaintenanceProfileData = (function () {
         getNotifications: getNotifications,
         saveNotifications: saveNotifications,
         hydrate: hydrate,
+        hydrateFamily: hydrateFamily,
         getUser: getUser,
         saveUser: saveUser,
         hasPassword: hasPassword,

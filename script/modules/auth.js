@@ -1,5 +1,32 @@
 window.MyMaintenanceAuth = {
     _config: null,
+    emailActionUrl() { return this._getConfig().emailActionUrl; },
+
+    async sendRecovery(email) {
+        const { response } = await this._supabaseRequest('recover?redirect_to=' + encodeURIComponent(this.emailActionUrl()), {
+            method: 'POST', body: { email }
+        });
+        if (!response.ok) throw new Error(response.status === 429 ? 'Too many emails requested. Please try again later.' : 'Could not send reset email. Please try again.');
+    },
+
+    async familyRequest(action, payload = {}) {
+        const session = await this._getSupabaseSession();
+        if (!session) throw new Error('Please sign in first.');
+        const config = this._getConfig();
+        const response = await fetch(config.supabaseUrl + '/functions/v1/family-invitations', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', apikey: config.supabasePublishableKey, Authorization: 'Bearer ' + session.access_token },
+            body: JSON.stringify({ ...payload, action })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Invitation service unavailable. Please try again later.');
+        return data;
+    },
+
+    safeNext() {
+        const next = new URLSearchParams(location.search).get('next') || 'dashboard.html';
+        const file = next.split('?')[0];
+        return [...this._getLoggedInPages(), 'email-action.html'].includes(file) ? next : 'dashboard.html';
+    },
 
     _getConfig() {
         if (this._config) return this._config;
@@ -45,6 +72,7 @@ window.MyMaintenanceAuth = {
 
     _storeSupabaseSession(session) {
         if (!session?.access_token) return;
+        if (!session.expires_at && session.expires_in) session = { ...session, expires_at: Math.floor(Date.now() / 1000) + Number(session.expires_in) };
         localStorage.setItem(this._getTokenKey(), session.access_token);
         localStorage.setItem(this._getSessionKey(), JSON.stringify(session));
     },
@@ -193,7 +221,7 @@ window.MyMaintenanceAuth = {
             if (!requiresAuth) {
                 if (publicOnlyPages.has(page) && user) {
                     document.body.classList.add('logged-in');
-                    window.location.href = this.resolvePageUrl('dashboard.html');
+                    window.location.href = this.resolvePageUrl(this.safeNext());
                 }
                 return;
             }
@@ -315,6 +343,26 @@ window.MyMaintenanceAuth = {
         const signinForm = document.getElementById('signin-form');
         const signupForm = document.getElementById('signup-form');
         const forgotPasswordButton = document.getElementById('forgot-password');
+        const resendButton = document.createElement('button');
+        resendButton.type = 'button';
+        resendButton.className = 'auth-forgot-password';
+        resendButton.textContent = 'Resend verification email';
+        signupForm?.querySelector('button[type="submit"]')?.after(resendButton);
+        resendButton.addEventListener('click', async () => {
+            const emailInput = signupForm?.querySelector('input[type="email"]');
+            clearSignupMessage();
+            if (!emailInput?.value || !emailInput.validity.valid) return showSignupError('Enter a valid email address first.', [emailInput]);
+            resendButton.disabled = true;
+            try {
+                const { response } = await this._supabaseRequest('resend?redirect_to=' + encodeURIComponent(this.emailActionUrl()), { method: 'POST', body: { type: 'signup', email: emailInput.value.trim() } });
+                if (!response.ok) throw new Error('Could not resend. Please wait before trying again.');
+                if (signupMessage) {
+                    signupMessage.textContent = 'If verification is needed, an email has been sent. Check your inbox and spam folder.';
+                    signupMessage.classList.add('success');
+                }
+            } catch (error) { showSignupError(error.message); }
+            finally { resendButton.disabled = false; }
+        });
         const signinMessage = document.getElementById('signin-message');
         const signupMessage = document.getElementById('signup-message');
         const urlParams = new URLSearchParams(window.location.search);
@@ -373,7 +421,10 @@ window.MyMaintenanceAuth = {
         };
 
         const clearSignupMessage = () => {
-            if (signupMessage) signupMessage.textContent = '';
+            if (signupMessage) {
+                signupMessage.textContent = '';
+                signupMessage.classList.remove('success');
+            }
             if (signupForm) signupForm.querySelectorAll('input').forEach((input) => input.classList.remove('signin-invalid'));
         };
 
@@ -384,7 +435,10 @@ window.MyMaintenanceAuth = {
                 void input.offsetWidth;
                 input.classList.add('signin-invalid');
             });
-            if (signupMessage) signupMessage.textContent = message;
+            if (signupMessage) {
+                signupMessage.textContent = message;
+                signupMessage.classList.remove('success');
+            }
         };
 
         if (signinForm) signinForm.querySelectorAll('input').forEach((input) => {
@@ -436,12 +490,16 @@ window.MyMaintenanceAuth = {
                             body: { email, password }
                         });
                         if (!response.ok || !data?.access_token) {
+                            if (data?.error_code === 'email_not_confirmed' || data?.code === 'email_not_confirmed') {
+                                showSigninMessage('Please verify your email first. You can resend the verification email under Sign up.');
+                                return;
+                            }
                             showInvalidLogin();
                             return;
                         }
                         this._storeSupabaseSession(data);
                         const params = new URLSearchParams(window.location.search);
-                        const next = params.get('next') || 'dashboard.html';
+                        const next = this.safeNext();
                         window.location.href = this.resolvePageUrl(next);
                         return;
                     }
@@ -456,7 +514,7 @@ window.MyMaintenanceAuth = {
                     }
                     localStorage.setItem(tokenKey, data.token);
                     const params = new URLSearchParams(window.location.search);
-                    const next = params.get('next') || 'dashboard.html';
+                    const next = this.safeNext();
                     window.location.href = this.resolvePageUrl(next);
                 } catch (_) {
                     if (this.hasSupabase()) {
@@ -465,7 +523,7 @@ window.MyMaintenanceAuth = {
                     }
                     localStorage.setItem(tokenKey, 'offline-token');
                     const params = new URLSearchParams(window.location.search);
-                    const next = params.get('next') || 'dashboard.html';
+                    const next = this.safeNext();
                     window.location.href = this.resolvePageUrl(next);
                 }
             });
@@ -499,19 +557,18 @@ window.MyMaintenanceAuth = {
                 }
 
                 if (!this.hasSupabase()) {
-                    alert('Sign up is not configured yet.');
+                    window.MyMaintenanceCommonUi.alert('Sign up is not configured yet.');
                     return;
                 }
 
                 try {
-                    const emailRedirectTo = new URL(this.resolvePageUrl('login.html'), window.location.href).href;
-                    const { response, data } = await this._supabaseRequest('signup', {
+                    const emailRedirectTo = this.emailActionUrl();
+                    const { response, data } = await this._supabaseRequest('signup?redirect_to=' + encodeURIComponent(emailRedirectTo), {
                         method: 'POST',
                         body: {
                             email,
                             password,
-                            data: { display_name: name },
-                            options: { emailRedirectTo }
+                            data: { display_name: name }
                         }
                     });
                     if (!response.ok) {
@@ -521,7 +578,7 @@ window.MyMaintenanceAuth = {
                         return;
                     }
                     if (data?.access_token) this._storeSupabaseSession(data);
-                    alert('Check your email to confirm your account.');
+                    await window.MyMaintenanceCommonUi.alert(data?.access_token ? 'Your account is ready. You can sign in.' : 'Check your email to confirm your account before signing in.');
                     container.classList.remove('signup-mode');
                 } catch (_) {
                     showSignupError('Could not connect. Please try again.');
@@ -531,6 +588,7 @@ window.MyMaintenanceAuth = {
 
         if (forgotPasswordButton) {
             forgotPasswordButton.addEventListener('click', async () => {
+                if (forgotPasswordButton.disabled) return;
                 const email = (signinForm?.querySelector('input[type="email"]')?.value || '').trim();
                 if (!email) {
                     showSigninMessage('Enter your email address first.');
@@ -540,16 +598,13 @@ window.MyMaintenanceAuth = {
                     showSigninMessage('Password reset is not configured.');
                     return;
                 }
+                forgotPasswordButton.disabled = true;
                 try {
-                    const redirectTo = new URL(this.resolvePageUrl('login.html'), window.location.href).href;
-                    const { response } = await this._supabaseRequest('recover', {
-                        method: 'POST', body: { email: email, redirect_to: redirectTo }
-                    });
-                    if (!response.ok) throw new Error('Reset failed');
+                    await this.sendRecovery(email);
                     showSigninMessage('If that account exists, a reset email was sent.', true);
-                } catch (_) {
-                    showSigninMessage('Could not send reset email. Please try again.');
-                }
+                } catch (error) {
+                    showSigninMessage(error.message || 'Could not send reset email. Please try again.');
+                } finally { forgotPasswordButton.disabled = false; }
             });
         }
     }

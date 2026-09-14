@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apCancel) apCancel.addEventListener('click', closeAddPhotos);
     if (apSave) apSave.addEventListener('click', () => {
         if (pendingPhotos.length === 0) {
-            alert('Please add at least one picture.');
+            window.MyMaintenanceCommonUi.alert('Please add at least one picture.');
             return;
         }
         storedPhotos = storedPhotos.concat(pendingPhotos);

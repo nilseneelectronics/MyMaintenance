@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyNeighborhood - MyMaintenance</title>
+    <title>Vedlikeholdt</title>
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <link rel="stylesheet" href="../css/global.css">
     <link rel="stylesheet" href="../css/header.css">
@@ -106,7 +106,7 @@
                     <label>Amount of houses</label>
                     <div class="nb-houses-stepper">
                         <button type="button" class="nb-houses-step minus" id="nb-houses-minus" aria-label="Remove house">−</button>
-                        <input type="number" id="nb-houses" min="0" placeholder="e.g. 15">
+                        <input type="number" id="nb-houses" min="1" value="1" required placeholder="e.g. 15">
                         <button type="button" class="nb-houses-step plus" id="nb-houses-plus" aria-label="Add house">+</button>
                     </div>
                     <label>Country</label>
@@ -258,6 +258,8 @@
     <script src="../script/modules/stlviewer.js"></script>
     <script src="../script/modules/officeviewer.js"></script>
     <script src="../script/pages/mydocuments.js"></script>
+    <script src="../script/modules/profile-data.js"></script>
+    <script src="../script/modules/neighborhood-defaults.js"></script>
     <script src="../script/pages/myneighborhood.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>

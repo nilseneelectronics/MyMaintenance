@@ -1,0 +1,28 @@
+.mm-message-dialog {
+    box-sizing: border-box;
+    width: min(440px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
+    padding: 28px;
+    border: 1px solid var(--accent-primary, #26b6ad);
+    border-radius: 16px;
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary, #222);
+    box-shadow: 0 16px 60px #0004;
+    font: inherit;
+}
+.mm-message-dialog::backdrop { background: #0008; }
+.mm-message-dialog h3 { margin: 0 0 14px; font-size: 1.25rem; }
+.mm-message-dialog p { margin: 0 0 24px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mm-message-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }
+.mm-message-actions button {
+    font: inherit;
+    padding: 10px 20px;
+    min-height: 44px;
+    border: 1px solid var(--accent-primary, #26b6ad);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.mm-message-cancel { background: transparent; color: inherit; }
+.mm-message-confirm { background: var(--accent-primary, #26b6ad); color: #fff; }
+.mm-message-actions button:focus-visible { outline: 3px solid var(--text-primary, #222); outline-offset: 3px; }

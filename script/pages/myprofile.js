@@ -211,12 +211,18 @@
     }
 
     /* ===================== FAMILY / ACCESS ===================== */
+    function isPendingInvite(member) {
+        return ['invited', 'pending', 'draft'].includes(member.status);
+    }
+
     function renderMembers(listId) {
         var listEl = $(listId);
         if (!listEl) return;
         listEl.innerHTML = '';
 
         family.forEach(function (m) {
+            var pending = isPendingInvite(m);
+            if (pending && listId === 'access-list') return;
             var row = document.createElement('div');
             row.className = 'profile-list-row';
             row.setAttribute('role', 'button');
@@ -238,20 +244,33 @@
             title.className = 'profile-row-title';
             title.textContent = m.name || 'Unnamed';
             var badge = document.createElement('span');
-            badge.className = 'role-badge ' + String(m.role || 'Member').toLowerCase();
-            badge.textContent = m.role || 'Member';
+            badge.className = 'role-badge ' + (pending ? 'pending' : String(m.role || 'Member').toLowerCase());
+            badge.textContent = pending ? 'Invite pending' : (m.role || 'Member');
             title.appendChild(badge);
 
             var sub = document.createElement('div');
             sub.className = 'profile-row-sub';
-            sub.textContent = m.email + (m.status === 'invited' ? ' - Invitation pending' : '');
+            sub.textContent = m.email + (pending ? (m.sentAt ? ' — Awaiting acceptance' : ' — Email not sent') : '');
 
             main.appendChild(title);
             main.appendChild(sub);
 
             var actions = document.createElement('div');
             actions.className = 'profile-row-actions';
-            if ((m.role || 'Member') !== 'Owner') {
+            if (pending) {
+                var cancelInvite = document.createElement('button');
+                cancelInvite.type = 'button'; cancelInvite.className = 'profile-row-btn'; cancelInvite.textContent = 'Cancel invite';
+                cancelInvite.onclick = async function (event) {
+                    event.stopPropagation(); cancelInvite.disabled = true;
+                    try {
+                        if (m.serverInvitation) await window.MyMaintenanceAuth.familyRequest('cancel', { id: m.id });
+                        family = family.filter(x => x.id !== m.id); PD.saveFamily(family); renderMembers('family-list');
+                    } catch (error) { toast(error.message, true); }
+                    finally { cancelInvite.disabled = false; }
+                };
+                actions.appendChild(cancelInvite);
+            }
+            if (!pending && (m.role || 'Member') !== 'Owner') {
                 var manage = document.createElement('button');
                 manage.type = 'button';
                 manage.className = 'profile-row-btn';
@@ -266,7 +285,11 @@
             row.appendChild(main);
             row.appendChild(actions);
 
-            if ((m.role || 'Member') === 'Owner') {
+            if (pending) {
+                row.addEventListener('click', function () {
+                    toast(m.sentAt ? 'Waiting for this person to accept the invitation.' : 'This invitation has not been emailed. Email sending must be configured first.', !m.sentAt);
+                });
+            } else if ((m.role || 'Member') === 'Owner') {
                 row.addEventListener('click', function () { toast('You are the account owner.'); });
             } else {
                 row.addEventListener('click', function () { openMemberAccess(m.id); });
@@ -299,6 +322,7 @@
     function openMemberAccess(id) {
         var m = family.find(function (x) { return x.id === id; });
         if (!m) return;
+        if (isPendingInvite(m)) { toast('This person must accept their invitation before receiving access.', true); return; }
         maMemberId = id;
         var isOwner = (m.role || 'Member') === 'Owner';
         m.role = isOwner ? 'Owner' : (m.role || 'Member');
@@ -340,7 +364,11 @@
     function removeMember() {
         var m = family.find(function (x) { return x.id === maMemberId; });
         if (!m) return;
-        askConfirm('Remove "' + m.name + '" from your family? They will lose access immediately.', function () {
+        askConfirm('Remove "' + m.name + '" from your family?', async function () {
+            if (m.serverInvitation) {
+                try { await window.MyMaintenanceAuth.familyRequest('cancel', { id: m.id }); }
+                catch (error) { toast(error.message, true); return; }
+            }
             family = family.filter(function (x) { return x.id !== m.id; });
             PD.saveFamily(family);
             renderMembers('family-list');
@@ -361,30 +389,27 @@
         openOverlay($('invite-popup'));
     }
 
-    function sendInvite() {
+    async function sendInvite() {
+        if ($('inv-send').disabled) return;
         var name = $('inv-name').value.trim();
         var email = $('inv-email').value.trim();
         if (!name) { toast('Please enter the name.', true); return; }
         if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
-        if (family.some(function (x) { return x.email.toLowerCase() === email.toLowerCase(); })) {
+        if (family.some(function (x) { return x.email.toLowerCase() === email.toLowerCase() && (!isPendingInvite(x) || x.sentAt); })) {
             toast('This email is already part of your family.', true);
             return;
         }
 
-        var role = invRole === 'Owner' ? 'Member' : invRole;
-        family.push({
-            id: 'fam_' + Date.now(),
-            name: name,
-            email: email,
-            role: role,
-            status: 'invited',
-            access: PD.presetAccess(role)
-        });
-        PD.saveFamily(family);
-        renderMembers('family-list');
-        renderMembers('access-list');
-        closeOverlay($('invite-popup'));
-        toast('Invitation sent to ' + email);
+        $('inv-send').disabled = true;
+        $('inv-send').textContent = 'Sending…';
+        try {
+            const result = await window.MyMaintenanceAuth.familyRequest('send', { name, email, role: invRole === 'Viewer' ? 'Viewer' : 'Member' });
+            family = family.filter(x => x.email.toLowerCase() !== email.toLowerCase());
+            family.push(result.member); PD.saveFamily(family);
+            renderMembers('family-list'); renderMembers('access-list'); closeOverlay($('invite-popup'));
+            toast('Invitation sent. Waiting for acceptance.');
+        } catch (error) { toast(error.message, true); }
+        finally { $('inv-send').disabled = false; $('inv-send').textContent = 'Send invite'; }
     }
 
     /* ===================== CONNECTED ASSETS ===================== */
@@ -502,7 +527,7 @@
 
         var owner = ownerMember();
         var recipients = family.filter(function (m) {
-            return m.status !== 'invited' && (m.role || 'Member') !== 'Owner' && m.id !== (owner && owner.id);
+            return !isPendingInvite(m) && (m.role || 'Member') !== 'Owner' && m.id !== (owner && owner.id);
         });
 
         var menu = $('transfer-recipient-menu');
@@ -541,7 +566,7 @@
         var note = '';
         if (transferRecipientId) {
             m = family.find(function (x) { return x.id === transferRecipientId; });
-            if (!m) {
+            if (!m || isPendingInvite(m)) {
                 toast('Recipient no longer exists as a member.', true);
                 return;
             }
@@ -551,20 +576,8 @@
             if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
             var existing = family.find(function (x) { return x.email.toLowerCase() === email.toLowerCase(); });
             if (existing) { toast('Someone with that email is already part of your family.', true); return; }
-            var name = email.split('@')[0].replace(/[._\-]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }).trim();
-            m = {
-                id: 'fam_' + Date.now(),
-                name: name || email,
-                email: email,
-                role: 'Member',
-                status: 'invited',
-                access: PD.presetAccess('Member')
-            };
-            family.push(m);
-            PD.saveFamily(family);
-            renderMembers('family-list');
-            renderMembers('access-list');
-            note = ' (invite sent)';
+            toast('Invite this person first. Ownership can be transferred after they accept.', true);
+            return;
         }
         transferTo(m, note);
     }
@@ -587,14 +600,25 @@
         openOverlay($('password-popup'));
     }
 
-    function savePassword() {
+    async function savePassword() {
+        if ($('pw-save').disabled) return;
         var current = $('pw-current').value;
         var next = $('pw-new').value;
         var confirm = $('pw-confirm').value;
         if (next.length < 8) { toast('New password must be at least 8 characters.', true); return; }
         if (next !== confirm) { toast('The new passwords do not match.', true); return; }
-        if (PD.hasPassword() && !PD.verifyPassword(current)) { toast('Current password is incorrect.', true); return; }
-        PD.setPassword(next);
+        $('pw-save').disabled = true;
+        try {
+            const auth = window.MyMaintenanceAuth;
+            const user = await auth._getSupabaseUser(await auth._getSupabaseSession());
+            if (!user) throw new Error('Please sign in again.');
+            const reauth = await auth._supabaseRequest('token?grant_type=password', { method: 'POST', body: { email: user.email, password: current } });
+            if (!reauth.response.ok) throw new Error('Current password is incorrect.');
+            const result = await auth._supabaseRequest('user', { method: 'PUT', accessToken: reauth.data.access_token, body: { password: next } });
+            if (!result.response.ok) throw new Error(result.data.msg || 'Could not update password.');
+            auth._storeSupabaseSession(reauth.data);
+        } catch (error) { toast(error.message, true); return; }
+        finally { $('pw-save').disabled = false; }
         $('pw-current').value = '';
         $('pw-new').value = '';
         $('pw-confirm').value = '';
@@ -602,10 +626,15 @@
         toast('Password updated');
     }
 
-    function sendResetLink() {
+    async function sendResetLink() {
+        if ($('fp-send').disabled) return;
         var email = $('fp-email').value.trim();
         if (!email) { toast('Please enter your email address first.', true); return; }
         if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
+        $('fp-send').disabled = true;
+        try { await window.MyMaintenanceAuth.sendRecovery(email); }
+        catch (error) { toast(error.message, true); return; }
+        finally { $('fp-send').disabled = false; }
         $('fp-email').value = '';
         closeOverlay($('forgot-password-popup'));
         toast('If an account exists for ' + email + ', a reset link has been sent.');
@@ -874,7 +903,9 @@
         window.addEventListener('profile:changed', function () {
             loadAll();
             renderHeader();
+            renderMembers('family-list'); renderMembers('access-list');
         });
+        window.addEventListener('focus', function () { PD.hydrateFamily(); });
         PD.hydrate();
     });
 })();

@@ -303,7 +303,8 @@
     border: 1px solid var(--border-color);
 }
 
-.role-badge.invited {
+.role-badge.invited,
+.role-badge.pending {
     background: var(--border-color);
     color: var(--text-secondary);
 }

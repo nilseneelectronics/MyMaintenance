@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await window.MyMaintenanceData.request('documents', { method: 'DELETE', query: { id: `eq.${editingId}` } });
             }
         } catch (error) {
-            alert(error.message || 'Could not delete document.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not delete document.');
             return;
         }
         payloadDelete(editingId);
@@ -1818,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rec.receiptItems = currentReceiptItems;
             } catch (error) {
                 if (isNewRecord) items = items.filter(function (item) { return item !== rec; });
-                alert(error.message || 'Could not upload document.');
+                window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload document.');
                 return;
             }
         }

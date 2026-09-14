@@ -3,22 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentId = getParam('id');
 
     /* current logged-in user (creator becomes admin) */
-    const me = {
-        email: (function () {
-            try {
-                const prof = localStorage.getItem('floorplan_user_profile');
-                if (prof) { const p = JSON.parse(prof); if (p && p.email) return p.email; }
-            } catch (e) {}
-            return '';
-        })(),
-        name: (function () {
-            try {
-                const prof = localStorage.getItem('floorplan_user_profile');
-                if (prof) { const p = JSON.parse(prof); if (p && p.name) return p.name; }
-            } catch (e) {}
-            return 'Me';
-        })()
-    };
+    const me = Object.assign({ name: '', email: '', phone: '' }, window.MyMaintenanceProfileData.getProfile());
 
     function getParam(name) {
         const p = new URLSearchParams(location.search);
@@ -86,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!nb) return Promise.resolve();
         return persistNeighborhood(nb).catch(function (error) {
             console.error(error);
-            alert(error.message || 'Could not save neighborhood.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not save neighborhood.');
             return null;
         });
     }
@@ -103,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
             render();
         } catch (error) {
             console.error(error);
-            alert(error.message || 'Could not load neighborhoods.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not load neighborhoods.');
         }
     }
 
@@ -341,8 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let builderModel = null;
 
     function syncAddressCount(n) {
-        n = Math.max(0, parseInt(n, 10) || 0);
+        n = Math.max(1, parseInt(n, 10) || 1);
         if (!builderModel) return;
+        document.getElementById('nb-houses').value = n;
         // Capture any text typed into the DOM before rebuilding so it is kept.
         readBuilderIntoModel(builderModel);
         if (!builderModel._deletedAddresses) builderModel._deletedAddresses = [];
@@ -370,18 +356,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---- Info / register popup ---- */
-    function openInfoPopup(nb) {
+    let openingInfo = false;
+    async function openInfoPopup(nb) {
+        if (openingInfo) return;
+        let defaults;
+        if (!nb) {
+            openingInfo = true;
+            try {
+                await Promise.all([window.MyMaintenanceProfileData.hydrate(), window.MyMaintenanceAssets.hydrate()]);
+                const profile = window.MyMaintenanceProfileData.getProfile();
+                Object.assign(me, { name: profile.name || '', email: profile.email || '', phone: profile.phone || '' });
+                defaults = window.MyMaintenanceNeighborhoodDefaults.create(profile,
+                    window.MyMaintenanceAssets.getHomes(), window.MyMaintenanceProfileData.getFamily());
+                if (!defaults) {
+                    window.MyMaintenanceCommonUi.alert('Register a home with an address in My Homes before creating a neighborhood.');
+                    return;
+                }
+            } finally {
+                openingInfo = false;
+            }
+        }
+        clearTimeout(housesTimer);
+        document.getElementById('nb-addr-builder').innerHTML = '';
         document.getElementById('nb-info-popup-title').textContent = nb ? 'Edit Neighborhood' : 'Register a neighborhood';
         isAdmin = isMeAdmin(nb);
-        builderModel = nb ? JSON.parse(JSON.stringify(nb)) : {
-            id: null,
-            name: '',
-            country: '',
-            zip: '',
-            city: '',
-            other: '',
-            addresses: []
-        };
+        builderModel = nb ? JSON.parse(JSON.stringify(nb)) : defaults;
         if (!builderModel.addresses) builderModel.addresses = [];
         const delBtn = document.getElementById('nb-info-delete');
         if (delBtn) delBtn.style.display = (nb && isAdmin) ? '' : 'none';
@@ -416,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nb-houses-minus').addEventListener('click', () => {
         clearTimeout(housesTimer);
         const input = document.getElementById('nb-houses');
-        const v = Math.max(0, (parseInt(input.value, 10) || 0) - 1);
+        const v = Math.max(1, (parseInt(input.value, 10) || 1) - 1);
         input.value = v;
         syncAddressCount(v);
     });
@@ -431,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---- Save ---- */
     function closeInfoPopup() {
+        clearTimeout(housesTimer);
         document.getElementById('nb-info-popup').style.display = 'none';
         builderModel = null;
     }
@@ -448,8 +448,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nb-info-cancel').addEventListener('click', closeInfoPopup);
 
     async function saveNeighborhoodForm() {
-        readBuilderIntoModel(builderModel);
-        cleanupBuilderModel(builderModel);
+        if (!builderModel) return;
+        clearTimeout(housesTimer);
+        syncAddressCount(document.getElementById('nb-houses').value);
         // Validate all required fields at once so they all turn red together.
         let invalid = false;
         let firstInvalid = null;
@@ -478,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (firstInvalid) firstInvalid.focus();
             return;
         }
+        cleanupBuilderModel(builderModel);
         builderModel.name = name;
         builderModel.country = document.getElementById('nb-country').value.trim();
         builderModel.zip = document.getElementById('nb-zip').value.trim();
@@ -501,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await persistNeighborhood(builderModel);
         } catch (error) {
-            alert(error.message || 'Could not save neighborhood.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not save neighborhood.');
             return;
         }
         if (existing && existing.id === builderModel.id) Object.assign(existing, builderModel);
@@ -519,13 +521,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nb-info-delete').addEventListener('click', async () => {
         if (!builderModel) return;
         const id = builderModel.id;
-        if (!confirm('Delete this neighborhood? This cannot be undone.')) return;
+        if (!await window.MyMaintenanceCommonUi.confirm('Delete this neighborhood? This cannot be undone.', { title: 'Delete neighborhood?', confirmLabel: 'Delete' })) return;
         try {
             await window.MyMaintenanceData.request('neighborhoods', {
                 method: 'DELETE', query: { id: 'eq.' + id }
             });
         } catch (error) {
-            alert(error.message || 'Could not delete neighborhood.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not delete neighborhood.');
             return;
         }
         neighborhoods = neighborhoods.filter(n => n.id !== id);
@@ -661,7 +663,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---- Photos ---- */
     let pendingPhotoUploads = [];
-    let photoPickerOpen = false;
     function photosFor(nb) {
         if (!nb) return [];
         if (!Array.isArray(nb.photos)) nb.photos = [];
@@ -952,10 +953,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const nbPhotoPopup = document.getElementById('nb-add-photos-popup');
     function closePhotoUploadPopup() {
         pendingPhotoUploads = [];
-        photoPickerOpen = false;
         nbPhotoPopup.style.display = 'none';
     }
     document.getElementById('nbp-cancel').addEventListener('click', closePhotoUploadPopup);
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || nbPhotoPopup.style.display !== 'flex') return;
+        event.preventDefault();
+        closePhotoUploadPopup();
+    });
     document.addEventListener('click', (event) => {
         if (!event.target.closest('#nbp-cancel')) return;
         event.preventDefault();
@@ -972,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const db = window.MyMaintenanceData;
         const userId = db && await db.userId();
-        if (!db || !userId) return alert('Please sign in again.');
+        if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
         try {
             const photos = photosFor(nb);
             for (const pending of pendingPhotoUploads) {
@@ -991,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('nb-add-photos-popup').style.display = 'none';
             render();
         } catch (error) {
-            alert(error.message || 'Could not upload picture.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload picture.');
         }
     });
     nbPhotoPopup.addEventListener('keyup', (event) => {
@@ -1010,26 +1015,14 @@ document.addEventListener('DOMContentLoaded', () => {
     photoInput.multiple = true;
     photoInput.style.display = 'none';
     document.body.appendChild(photoInput);
-    function closeAfterCancelledPhotoPicker() {
-        if (!photoPickerOpen) return;
-        window.setTimeout(() => {
-            if (!photoPickerOpen) return;
-            if (!photoInput.files || !photoInput.files.length) closePhotoUploadPopup();
-        }, 250);
-    }
+    // Cancelling the native file picker leaves this popup and pending photos intact.
     document.getElementById('nbp-picture-btn').addEventListener('click', () => {
-        photoPickerOpen = true;
         photoInput.value = '';
         photoInput.click();
-    });
-    window.addEventListener('focus', closeAfterCancelledPhotoPicker);
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) closeAfterCancelledPhotoPicker();
     });
     photoInput.addEventListener('change', async () => {
         const nb = current();
         const files = Array.prototype.slice.call(photoInput.files || []);
-        photoPickerOpen = false;
         photoInput.value = '';
         if (!nb || !files.length) return;
         try {
@@ -1044,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
             renderPhotoThumbs();
         } catch (error) {
-            alert(error.message || 'Could not upload picture.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload picture.');
         }
     });
 
@@ -1091,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const privacy = (document.querySelector('input[name="nb-doc-privacy"]:checked') || {}).value || 'private';
         const db = window.MyMaintenanceData;
         const userId = db && await db.userId();
-        if (!db || !userId) return alert('Please sign in again.');
+        if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
         try {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
             const doc = {
@@ -1107,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('nb-doc-add-popup').style.display = 'none';
             renderDocs();
         } catch (error) {
-            alert(error.message || 'Could not upload document.');
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload document.');
         }
     });
     document.getElementById('nb-show-all-docs').addEventListener('click', () => {

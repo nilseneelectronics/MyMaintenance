@@ -483,8 +483,8 @@ function downloadSavedPlan(id) {
   downloadBlob(JSON.stringify(data, null, 2), id + '.json', 'application/json');
 }
 
-function deleteSavedPlan(id) {
-  if (!confirm('Delete "' + id + '"?')) return;
+async function deleteSavedPlan(id) {
+  if (!await window.MyMaintenanceCommonUi.confirm('Delete "' + id + '"?', { title: 'Delete floor plan?', confirmLabel: 'Delete' })) return;
   deletePlanData(id);
   if (planFileName === id) { planFileName = ''; document.getElementById('planTitle').textContent = 'Untitled Plan'; isDirty = false; doClear(); }
   renderFileList();

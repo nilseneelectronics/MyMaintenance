@@ -1,4 +1,5 @@
 window.MyMaintenanceConfig = {
+    emailActionUrl: 'https://vedlikeholdt.no/pages/email-action.html',
     authTokenKey: 'mymaintenance.authToken',
     authSessionKey: 'mymaintenance.supabaseSession',
     apiBaseUrl: 'http://localhost:3000',

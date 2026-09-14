@@ -430,8 +430,8 @@ function setMode(mode) {
   canvas.forEachObject(obj => { obj.selectable = obj.evented = true; });
 }
 
-function clearCanvas() {
-  if (confirm('Clear entire canvas?')) {
+async function clearCanvas() {
+  if (await window.MyMaintenanceCommonUi.confirm('Clear entire canvas?', { title: 'Clear canvas?', confirmLabel: 'Clear' })) {
     canvas.clear();
     allWalls = [];
     createGrid();
