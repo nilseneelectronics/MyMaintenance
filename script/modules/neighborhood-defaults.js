@@ -14,7 +14,7 @@ window.MyMaintenanceNeighborhoodDefaults = (function () {
             eligible.find(home => normalize(home.houseType) === 'apartment') || eligible[0];
         if (!home) return null;
 
-        const creator = { name: profile.name || '', email: profile.email || '', phone: profile.phone || '', role: 'admin' };
+        const creator = { userId: profile.id || '', name: profile.name || '', email: profile.email || '', phone: profile.phone || '', role: 'admin' };
         const people = [creator];
         const seen = new Set([normalize(creator.email)].filter(Boolean));
         family.forEach(member => {

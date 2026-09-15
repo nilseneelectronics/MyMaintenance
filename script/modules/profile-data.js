@@ -7,10 +7,12 @@ window.MyMaintenanceProfileData = (function () {
     var USER_KEY = 'mymaintenance_user';
     var PASSWORD_KEY = 'mymaintenance_password';
     var syncTimer = null;
+    var familyLoadError = '';
 
     var ACCESS_AREAS = [
         { key: 'dashboard', label: 'Dashboard' },
         { key: 'homes', label: 'My Homes' },
+        { key: 'neighborhood', label: 'MyNeighborhood', invitation: true },
         { key: 'vehicles', label: 'My Vehicles' },
         { key: 'documents', label: 'My Documents' },
         { key: 'planning', label: 'My Planning' },
@@ -37,9 +39,9 @@ window.MyMaintenanceProfileData = (function () {
     }
 
     function presetAccess(role) {
-        var member = { dashboard: true, homes: true, vehicles: true, documents: true, planning: true, tools: false, subscription: false };
-        if (role === 'Owner') return { dashboard: true, homes: true, vehicles: true, documents: true, planning: true, tools: true, subscription: true };
-        if (role === 'Viewer') return { dashboard: true, homes: true, vehicles: true, documents: true, planning: false, tools: false, subscription: false };
+        var member = { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: true, tools: false, subscription: false };
+        if (role === 'Owner') return { dashboard: true, homes: true, neighborhood: true, vehicles: true, documents: true, planning: true, tools: true, subscription: true };
+        if (role === 'Viewer') return { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: false, tools: false, subscription: false };
         return member;
     }
 
@@ -73,8 +75,12 @@ window.MyMaintenanceProfileData = (function () {
         return profile;
     }
 
-    function saveProfile(profile) {
+    function saveProfile(profile, waitForCloud) {
         localStorage.setItem(PROFILE_KEY, JSON.stringify(profile || {}));
+        if (waitForCloud) {
+            clearTimeout(syncTimer);
+            return syncCloud();
+        }
         queueCloudSync();
     }
 
@@ -116,12 +122,16 @@ window.MyMaintenanceProfileData = (function () {
         } catch (_) { return ''; }
     }
 
+    function sameEmail(left, right) {
+        return String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase();
+    }
+
     async function syncCloud() {
         var db = window.MyMaintenanceData;
-        if (!db) return;
+        if (!db) throw new Error('Profile database is unavailable.');
         try {
             var userId = await db.userId();
-            if (!userId) return;
+            if (!userId) throw new Error('Please sign in again.');
             var profile = getProfile();
             var notifications = getNotifications();
             await db.request('profiles', {
@@ -135,22 +145,31 @@ window.MyMaintenanceProfileData = (function () {
             });
         } catch (error) {
             console.error('Could not save profile:', error);
+            throw error;
         }
     }
 
     function queueCloudSync() {
         clearTimeout(syncTimer);
-        syncTimer = setTimeout(syncCloud, 80);
+        syncTimer = setTimeout(function () { syncCloud().catch(function () {}); }, 80);
     }
 
     async function hydrateFamily() {
         try {
             var result = await window.MyMaintenanceAuth.familyRequest('list');
-            var legacy = getFamily().filter(member => !member.serverInvitation &&
-                !result.members.some(remote => remote.email.toLowerCase() === String(member.email || '').toLowerCase()));
-            saveFamily(legacy.concat(result.members));
+            if (!Array.isArray(result.members)) throw new Error('Invalid family list response.');
+            // Memberships in the database replace obsolete cached invitations.
+            saveFamily(result.members);
+            familyLoadError = '';
             window.dispatchEvent(new CustomEvent('profile:changed'));
-        } catch (error) { console.warn('Could not refresh family invitations:', error.message); }
+            return true;
+        } catch (error) {
+            familyLoadError = 'Could not load family members. ' +
+                (error.message || 'Close and reopen to retry.');
+            console.warn('Could not refresh family members:', error.message);
+            window.dispatchEvent(new CustomEvent('profile:changed'));
+            return false;
+        }
     }
 
     async function hydrate() {
@@ -165,10 +184,19 @@ window.MyMaintenanceProfileData = (function () {
             var row = rows && rows[0];
             var localProfile = getProfile();
             var cloudProfile = row && row.details && row.details.profile;
-            var nextProfile = Object.assign(defaultProfile(), localProfile, cloudProfile || {});
+            var authenticatedEmail = sessionEmail();
+            var belongsToUser = localProfile.id === userId ||
+                (!localProfile.id && authenticatedEmail && sameEmail(localProfile.email, authenticatedEmail));
+            var nextProfile = Object.assign(defaultProfile(), belongsToUser ? localProfile : {}, cloudProfile || {});
+            nextProfile.id = userId;
             nextProfile.name = (row && row.display_name) || nextProfile.name || '';
-            nextProfile.email = nextProfile.email || sessionEmail();
+            // Auth owns account identity. Never copy an email cached by another
+            // account in the same browser into this user's profile row.
+            nextProfile.email = authenticatedEmail || nextProfile.email || '';
             localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
+            if (row && authenticatedEmail && !sameEmail(cloudProfile && cloudProfile.email, authenticatedEmail)) {
+                queueCloudSync();
+            }
 
             var cloudNotifications = row && row.details && row.details.notifications;
             if (cloudNotifications && cloudNotifications.channels && cloudNotifications.types) {
@@ -225,6 +253,7 @@ window.MyMaintenanceProfileData = (function () {
         saveNotifications: saveNotifications,
         hydrate: hydrate,
         hydrateFamily: hydrateFamily,
+        getFamilyLoadError: function () { return familyLoadError; },
         getUser: getUser,
         saveUser: saveUser,
         hasPassword: hasPassword,

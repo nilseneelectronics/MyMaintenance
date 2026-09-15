@@ -21,27 +21,41 @@ async function main() {
   assert(auth._readSupabaseSession().expires_at > Date.now()/1000);
 
   // Exercise the actual Edge Function handler with mock Auth, DB, and SMTP.
-  let handler, verified = true, smtpFails = false; const operations = [];
+  let handler, verified = true, smtpFails = false, neighborhoodScenario = false, actingUserId = 'owner'; const operations = [];
   const id='11111111-1111-4111-8111-111111111111';
+  const recipientId='66666666-6666-4666-8666-666666666666';
   const row={id,name:'Recipient',email:'recipient@example.test',role:'Member',status:'sending',member_profile:{}};
+  const neighborhoodRow={id:'77777777-7777-4777-8777-777777777777',neighborhood_id:'55555555-5555-4555-8555-555555555555',name:'Recipient',email:'recipient@example.test',address:'Example Street 2',status:'sending'};
   const env={SUPABASE_URL:'https://test.invalid',SUPABASE_SERVICE_ROLE_KEY:'server-test',SMTP_HOST:'mail.test.invalid',SMTP_USER:'noreply@example.test',SMTP_PASSWORD:'test-only',SMTP_FROM:'noreply@example.test'};
   const backend = { Request, Response, Set, Date, Number, String, Error,
     Deno:{env:{get:key=>env[key]},serve:fn=>{handler=fn}},
-    nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
+    nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?'));assert(mail.html.includes('Vedlikeholdt'));assert(mail.html.includes('Accept invitation'));assert(mail.html.includes('src="cid:vedlikeholdt-logo"'));assert(!mail.html.includes('\n+<tr'));assert.equal(mail.attachments?.[0]?.cid,'vedlikeholdt-logo');assert.equal(mail.attachments?.[0]?.encoding,'base64');if(neighborhoodScenario)assert(mail.text.includes('?neighborhood-invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
     fetch:async(url,options)=>{
-      if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({id:'owner',email:'owner@example.test',email_confirmed_at:verified?'2026-01-01':null}));
-      if(url.includes('family_members?')) return new Response(JSON.stringify([]));
+      if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({id:actingUserId,email:actingUserId+'@example.test',email_confirmed_at:verified?'2026-01-01':null}));
+      if(url.includes('family_members?')) {
+        if(neighborhoodScenario && url.includes('user_id=eq.owner')) return new Response(JSON.stringify([{family_id:'family-test',user_id:'owner',role:'Owner'}]));
+        if(neighborhoodScenario && url.includes('user_id=eq.member')) return new Response(JSON.stringify([{family_id:'member-family',user_id:'member',role:'Owner'}]));
+        if(neighborhoodScenario && url.includes('family_id=eq.member-family')) return new Response(JSON.stringify([{user_id:'member'}]));
+        if(neighborhoodScenario && url.includes('user_id=eq.'+recipientId)) return new Response(JSON.stringify([{user_id:recipientId,role:'Member'}]));
+        return new Response(JSON.stringify([]));
+      }
       if(url.endsWith('/rest/v1/families')) return new Response(JSON.stringify([{id:'44444444-4444-4444-8444-444444444444'}]));
       if(url.endsWith('/rest/v1/family_members')) return new Response(JSON.stringify([]));
       if(url.includes('/rest/v1/homes?') || url.includes('/rest/v1/vehicles?')) return new Response(JSON.stringify([]));
-      if(url.includes('/rest/v1/profiles?')) return new Response(JSON.stringify([]));
+      if(url.includes('/rest/v1/profiles?')) return new Response(JSON.stringify(neighborhoodScenario && url.includes('id=eq.'+recipientId) ? [{display_name:'Recipient',details:{profile:{name:'Recipient',email:'recipient@example.test'}}}] : (url.includes('id=eq.') ? [{display_name:'Alex Inviter',details:{profile:{name:'Alex Inviter'}}}] : [])));
+      if(url.includes('/rest/v1/neighborhood_members?')) return new Response(JSON.stringify(actingUserId==='member' ? [{user_id:'member'}] : []));
+      if(url.endsWith('/rest/v1/neighborhood_members')) return new Response(JSON.stringify([{}]));
+      if(url.includes('/rest/v1/neighborhoods?') && options.method==='GET') return new Response(JSON.stringify(neighborhoodScenario ? [{id:'55555555-5555-4555-8555-555555555555',owner_id:'owner',name:'Test Neighborhood',details:{addresses:[]}}] : []));
+      if(url.includes('neighborhood_invitations?') && options.method==='GET') return new Response(JSON.stringify([]));
       if(url.includes('family_invitations?') && options.method==='GET') {
         operations.push('list');
+        if(url.includes('family_id=eq.member-family')) return new Response(JSON.stringify([]));
         if(url.includes('email=eq.')) return new Response(JSON.stringify([{...row,id:'22222222-2222-4222-8222-222222222222',status:'pending'}]));
         if(url.includes('recipient_id=eq.')) return new Response(JSON.stringify([{...row,id:'33333333-3333-4333-8333-333333333333',status:'accepted'}]));
         return new Response(JSON.stringify([]));
       }
       if(url.includes('reserve_family_invitation')){operations.push('reserve');return new Response(JSON.stringify(row));}
+      if(url.includes('reserve_neighborhood_invitation')){operations.push('reserve-neighborhood');return new Response(JSON.stringify(neighborhoodRow));}
       if(url.includes('accept_family_invitation'))return new Response(JSON.stringify({code:'P0001',message:'Invitation not found for your email address.'}),{status:400});
       const body=JSON.parse(options.body);operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
     }
@@ -54,11 +68,15 @@ async function main() {
   operations.length=0;smtpFails=true;assert.equal((await handler(request(send))).status,400);assert.deepEqual(operations,['reserve','family','smtp','failed']);
   assert.equal((await handler(request({action:'send',...send,role:'Owner'}))).status,400);
   assert.equal((await handler(request({action:'accept',id}))).status,400);
+  operations.length=0;const details=await (await handler(request({action:'details',id}))).json();assert.equal(details.invitation.inviterName,'Alex Inviter');
   operations.length=0;const listed=await (await handler(request({action:'list'}))).json();assert.deepEqual(listed.members,[]);assert.equal(listed.familyId,'44444444-4444-4444-8444-444444444444');
+  smtpFails=false;neighborhoodScenario=true;operations.length=0;const neighborhoodInvite=await (await handler(request({action:'invite-neighborhood',recipientId}))).json();assert.equal(neighborhoodInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));
+  operations.length=0;const houseInvite=await (await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'resident@example.test'}))).json();assert.equal(houseInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));neighborhoodScenario=false;
+  neighborhoodScenario=true;actingUserId='member';operations.length=0;assert.equal((await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'outsider@example.test'}))).status,400);assert(!operations.includes('smtp'));actingUserId='owner';neighborhoodScenario=false;
 
   // Test reset landing-page flow without a real session or password change.
   const elements={};
-  for(const key of ['action-message','action-title','reset-form','verify-link','accept-invite','sign-in','new-password','repeat-password'])elements[key]={textContent:'',hidden:true,value:'',addEventListener(type,fn){this[type]=fn},querySelector(){return this.button||(this.button={})},reset(){this.didReset=true}};
+  for(const key of ['action-message','action-detail','action-title','reset-form','verify-link','accept-invite','sign-in','new-password','repeat-password'])elements[key]={textContent:'',hidden:true,value:'',addEventListener(type,fn){this[type]=fn},querySelector(){return this.button||(this.button={})},reset(){this.didReset=true}};
   let resetCalls=0, cleared=false;
   const page={window:{MyMaintenanceAuth:{_getSupabaseUser:async()=>({id:'test'}),_supabaseRequest:async()=>{resetCalls++;return {response:{ok:true},data:{}}},_clearSupabaseSession(){cleared=true}}},document:{getElementById:id=>elements[id]},URLSearchParams,
     location:{search:'',hash:'#type=recovery&access_token=test-only',pathname:'/pages/email-action.html'},history:{replaceState(_a,_b,url){assert(!url.includes('access_token'))}}};
@@ -68,6 +86,23 @@ async function main() {
   await elements['reset-form'].submit({preventDefault(){}});assert.equal(resetCalls,0);
   elements['repeat-password'].value='test-password';
   await elements['reset-form'].submit({preventDefault(){}});assert.equal(resetCalls,1);assert(cleared);assert.equal(elements['reset-form'].hidden,true);
-  console.log('PASS: reset redirect, safe next URL, session expiry, verified-user gate, pending after SMTP only, SMTP failures, role validation, acceptance errors, reset mismatch and success. No real emails sent.');
+
+  const invitationElements={};
+  for(const key of ['action-message','action-detail','action-title','reset-form','verify-link','accept-invite','sign-in','new-password','repeat-password'])invitationElements[key]={textContent:'',hidden:true,value:'',addEventListener(type,fn){this[type]=fn},querySelector(){return this.button||(this.button={})},reset(){}};
+  const invitationPage={window:{MyMaintenanceAuth:{_getSupabaseSession:async()=>({access_token:'test'}),_getSupabaseUser:async()=>({id:'recipient'}),familyRequest:async action=>{assert.equal(action,'details');return {invitation:{inviterName:'Alex Inviter'}}}}},document:{getElementById:id=>invitationElements[id]},URLSearchParams,
+    location:{search:'?invitation='+id,hash:'',pathname:'/pages/email-action.html'},history:{replaceState(){}}};
+  await vm.runInNewContext(read('script/pages/email-action.js'),invitationPage);
+  assert.equal(invitationElements['action-message'].textContent,"You are invited to join Alex Inviter's family.");
+  assert.equal(invitationElements['action-detail'].hidden,false);assert.equal(invitationElements['accept-invite'].hidden,false);
+
+  const neighborhoodElements={};
+  for(const key of ['action-message','action-detail','action-title','reset-form','verify-link','accept-invite','sign-in','new-password','repeat-password'])neighborhoodElements[key]={textContent:'',hidden:true,value:'',addEventListener(type,fn){this[type]=fn},querySelector(){return this.button||(this.button={})},reset(){}};
+  const neighborhoodPage={window:{MyMaintenanceAuth:{_getSupabaseSession:async()=>({access_token:'test'}),_getSupabaseUser:async()=>({id:'recipient'}),familyRequest:async action=>{assert.equal(action,'details-neighborhood');return {invitation:{inviterName:'Alex Inviter',neighborhoodName:'Test Neighborhood',address:'Example Street 2'}}}}},document:{getElementById:id=>neighborhoodElements[id]},URLSearchParams,
+    location:{search:'?neighborhood-invitation='+neighborhoodRow.id,hash:'',pathname:'/pages/email-action.html'},history:{replaceState(){}}};
+  await vm.runInNewContext(read('script/pages/email-action.js'),neighborhoodPage);
+  assert.equal(neighborhoodElements['action-message'].textContent,'Alex Inviter invited you to join Test Neighborhood.');
+  assert(neighborhoodElements['action-detail'].textContent.includes('Example Street 2'));
+  assert.equal(neighborhoodElements['accept-invite'].textContent,'Accept neighborhood invitation');
+  console.log('PASS: reset redirect, safe next URL, session expiry, verified-user gate, invitation details, pending after SMTP only, SMTP failures, role validation, acceptance errors, reset mismatch and success. No real emails sent.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1});

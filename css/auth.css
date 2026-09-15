@@ -62,6 +62,10 @@
     position: relative;
 }
 
+.form-panel form {
+    width: min(100%, 420px);
+}
+
 .overlay-container {
     position: absolute;
     width: 50%;
@@ -220,6 +224,14 @@
 }
 
 .auth-forgot-password:hover { text-decoration: underline; }
+
+.auth-resend-verification {
+    position: relative;
+    z-index: 2;
+    margin: 14px auto 0;
+    padding: 2px 8px;
+    line-height: 1.4;
+}
 
 .auth-message {
     min-height: 1.25em;
