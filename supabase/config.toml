@@ -15,3 +15,15 @@ content_path = "./supabase/templates/recovery.html"
 [auth.email.template.invite]
 subject = "You've been invited to Vedlikeholdt"
 content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Your Vedlikeholdt sign-in link"
+content_path = "./supabase/templates/magic-link.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new Vedlikeholdt email address"
+content_path = "./supabase/templates/email-change.html"
+
+[auth.email.template.reauthentication]
+subject = "{{ .Token }} is your Vedlikeholdt verification code"
+content_path = "./supabase/templates/reauthentication.html"

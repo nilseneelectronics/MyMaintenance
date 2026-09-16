@@ -11,7 +11,11 @@ These changes are local source code until published. No SMTP passwords belong in
 5. Publish `pages/email-action.html`, its CSS/JS, and the updated login/auth code before using the new email links.
 6. In Confirm signup and Reset password email templates, keep the button linked to `{{ .ConfirmationURL }}`. The app supplies the redirect URL. Do not replace this with a plain link to the site; it must retain Supabase's verification token.
 
-The branded source templates are in `supabase/templates/confirmation.html` and `supabase/templates/recovery.html`, with matching local CLI configuration in `supabase/config.toml`. Hosted projects use copies saved in **Authentication → Emails → Templates** in the Supabase Dashboard; editing these files alone does not update hosted Auth emails.
+The six branded Supabase Auth templates are in `supabase/templates`: confirmation, invitation, magic link, email change, password recovery, and reauthentication. Their matching local CLI configuration is in `supabase/config.toml`. Hosted projects use copies saved in **Authentication → Emails → Templates** in the Supabase Dashboard; editing these files alone does not update hosted Auth emails.
+
+Every template loads the exact Vedlikeholdt mark from the public, immutable endpoint below so email clients that reject inline SVG still show the logo:
+
+`https://nrmhojdkoxnlvssdksvf.supabase.co/functions/v1/family-invitations/email-logo.png`
 
 Auth has one SMTP configuration and default From address per project. Changing it switches Auth emails to the new mailbox; it does not create the mailbox or add another inbox. Use cPanel/Roundcube for receiving email.
 

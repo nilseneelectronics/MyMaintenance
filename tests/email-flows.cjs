@@ -5,6 +5,12 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 async function main() {
+  const hostedLogoUrl='https://nrmhojdkoxnlvssdksvf.supabase.co/functions/v1/family-invitations/email-logo.png';
+  for(const template of ['confirmation.html','recovery.html','invite.html','magic-link.html','email-change.html','reauthentication.html']) {
+    const html=read('supabase/templates/'+template);
+    assert(html.includes(hostedLogoUrl));
+    assert(!html.includes('<svg'));
+  }
   const store = new Map(); const calls = [];
   const context = { window: { MyMaintenanceConfig: { supabaseUrl: 'https://test.invalid', supabasePublishableKey: 'public-test', emailActionUrl: 'https://vedlikeholdt.no/pages/email-action.html' } },
     URLSearchParams, Date, localStorage: { getItem: k => store.get(k), setItem: (k,v) => store.set(k,v) },
@@ -27,7 +33,7 @@ async function main() {
   const row={id,name:'Recipient',email:'recipient@example.test',role:'Member',status:'sending',member_profile:{}};
   const neighborhoodRow={id:'77777777-7777-4777-8777-777777777777',neighborhood_id:'55555555-5555-4555-8555-555555555555',name:'Recipient',email:'recipient@example.test',address:'Example Street 2',status:'sending'};
   const env={SUPABASE_URL:'https://test.invalid',SUPABASE_SERVICE_ROLE_KEY:'server-test',SMTP_HOST:'mail.test.invalid',SMTP_USER:'noreply@example.test',SMTP_PASSWORD:'test-only',SMTP_FROM:'noreply@example.test'};
-  const backend = { Request, Response, Set, Date, Number, String, Error,
+  const backend = { Request, Response, URL, Uint8Array, Set, Date, Number, String, Error, atob:data=>Buffer.from(data,'base64').toString('binary'),
     Deno:{env:{get:key=>env[key]},serve:fn=>{handler=fn}},
     nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?'));assert(mail.html.includes('Vedlikeholdt'));assert(mail.html.includes('Accept invitation'));assert(mail.html.includes('src="cid:vedlikeholdt-logo"'));assert(!mail.html.includes('\n+<tr'));assert.equal(mail.attachments?.[0]?.cid,'vedlikeholdt-logo');assert.equal(mail.attachments?.[0]?.encoding,'base64');assert.equal(mail.attachments?.[0]?.content,fs.readFileSync(path.join(root,'supabase/functions/family-invitations/assets/vedlikeholdt-email-logo.png')).toString('base64'));if(neighborhoodScenario)assert(mail.text.includes('?neighborhood-invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
     fetch:async(url,options)=>{
@@ -61,6 +67,9 @@ async function main() {
     }
   };
   vm.runInNewContext(require('node:module').stripTypeScriptTypes(read('supabase/functions/family-invitations/index.ts').replace(/^import[^\r\n]*\r?\n/,'')),backend);
+  const logoResponse=await handler(new Request('https://test.invalid/functions/v1/family-invitations/email-logo.png'));
+  assert.equal(logoResponse.status,200);assert.equal(logoResponse.headers.get('content-type'),'image/png');
+  assert.deepEqual(Buffer.from(await logoResponse.arrayBuffer()),fs.readFileSync(path.join(root,'supabase/functions/family-invitations/assets/vedlikeholdt-email-logo.png')));
   const request = body=>new Request('https://test.invalid/functions/v1/family-invitations',{method:'POST',headers:{authorization:'Bearer test','Content-Type':'application/json',origin:'http://127.0.0.1:5500'},body:JSON.stringify(body)});
   const send={action:'send',name:'Recipient',email:'recipient@example.test',role:'Member'};
   verified=false;assert.equal((await handler(request(send))).status,401);assert.equal(operations.length,0);

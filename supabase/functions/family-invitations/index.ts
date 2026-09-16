@@ -164,6 +164,17 @@ async function addAcceptedResident(invitation: Record<string, any>, user: Record
     await database('neighborhoods?id=eq.' + invitation.neighborhood_id, 'PATCH', { details });
 }
 Deno.serve(async request => {
+    const requestUrl = new URL(request.url);
+    if (request.method === 'GET' && requestUrl.pathname.endsWith('/email-logo.png')) {
+        const binary = atob(emailLogoBase64);
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        return new Response(bytes, { headers: {
+            'Content-Type': 'image/png',
+            'Content-Disposition': 'inline; filename="vedlikeholdt-logo.png"',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'X-Content-Type-Options': 'nosniff'
+        } });
+    }
     const origin = request.headers.get('origin') || '';
     const cors = { 'Access-Control-Allow-Origin': allowedOrigins.has(origin) ? origin : site,
         'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
