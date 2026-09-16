@@ -10,8 +10,9 @@
     color: var(--text-primary, #222);
     box-shadow: 0 16px 60px #0004;
     font: inherit;
+    z-index: 2147483000;
 }
-.mm-message-dialog::backdrop { background: #0008; }
+.mm-message-dialog::backdrop { background: #0008; z-index: 2147483000; }
 .mm-message-dialog h3 { margin: 0 0 14px; font-size: 1.25rem; }
 .mm-message-dialog p { margin: 0 0 24px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mm-message-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; }

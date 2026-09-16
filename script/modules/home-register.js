@@ -30,7 +30,13 @@
         let initialState = '';
 
         function stateSnapshot() {
-            return JSON.stringify(Object.keys(inputs).map(function (key) { return inputs[key] ? inputs[key].value : ''; }).concat(houseType));
+            return JSON.stringify(Object.keys(inputs).map(function (key) { return inputs[key] ? inputs[key].value : ''; }));
+        }
+
+        function hasText() {
+            return Object.keys(inputs).some(function (key) {
+                return inputs[key] && String(inputs[key].value || '').trim() !== '';
+            });
         }
 
         function setInvalid(el, invalid) {
@@ -110,7 +116,7 @@
         }
 
         function requestClose() {
-            if (stateSnapshot() === initialState) return close();
+            if (!hasText() || stateSnapshot() === initialState) return close();
             window.MyMaintenanceCommonUi.confirmDiscard(close);
         }
 

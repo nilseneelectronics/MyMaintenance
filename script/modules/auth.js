@@ -532,24 +532,27 @@ window.MyMaintenanceAuth = {
         if (signupForm) {
             signupForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const inputs = signupForm.querySelectorAll('input');
-                const name = (inputs[0]?.value || '').trim();
-                const email = (inputs[1]?.value || '').trim();
-                const password = inputs[2]?.value || '';
-                const confirmPassword = inputs[3]?.value || '';
-                const emailIsValid = !!email && !!inputs[1]?.validity.valid;
+                const name = (document.getElementById('su-name')?.value || '').trim();
+                const email = (document.getElementById('su-email')?.value || '').trim();
+                const password = document.getElementById('su-password')?.value || '';
+                const confirmPassword = document.getElementById('su-confirm')?.value || '';
+                const phoneCode = (document.getElementById('su-phone-code')?.value || '+47').trim();
+                const phoneNumber = (document.getElementById('su-phone')?.value || '').trim();
+                const phone = phoneNumber ? phoneCode + ' ' + phoneNumber : '';
+                const emailInput = document.getElementById('su-email');
+                const emailIsValid = !!email && !!emailInput?.validity.valid;
                 const messages = [];
                 const invalidInputs = [];
 
                 if (!name || !email || !password || !confirmPassword) messages.push('Please complete all fields.');
-                if (!name) invalidInputs.push(inputs[0]);
+                if (!name) invalidInputs.push(document.getElementById('su-name'));
                 if (!emailIsValid) {
                     messages.push('Invalid email.');
-                    invalidInputs.push(inputs[1]);
+                    invalidInputs.push(emailInput);
                 }
                 if (!password || !confirmPassword || password !== confirmPassword) {
                     if (password && confirmPassword && password !== confirmPassword) messages.push('Passwords do not match.');
-                    invalidInputs.push(inputs[2], inputs[3]);
+                    invalidInputs.push(document.getElementById('su-password'), document.getElementById('su-confirm'));
                 }
                 if (messages.length) {
                     showSignupError(messages.join(' '), invalidInputs);
@@ -568,13 +571,13 @@ window.MyMaintenanceAuth = {
                         body: {
                             email,
                             password,
-                            data: { display_name: name }
+                            data: { display_name: name, phone: phone }
                         }
                     });
                     if (!response.ok) {
                         const detail = String(data?.msg || data?.message || '').toLowerCase();
                         const invalidEmail = detail.includes('email') && (detail.includes('invalid') || detail.includes('valid'));
-                        showSignupError(invalidEmail ? 'Invalid email.' : 'Could not create account.', invalidEmail ? [inputs[1]] : []);
+                        showSignupError(invalidEmail ? 'Invalid email.' : 'Could not create account.', invalidEmail ? [emailInput] : []);
                         return;
                     }
                     if (data?.access_token) this._storeSupabaseSession(data);

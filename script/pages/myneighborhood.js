@@ -740,12 +740,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderEvents() {
         const nb = current();
         const list = document.getElementById('nb-events-list');
-        if (!nb || !nb.events || !nb.events.length) {
+        if (!nb) return;
+        const today = window.MyMaintenanceEvents ? window.MyMaintenanceEvents.todayKey() : '';
+        const sorted = (nb.events || []).slice()
+            .filter(function (ev) { return !today || (ev.startDate || ev.date || '') >= today; })
+            .sort((a, b) => (a.startDate || a.date || '').localeCompare(b.startDate || b.date || ''))
+            .slice(0, 3);
+        if (!sorted.length) {
             list.innerHTML = '<div class="nb-empty">No upcoming events.</div>';
             return;
         }
         list.innerHTML = '';
-        const sorted = nb.events.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         sorted.forEach((ev, idx) => {
             const item = document.createElement('div');
             item.className = 'asset-planned-item';
@@ -753,7 +758,17 @@ document.addEventListener('DOMContentLoaded', () => {
             name.textContent = ev.name || 'Event';
             const info = document.createElement('div');
             info.className = 'planned-item-info';
-            info.textContent = (ev.date || '') + (ev.time ? ' ' + ev.time : '') + (ev.location ? ' · ' + ev.location : '');
+            const start = ev.startDate || ev.date || '';
+            const finish = ev.finishDate || ev.startDate || '';
+            const startT = ev.startTime || ev.time || '';
+            const finishT = ev.finishTime || '';
+            const dateLabel = (start && finish && start !== finish)
+                ? start + ' – ' + finish
+                : (start || '');
+            const timeLabel = (startT && finishT && startT !== finishT)
+                ? startT + ' – ' + finishT
+                : (startT || '');
+            info.textContent = [dateLabel, timeLabel, ev.location ? ev.location : ''].filter(Boolean).join(' · ');
             const desc = document.createElement('div');
             desc.className = 'planned-item-desc';
             desc.textContent = ev.desc || '';
@@ -945,18 +960,61 @@ document.addEventListener('DOMContentLoaded', () => {
     function neighborhoodDocumentIcon() {
         return '<svg class="doc-symbol" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M450-154v-309L180-619v309l270 156Zm60 0 270-156v-310L510-463.16V-154Zm-30-360 266-155-266-154-267 154 267 155ZM150-258q-14.25-8.43-22.12-22.21Q120-294 120-310v-340q0-16 7.88-29.79Q135.75-693.57 150-702l300-173q14.33-8 30.16-8 15.84 0 29.84 8l300 173q14.25 8.43 22.13 22.21Q840-666 840-650v340q0 16-7.87 29.79Q824.25-266.43 810-258L510-85q-14.33 8-30.16 8Q464-77 450-85L150-258Zm330-222Z"/></svg>';
     }
+    function neighborhoodDocumentRow(item) {
+        const extra = Object.assign({}, item);
+        delete extra.id;
+        delete extra.name;
+        delete extra.performed;
+        delete extra.filePath;
+        delete extra.data;
+        delete extra.payloadInDB;
+        delete extra.homeId;
+        delete extra.vehicleId;
+        return {
+            id: item.id,
+            title: item.name,
+            document_type: item.docType || null,
+            document_date: item.performed || null,
+            file_path: item.filePath || null,
+            home_id: null,
+            vehicle_id: null,
+            extracted_data: extra
+        };
+    }
+
+    function persistNeighborhoodDocument(item) {
+        const db = window.MyMaintenanceData;
+        if (!db || !item || !item.id) return;
+        db.request('documents', {
+            method: 'POST',
+            query: { on_conflict: 'id' },
+            body: neighborhoodDocumentRow(item),
+            prefer: 'resolution=merge-duplicates,return=representation'
+        }).catch(function (error) { console.error('Could not save neighborhood document:', error); });
+    }
+
     function renderDocs() {
         const nb = current();
         const list = document.getElementById('nb-docs-list');
-        if (!nb || !nb.docs || !nb.docs.length) {
+        if (!list) return;
+        const asset = 'Neighborhood: ' + (nb ? nb.name || 'Neighborhood' : 'Neighborhood');
+        let docs = [];
+        if (window.MyMaintenanceDocs) docs = window.MyMaintenanceDocs.getItems().filter(function (d) {
+            return String(d.asset || '').trim() === asset;
+        });
+        const recent = docs.slice().sort(function (a, b) {
+            return String(b.uploaded || '').localeCompare(String(a.uploaded || ''));
+        }).slice(0, 3);
+        if (!recent.length) {
             list.innerHTML = '<div class="nb-empty">No documents registered.</div>';
             return;
         }
         list.innerHTML = '<div class="doc-row doc-header-row"><div class="doc-row-left"><span class="doc-cell doc-cell-icon"></span><span class="doc-cell doc-cell-name doc-col-label">Document</span></div><div class="doc-row-right"><span class="doc-cell doc-cell-performed doc-col-label">Performed</span><span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span><span class="doc-cell doc-cell-size doc-col-label">Size</span><span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span></div></div>';
-        nb.docs.forEach((d, idx) => {
+        recent.forEach((d, idx) => {
             const row = document.createElement('div');
             row.className = 'doc-row doc-row-open';
             row.style.cursor = 'pointer';
+            row.setAttribute('data-doc-id', d.id);
             const left = document.createElement('div');
             left.className = 'doc-row-left';
             left.innerHTML = neighborhoodDocumentIcon();
@@ -980,6 +1038,19 @@ document.addEventListener('DOMContentLoaded', () => {
             tag.textContent = isNeighborhood ? 'Neighborhood' : 'Private';
             privacy.appendChild(tag);
             right.appendChild(privacy);
+            const editCell = document.createElement('span');
+            editCell.className = 'doc-cell doc-cell-edit';
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'doc-edit-btn';
+            editBtn.setAttribute('title', 'Edit document');
+            editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
+            editBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (window.MyMaintenanceDocs) window.MyMaintenanceDocs.openEdit(d);
+            });
+            editCell.appendChild(editBtn);
+            right.appendChild(editCell);
             row.appendChild(left);
             row.appendChild(right);
             row.addEventListener('click', () => previewDoc(d));
@@ -1036,27 +1107,74 @@ document.addEventListener('DOMContentLoaded', () => {
         renderNbThumbs();
     }
 
+    window.addEventListener('mydocs:changed', function () {
+        if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.render) window.MyMaintenanceDocs.render();
+        renderDocs();
+    });
+
     /* ---- Wire events ---- */
     document.getElementById('nb-add-event').addEventListener('click', () => {
         if (!current()) return openInfoPopup(null);
+        const pickers = window.MyMaintenanceEventPickers;
+        const pad2 = function (n) { return String(n).padStart(2, '0'); };
+        const now = new Date();
+        const today = now.getFullYear() + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate());
+        const rounded = new Date(now);
+        rounded.setMinutes(Math.ceil(rounded.getMinutes() / 15) * 15, 0, 0);
+        const h = pad2(rounded.getHours());
+        const m = pad2(rounded.getMinutes());
+        const later = new Date(rounded.getTime() + 60 * 60 * 1000);
+        const h2 = pad2(later.getHours());
+        const m2 = pad2(later.getMinutes());
         document.getElementById('nb-event-modal').style.display = 'flex';
         document.getElementById('nbe-name').value = '';
-        document.getElementById('nbe-date').value = '';
-        document.getElementById('nbe-time').value = '';
+        if (pickers) {
+            pickers.setDate(document.getElementById('nbe-start-date'), today);
+            pickers.setDate(document.getElementById('nbe-finish-date'), today);
+        }
+        document.getElementById('nbe-start-time').value = h + ':' + m;
+        document.getElementById('nbe-finish-time').value = h2 + ':' + m2;
         document.getElementById('nbe-location').value = '';
         document.getElementById('nbe-desc').value = '';
+        document.getElementById('nbe-invite').checked = false;
+        if (document.getElementById('nbe-name')) document.getElementById('nbe-name').focus();
     });
     document.getElementById('nbe-cancel').addEventListener('click', () => { document.getElementById('nb-event-modal').style.display = 'none'; });
-    document.getElementById('nbe-add').addEventListener('click', () => {
+    document.getElementById('nbe-save').addEventListener('click', () => {
         const nb = current();
         const name = document.getElementById('nbe-name').value.trim();
         if (!name) return;
         if (!nb.events) nb.events = [];
-        nb.events.push({ name, date: document.getElementById('nbe-date').value, time: document.getElementById('nbe-time').value, location: document.getElementById('nbe-location').value, desc: document.getElementById('nbe-desc').value });
+        const pickers = window.MyMaintenanceEventPickers;
+        const startDate = pickers ? pickers.dateValue(document.getElementById('nbe-start-date')) : '';
+        const finishDate = pickers ? pickers.dateValue(document.getElementById('nbe-finish-date')) : '';
+        nb.events.push({
+            name,
+            startDate: startDate,
+            finishDate: finishDate || startDate,
+            startTime: document.getElementById('nbe-start-time').value,
+            finishTime: document.getElementById('nbe-finish-time').value,
+            location: document.getElementById('nbe-location').value,
+            desc: document.getElementById('nbe-desc').value,
+            inviteNeighborhood: document.getElementById('nbe-invite').checked
+        });
         saveNeighborhoods();
         document.getElementById('nb-event-modal').style.display = 'none';
         renderEvents();
     });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('nb-event-modal');
+        if (modal && modal.style.display === 'flex') modal.style.display = 'none';
+    });
+
+    const nbPickers = window.MyMaintenanceEventPickers;
+    if (nbPickers) {
+        nbPickers.attachDateField(document.getElementById('nbe-start-date'));
+        nbPickers.attachDateField(document.getElementById('nbe-finish-date'), { finishDate: true });
+        nbPickers.attachTimeField(document.getElementById('nbe-start-time'));
+        nbPickers.attachTimeField(document.getElementById('nbe-finish-time'));
+    }
 
     document.getElementById('nb-add-neighbor').addEventListener('click', () => {
         if (!current()) return openInfoPopup(null);
@@ -1225,9 +1343,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
         try {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const docType = fileFormat(file);
             const doc = {
+                id: crypto.randomUUID(),
                 name: name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed: performed,
-                asset: nb.name || 'Neighborhood', privacy: privacy,
+                asset: 'Neighborhood: ' + (nb.name || 'Neighborhood'), privacy: privacy, docType: docType,
                 type: db.fileMime ? db.fileMime(file) : file.type, uploaded: new Date().toISOString(),
                 filePath: `${userId}/neighborhoods/${nb.id}/documents/${crypto.randomUUID()}-${safeName}`
             };
@@ -1235,7 +1355,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!nb.docs) nb.docs = [];
             nb.docs.push(doc);
             await saveNeighborhoods();
+            persistNeighborhoodDocument(doc);
             document.getElementById('nb-doc-add-popup').style.display = 'none';
+            if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.refresh) {
+                await window.MyMaintenanceDocs.refresh();
+            }
             renderDocs();
         } catch (error) {
             window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload document.');
@@ -1243,8 +1367,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('nb-show-all-docs').addEventListener('click', () => {
         const nb = current();
-        if (!nb || !nb.docs || !nb.docs.length) return;
-        if (nb.docs[0]) previewDoc(nb.docs[0]);
+        if (!nb) return openInfoPopup(null);
+        window.MyMaintenanceDocumentContext = {
+            asset: 'Neighborhood: ' + (nb.name || 'Neighborhood'),
+            neighborhoodDocs: (nb.docs || []).slice()
+        };
+        window.location.href = '../pages/mydocuments.html';
     });
 
     function formatBytes(bytes) {

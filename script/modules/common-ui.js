@@ -30,12 +30,20 @@ const commonDialogs = (function () {
             request.resolve(value);
             next();
         }
-        active = { dialog, finish };
+        active = { dialog, finish, escapeResult: !!request.escapeResult };
         cancel.onclick = () => finish(false);
         confirm.onclick = () => finish(true);
-        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
+        // Ignore the native Escape "cancel" that belongs to the same keydown
+        // that opened this dialog; only handle cancels from later presses.
+        let cancelReady = false;
+        dialog.addEventListener('cancel', event => {
+            event.preventDefault();
+            if (!cancelReady) return;
+            finish(active.escapeResult);
+        });
         document.body.appendChild(dialog);
         dialog.showModal();
+        setTimeout(function () { cancelReady = true; }, 0);
         (request.confirm ? cancel : confirm).focus();
     }
     // Keep keyboard events from reaching popups underneath this dialog.
@@ -45,7 +53,10 @@ const commonDialogs = (function () {
         if (event.key === 'Escape' || event.key === 'Enter') {
             event.preventDefault();
             suppressKeyUp = event.key;
-            if (!event.repeat) active.finish(event.key === 'Enter' && document.activeElement === active.dialog.querySelector('.mm-message-confirm'));
+            if (!event.repeat) {
+                if (event.key === 'Escape') active.finish(active.escapeResult);
+                else active.finish(document.activeElement === active.dialog.querySelector('.mm-message-confirm'));
+            }
         }
         event.stopImmediatePropagation();
     }, true);
@@ -65,7 +76,7 @@ window.MyMaintenanceCommonUi = {
     confirm: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: true })); },
     confirmDiscard: function (onDiscard) {
         return this.confirm('Your unsaved changes will be lost.', {
-            title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard'
+            title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard', escapeResult: true
         }).then(discard => { if (discard) onDiscard(); });
     },
     initCommonUiInteractions() {

@@ -21,6 +21,12 @@
 </head>
 <body class="sidebar-open logged-in">
     <main class="main">
+        <div class="planning-content" id="doc-context-header" style="display:none; margin-bottom:30px;">
+            <div style="position:relative;">
+                <button onclick="history.back()" style="position:absolute;left:0;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;padding:10px 28px;border:2px solid var(--border-color);border-radius:25px;background:var(--bg-primary);cursor:pointer;color:var(--text-primary);font-family:'Poppins',sans-serif;font-size:1rem;font-weight:600;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-primary)'"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Back</button>
+                <h1 style="margin:0;text-align:center;" id="doc-context-title">Neighborhood Documents</h1>
+            </div>
+        </div>
         <h1>MyDocuments</h1>
         <div class="grid-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
             <div class="button-group">

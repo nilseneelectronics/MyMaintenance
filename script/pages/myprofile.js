@@ -91,6 +91,21 @@
         reader.readAsDataURL(file);
     }
 
+    function splitPhone(value) {
+        value = String(value || '').trim();
+        var m = value.match(/^(\+\d{1,3})\s*(.*)$/);
+        if (m) return { code: m[1], number: m[2] || '' };
+        return { code: '+47', number: value };
+    }
+
+    function joinPhone(code, number) {
+        code = String(code || '').trim().replace(/^0+/, '');
+        if (!code) code = '+47';
+        if (code.charAt(0) !== '+') code = '+' + code;
+        number = String(number || '').trim();
+        return number ? code + ' ' + number : '';
+    }
+
     function setDropdownValue(dropdown, value) {
         if (!dropdown) return;
         var menu = dropdown.querySelector('.asset-menu');
@@ -182,7 +197,9 @@
     function openEditProfile() {
         $('pe-name').value = profile.name || '';
         $('pe-email').value = profile.email || '';
-        $('pe-phone').value = profile.phone || '';
+        var phone = splitPhone(profile.phone);
+        $('pe-phone-code').value = phone.code;
+        $('pe-phone').value = phone.number;
         $('pe-address').value = profile.address || '';
         $('pe-zip').value = profile.zip || '';
         $('pe-city').value = profile.city || '';
@@ -202,7 +219,7 @@
             id: profile.id,
             name: name,
             email: email,
-            phone: $('pe-phone').value.trim(),
+            phone: joinPhone($('pe-phone-code').value, $('pe-phone').value),
             address: $('pe-address').value.trim(),
             zip: $('pe-zip').value.trim(),
             city: $('pe-city').value.trim(),

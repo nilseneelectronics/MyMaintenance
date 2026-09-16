@@ -65,6 +65,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return it;
     });
 
+    // If we were sent here from a neighborhood ("Show all documents"), render
+    // that neighborhood's docs with a dedicated header instead of the main list.
+    const docContext = window.MyMaintenanceDocumentContext || null;
+    window.MyMaintenanceDocumentContext = null;
+    let neighborhoodOnly = false;
+    if (docContext && Array.isArray(docContext.neighborhoodDocs)) {
+        neighborhoodOnly = true;
+        items = docContext.neighborhoodDocs.map(function (d) {
+            const id = d.id || d.filePath || ('nb_' + (d.name || 'doc'));
+            return {
+                id: id,
+                name: d.name || d.fileName || 'Document',
+                docType: d.docType || '',
+                performed: d.performed || '',
+                uploaded: String(d.uploaded || '').slice(0, 10),
+                filePath: d.filePath || '',
+                size: d.size,
+                asset: d.asset || docContext.asset || 'Neighborhood',
+                privacy: d.privacy || 'private',
+                type: d.type || ''
+            };
+        });
+        const ctxHead = document.getElementById('doc-context-header');
+        const ctxTitle = document.getElementById('doc-context-title');
+        const mainH1 = document.querySelector('main.main h1');
+        if (ctxHead) ctxHead.style.display = '';
+        if (ctxTitle) ctxTitle.textContent = (docContext.asset || 'Neighborhood') + ' · Documents';
+        if (mainH1) mainH1.style.display = 'none';
+        ['doc-add-btn', 'doc-scan-btn', 'doc-search'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
+
     function store() {
         items.forEach(persistDocument);
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
@@ -113,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filePath: row.file_path || '',
             homeId: row.home_id || '',
             vehicleId: row.vehicle_id || '',
-            uploaded: extra.uploaded || String(row.created_at || '').slice(0, 10),
+            uploaded: String(extra.uploaded || row.created_at || '').slice(0, 10),
             created: extra.created || new Date(row.created_at || Date.now()).getTime()
         });
     }
@@ -738,14 +772,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function documentStateSnapshot() {
         return JSON.stringify({
-            name: nameInput.value, performed: performedInput.value, asset: selectedAssetValue,
-            otherAsset: docAssetOther ? docAssetOther.value : '', type: selectedDocType,
-            privacy: privacyValue(), file: selectedFile ? selectedFile.name + ':' + selectedFile.size : ''
+            name: nameInput.value, performed: performedInput.value,
+            otherAsset: docAssetOther ? docAssetOther.value : ''
+        });
+    }
+
+    function hasDocumentText() {
+        return [nameInput, performedInput, docAssetOther].some(function (el) {
+            return el && String(el.value || '').trim() !== '';
         });
     }
 
     function requestClosePopup() {
-        if (documentStateSnapshot() === initialDocState) return closePopup();
+        if (!hasDocumentText() || documentStateSnapshot() === initialDocState) return closePopup();
         window.MyMaintenanceCommonUi.confirmDiscard(closePopup);
     }
 
@@ -2104,7 +2143,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!byAsset.has(key)) byAsset.set(key, []);
                 byAsset.get(key).push(it);
             });
-            byAsset.forEach(function (arr, key) {
+            const groupKeys = Array.from(byAsset.keys()).sort(function (a, b) {
+                const aNb = /^Neighborhood:/i.test(a);
+                const bNb = /^Neighborhood:/i.test(b);
+                if (aNb !== bNb) return aNb ? 1 : -1;
+                return a < b ? -1 : 1;
+            });
+            groupKeys.forEach(function (key) {
+                const arr = byAsset.get(key);
                 const sortedArr = arr.slice().sort(sortComparator());
                 const grp = document.createElement('div');
                 grp.className = 'subgroup doc-group';
@@ -2316,11 +2362,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initDocSort();
     updateView();
-    hydrateDocuments();
+    if (!neighborhoodOnly) hydrateDocuments();
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },
         openPreview: openPreview,
+        openEdit: function (it) {
+            const doc = items.filter(function (d) { return d.id === (it && it.id); })[0] || it;
+            if (doc) openEditPopup(doc);
+        },
+        refresh: function () { return hydrateDocuments(); },
         render: render,
         headerRowHtml: headerRowHtml,
         rowHtml: rowHtml

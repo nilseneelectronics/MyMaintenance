@@ -574,6 +574,7 @@
 .done-fields input[type="text"],
 .done-fields input[type="email"],
 .done-fields input[type="password"],
+.done-fields input[type="tel"],
 .done-fields textarea,
 .done-fields input[type="file"] {
     width: 100%;
@@ -590,9 +591,34 @@
 .done-fields input[type="text"]:focus,
 .done-fields input[type="email"]:focus,
 .done-fields input[type="password"]:focus,
+.done-fields input[type="tel"]:focus,
 .done-fields textarea:focus {
     outline: none;
     border-color: var(--accent-primary);
+}
+
+.done-fields .phone-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    overflow: hidden;
+}
+
+.done-fields .phone-group .phone-code {
+    flex: 0 0 84px;
+    width: 84px;
+    min-width: 0;
+    text-align: center;
+    border-radius: 25px 0 0 25px !important;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.done-fields .phone-group .phone-number {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0 25px 25px 0 !important;
+    border-left: none !important;
 }
 
 .done-fields textarea {
@@ -1393,7 +1419,7 @@ body:has(.event-modal-overlay.open) {
     border: 2px solid var(--accent-primary);
     border-radius: 16px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
-    z-index: 310;
+    z-index: 100000;
 }
 
 .event-time-picker.open { display: block; }

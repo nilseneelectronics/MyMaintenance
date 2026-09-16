@@ -162,21 +162,21 @@
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Start date</label>
-                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
+                    <input type="text" id="ev-start-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Finish date</label>
-                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
+                    <input type="text" id="ev-finish-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Start time</label>
-                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
+                    <input type="text" id="ev-start-time" class="event-time-field" placeholder="HH:MM" readonly aria-haspopup="dialog">
                 </div>
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Finish time</label>
-                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
+                    <input type="text" id="ev-finish-time" class="event-time-field" placeholder="HH:MM" readonly aria-haspopup="dialog">
                 </div>
             </div>
             <div class="event-modal-field">
@@ -228,6 +228,7 @@
     <script src="../script/modules/events.js"></script>
     <script src="../script/modules/assets.js"></script>
     <script src="../script/modules/event-tools.js"></script>
+    <script src="../script/modules/event-pickers.js"></script>
     <script>
     const STORAGE_KEY = 'floorplan_calendar_events';
     function loadEvents() {
@@ -278,6 +279,13 @@
         if (evAssetMenu) evAssetMenu.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
         if (evAssetOther) { evAssetOther.value = ''; evAssetOther.style.display = 'none'; }
         if (evAssetDropdown) evAssetDropdown.classList.remove('open');
+    }
+
+    if (window.MyMaintenanceEventPickers) {
+        window.MyMaintenanceEventPickers.attachDateField(evStartDate);
+        window.MyMaintenanceEventPickers.attachDateField(evFinishDate, { finishDate: true });
+        window.MyMaintenanceEventPickers.attachTimeField(evStartTime);
+        window.MyMaintenanceEventPickers.attachTimeField(evFinishTime);
     }
 
     function setEvAsset(value) {
@@ -375,8 +383,13 @@
             evAdd.textContent = 'Save';
             evDelete.style.display = '';
             evName.value = e.name || '';
-            evStartDate.value = e.startDate || key;
-            evFinishDate.value = e.finishDate || key;
+            if (window.MyMaintenanceEventPickers) {
+                window.MyMaintenanceEventPickers.setDate(evStartDate, e.startDate || key);
+                window.MyMaintenanceEventPickers.setDate(evFinishDate, e.finishDate || key);
+            } else {
+                evStartDate.value = e.startDate || key;
+                evFinishDate.value = e.finishDate || key;
+            }
             evStartTime.value = e.startTime || '';
             evFinishTime.value = e.finishTime || '';
             evLocation.value = e.location || '';
@@ -394,8 +407,13 @@
             evAdd.textContent = 'Add';
             evDelete.style.display = 'none';
             evName.value = '';
-            evStartDate.value = key;
-            evFinishDate.value = key;
+            if (window.MyMaintenanceEventPickers) {
+                window.MyMaintenanceEventPickers.setDate(evStartDate, key);
+                window.MyMaintenanceEventPickers.setDate(evFinishDate, key);
+            } else {
+                evStartDate.value = key;
+                evFinishDate.value = key;
+            }
             defaultTimes();
             evLocation.value = '';
             evDesc.value = '';
@@ -412,7 +430,9 @@
     }
 
     function eventStateSnapshot() {
-        return JSON.stringify({ name: evName.value, start: evStartDate.value, finish: evFinishDate.value,
+        const start = window.MyMaintenanceEventPickers ? window.MyMaintenanceEventPickers.dateValue(evStartDate) : evStartDate.value;
+        const finish = window.MyMaintenanceEventPickers ? window.MyMaintenanceEventPickers.dateValue(evFinishDate) : evFinishDate.value;
+        return JSON.stringify({ name: evName.value, start: start, finish: finish,
             startTime: evStartTime.value, finishTime: evFinishTime.value, location: evLocation.value,
             description: evDesc.value, planned: !!(evPlanned && evPlanned.checked), asset: selectedEvAsset });
     }
@@ -441,8 +461,8 @@
     confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.style.display = 'none'; });
     evAdd.addEventListener('click', () => {
         const name = evName.value.trim();
-        const startDate = evStartDate.value;
-        const finishDate = evFinishDate.value;
+        const startDate = window.MyMaintenanceEventPickers ? window.MyMaintenanceEventPickers.dateValue(evStartDate) : evStartDate.value;
+        const finishDate = window.MyMaintenanceEventPickers ? window.MyMaintenanceEventPickers.dateValue(evFinishDate) : evFinishDate.value;
         const startTime = evStartTime.value;
         const finishTime = evFinishTime.value;
         const location = evLocation.value.trim();

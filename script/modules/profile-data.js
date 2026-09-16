@@ -122,6 +122,14 @@ window.MyMaintenanceProfileData = (function () {
         } catch (_) { return ''; }
     }
 
+    function sessionPhone() {
+        try {
+            var session = JSON.parse(localStorage.getItem('mymaintenance.supabaseSession') || 'null');
+            return session && session.user && session.user.user_metadata && session.user.user_metadata.phone
+                ? session.user.user_metadata.phone : '';
+        } catch (_) { return ''; }
+    }
+
     function sameEmail(left, right) {
         return String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase();
     }
@@ -193,6 +201,8 @@ window.MyMaintenanceProfileData = (function () {
             // Auth owns account identity. Never copy an email cached by another
             // account in the same browser into this user's profile row.
             nextProfile.email = authenticatedEmail || nextProfile.email || '';
+            // Phone may come from signup metadata until the profile is edited.
+            if (!nextProfile.phone) nextProfile.phone = sessionPhone() || '';
             localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
             if (row && authenticatedEmail && !sameEmail(cloudProfile && cloudProfile.email, authenticatedEmail)) {
                 queueCloudSync();
