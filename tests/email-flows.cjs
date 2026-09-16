@@ -27,10 +27,10 @@ async function main() {
   assert(auth._readSupabaseSession().expires_at > Date.now()/1000);
 
   // Exercise the actual Edge Function handler with mock Auth, DB, and SMTP.
-  let handler, verified = true, smtpFails = false, neighborhoodScenario = false, actingUserId = 'owner'; const operations = [];
+  let handler, verified = true, smtpFails = false, neighborhoodScenario = false, existingNeighborhoodPending = false, outgoingFamilyPending = false, incomingFamilyPending = false, actingUserId = 'owner'; const operations = [];
   const id='11111111-1111-4111-8111-111111111111';
   const recipientId='66666666-6666-4666-8666-666666666666';
-  const row={id,name:'Recipient',email:'recipient@example.test',role:'Member',status:'sending',member_profile:{}};
+  const row={id,inviter_id:'owner',name:'Recipient',email:'recipient@example.test',role:'Member',status:'sending',member_profile:{}};
   const neighborhoodRow={id:'77777777-7777-4777-8777-777777777777',neighborhood_id:'55555555-5555-4555-8555-555555555555',name:'Recipient',email:'recipient@example.test',address:'Example Street 2',status:'sending'};
   const env={SUPABASE_URL:'https://test.invalid',SUPABASE_SERVICE_ROLE_KEY:'server-test',SMTP_HOST:'mail.test.invalid',SMTP_USER:'noreply@example.test',SMTP_PASSWORD:'test-only',SMTP_FROM:'noreply@example.test'};
   const backend = { Request, Response, URL, Uint8Array, Set, Date, Number, String, Error, atob:data=>Buffer.from(data,'base64').toString('binary'),
@@ -52,10 +52,12 @@ async function main() {
       if(url.includes('/rest/v1/neighborhood_members?')) return new Response(JSON.stringify(actingUserId==='member' ? [{user_id:'member'}] : []));
       if(url.endsWith('/rest/v1/neighborhood_members')) return new Response(JSON.stringify([{}]));
       if(url.includes('/rest/v1/neighborhoods?') && options.method==='GET') return new Response(JSON.stringify(neighborhoodScenario ? [{id:'55555555-5555-4555-8555-555555555555',owner_id:'owner',name:'Test Neighborhood',details:{addresses:[]}}] : []));
-      if(url.includes('neighborhood_invitations?') && options.method==='GET') return new Response(JSON.stringify([]));
+      if(url.includes('neighborhood_invitations?') && options.method==='GET') return new Response(JSON.stringify(existingNeighborhoodPending ? [{...neighborhoodRow,status:'pending'}] : []));
       if(url.includes('family_invitations?') && options.method==='GET') {
         operations.push('list');
         if(url.includes('family_id=eq.member-family')) return new Response(JSON.stringify([]));
+        if(url.includes('family_id=eq.') && outgoingFamilyPending) return new Response(JSON.stringify([row]));
+        if(url.includes('status=eq.pending') && url.includes('email=eq.') && url.includes('order=created_at.asc')) return new Response(JSON.stringify(incomingFamilyPending ? [row] : []));
         if(url.includes('email=eq.')) return new Response(JSON.stringify([{...row,id:'22222222-2222-4222-8222-222222222222',status:'pending'}]));
         if(url.includes('recipient_id=eq.')) return new Response(JSON.stringify([{...row,id:'33333333-3333-4333-8333-333333333333',status:'accepted'}]));
         return new Response(JSON.stringify([]));
@@ -74,11 +76,14 @@ async function main() {
   const send={action:'send',name:'Recipient',email:'recipient@example.test',role:'Member'};
   verified=false;assert.equal((await handler(request(send))).status,401);assert.equal(operations.length,0);
   verified=true;const result=await (await handler(request(send))).json();assert.equal(result.member.status,'invited');assert(result.member.sentAt);assert.deepEqual(operations,['reserve','family','smtp','pending']);
+  operations.length=0;existingNeighborhoodPending=true;const separate=await (await handler(request({...send,inviteNeighborhood:true}))).json();assert.equal(separate.member.status,'invited');assert(!operations.includes('reserve-neighborhood'));assert.deepEqual(operations,['reserve','family','smtp','pending']);existingNeighborhoodPending=false;
   operations.length=0;smtpFails=true;assert.equal((await handler(request(send))).status,400);assert.deepEqual(operations,['reserve','family','smtp','failed']);
   assert.equal((await handler(request({action:'send',...send,role:'Owner'}))).status,400);
   assert.equal((await handler(request({action:'accept',id}))).status,400);
   operations.length=0;const details=await (await handler(request({action:'details',id}))).json();assert.equal(details.invitation.inviterName,'Alex Inviter');
   operations.length=0;const listed=await (await handler(request({action:'list'}))).json();assert.deepEqual(listed.members,[]);assert.equal(listed.familyId,'44444444-4444-4444-8444-444444444444');
+  outgoingFamilyPending=true;const outgoingList=await (await handler(request({action:'list'}))).json();assert.equal(outgoingList.members.length,1);assert.equal(outgoingList.members[0].status,'invited');assert.equal(outgoingList.members[0].incomingInvitation,false);outgoingFamilyPending=false;
+  incomingFamilyPending=true;const incomingList=await (await handler(request({action:'list'}))).json();assert.equal(incomingList.members.length,1);assert.equal(incomingList.members[0].incomingInvitation,true);incomingFamilyPending=false;
   smtpFails=false;neighborhoodScenario=true;operations.length=0;const neighborhoodInvite=await (await handler(request({action:'invite-neighborhood',recipientId}))).json();assert.equal(neighborhoodInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));
   operations.length=0;const houseInvite=await (await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'resident@example.test'}))).json();assert.equal(houseInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));neighborhoodScenario=false;
   neighborhoodScenario=true;actingUserId='member';operations.length=0;assert.equal((await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'outsider@example.test'}))).status,400);assert(!operations.includes('smtp'));actingUserId='owner';neighborhoodScenario=false;

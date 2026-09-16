@@ -9,7 +9,7 @@ window.MyMaintenanceNeighborhoodDefaults = (function () {
         family = Array.isArray(family) ? family : [];
         const owner = family.find(member => normalize(member.email) === normalize(profile.email) && profile.email);
         const eligible = (homes || []).filter(home => normalize(home.address) &&
-            (!home.ownerId || (owner && home.ownerId === owner.id)));
+            (!home.ownerId || home.ownerId === profile.id || (owner && home.ownerId === owner.id)));
         const home = eligible.find(home => normalize(home.houseType) === 'house') ||
             eligible.find(home => normalize(home.houseType) === 'apartment') || eligible[0];
         if (!home) return null;

@@ -307,8 +307,8 @@
 .role-badge.invited,
 .role-badge.pending {
     background: transparent;
-    color: #FF0000;
-    border: 1px solid #FF0000;
+    color: #d97706;
+    border: 1px solid #d97706;
 }
 
 .profile-row-actions {

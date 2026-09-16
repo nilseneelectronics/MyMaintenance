@@ -38,8 +38,11 @@ async function database(path: string, method = 'GET', body?: unknown) {
     const data = await response.json().catch(() => null);
     if (!response.ok) {
         console.error('Database request failed', path.split('?')[0], response.status, data);
-        if (data?.code === '23505') throw new Error('An invitation or member already exists for this email. Cancel the old invitation first.');
+        if (data?.code === '23505' && path.includes('reserve_family_invitation')) throw new Error('A family invitation is already pending or this person is already a family member.');
+        if (data?.code === '23505' && path.includes('reserve_neighborhood_invitation')) throw new Error('A neighborhood invitation is already pending for this email.');
+        if (data?.code === '23505') throw new Error('This record already exists.');
         if (data?.code === 'P0001') throw new Error(data.message);
+        if (['42P01', '42501', '42703', '42883', 'PGRST202'].includes(data?.code)) throw new Error('Neighborhood invitation database setup is missing. Apply the latest Supabase migrations.');
         throw new Error('Could not update invitation records.');
     }
     return data;
@@ -248,10 +251,11 @@ Deno.serve(async request => {
             // the member they invited, while the recipient sees the invitation before
             // accepting and their membership afterward.
             const familyId = await familyFor(user.id);
-            const [memberships, profiles, pending, ownedNeighborhoods] = await Promise.all([
+            const [memberships, profiles, outgoingPending, incomingPending, ownedNeighborhoods] = await Promise.all([
                 database('family_members?family_id=eq.' + familyId + '&select=user_id,role,joined_at&order=joined_at.asc'),
                 database('profiles?select=id,display_name,details'),
                 database('family_invitations?family_id=eq.' + familyId + '&status=eq.pending&order=created_at.asc'),
+                database('family_invitations?email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending&order=created_at.asc'),
                 database('neighborhoods?owner_id=eq.' + user.id + '&select=id')
             ]);
             const profileById = new Map(profiles.map((profile: Record<string, any>) => [profile.id, profile]));
@@ -270,8 +274,10 @@ Deno.serve(async request => {
                 return { id: membership.user_id, name: details.name || profile.display_name || 'Family member', email, role: membership.role,
                     status: 'active', familyId, serverInvitation: true, neighborhoodStatus: neighborhoodMemberIds.has(membership.user_id) ? 'active' : (pendingNeighborhood ? 'invited' : '') };
             });
-            const incoming = pending.filter((row: Record<string, any>) => row.email.toLowerCase() === user.email.toLowerCase()).map((row: Record<string, any>) => member(row, true));
-            return reply({ members: [...active, ...incoming], familyId });
+            const outgoing = outgoingPending.filter((row: Record<string, any>) => row.inviter_id === user.id).map((row: Record<string, any>) => member(row));
+            const outgoingIds = new Set(outgoing.map((row: Record<string, any>) => row.id));
+            const incoming = incomingPending.filter((row: Record<string, any>) => !outgoingIds.has(row.id)).map((row: Record<string, any>) => member(row, true));
+            return reply({ members: [...active, ...outgoing, ...incoming], familyId });
             /* legacy rows are retained below for compatibility with pre-migration deployments. */
             /*
             const [sent, pending, accepted] = await Promise.all([
@@ -341,8 +347,13 @@ Deno.serve(async request => {
         const row = await database('rpc/reserve_family_invitation', 'POST', { p_inviter: user.id, p_email: email, p_name: name, p_role: body.role, p_limit: Number(env('INVITE_HOURLY_LIMIT')) || 5 });
         await database('family_invitations?id=eq.' + row.id, 'PATCH', { family_id: familyId });
         let neighborhoodInvitation = null;
+        let createdNeighborhoodInvitation = false;
         if (body.inviteNeighborhood) {
-            try { neighborhoodInvitation = await reserveNeighborhoodInvite(user, email, name, null); }
+            try {
+                const existingNeighborhoodInvites = await database('neighborhood_invitations?inviter_id=eq.' + user.id + '&email=eq.' + encodeURIComponent(email) + '&status=eq.pending&select=id&limit=1');
+                neighborhoodInvitation = existingNeighborhoodInvites[0] || await reserveNeighborhoodInvite(user, email, name, null);
+                createdNeighborhoodInvitation = !existingNeighborhoodInvites.length;
+            }
             catch (error) {
                 await database('family_invitations?id=eq.' + row.id, 'PATCH', { status: 'failed' });
                 throw error;
@@ -360,10 +371,10 @@ Deno.serve(async request => {
             if (!delivery.accepted?.length) throw new Error('Rejected');
         } catch (_) {
             await database('family_invitations?id=eq.' + row.id, 'PATCH', { status: 'failed' });
-            if (neighborhoodInvitation) await database('neighborhood_invitations?id=eq.' + neighborhoodInvitation.id, 'PATCH', { status: 'failed' });
+            if (createdNeighborhoodInvitation) await database('neighborhood_invitations?id=eq.' + neighborhoodInvitation.id, 'PATCH', { status: 'failed' });
             throw new Error('The mail server did not confirm delivery. No member was added. Please check email delivery logs before retrying.');
         } finally { transport.close(); }
-        if (neighborhoodInvitation) await database('neighborhood_invitations?id=eq.' + neighborhoodInvitation.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
+        if (createdNeighborhoodInvitation) await database('neighborhood_invitations?id=eq.' + neighborhoodInvitation.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
         const saved = await database('family_invitations?id=eq.' + row.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
         return reply({ member: member(saved[0]) });
     } catch (error) { return reply({ error: error instanceof Error ? error.message : 'Could not process invitation.' }, 400); }

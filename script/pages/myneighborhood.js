@@ -307,15 +307,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = document.createElement('span');
             status.className = 'nb-invite-status';
             status.textContent = creator ? (person.name || me.name || 'Neighborhood creator') :
-                (joined ? (person.name || 'Joined') : (person.invitationStatus === 'invited' ? 'Invitation sent' : ''));
+                (joined ? (person.name || 'Joined') : (person.invitationStatus === 'invited' ? 'Invite pending' : ''));
             line.appendChild(personLabel);
             line.appendChild(emailControl);
             line.appendChild(status);
             if (!creator) {
                 const invite = document.createElement('button');
                 invite.type = 'button';
-                invite.className = 'nb-send-invite-btn';
-                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Invited' : 'Send invite');
+                invite.className = 'nb-send-invite-btn' + (person.invitationStatus === 'invited' ? ' pending' : '');
+                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Invite sent' : 'Send invite');
                 invite.disabled = joined || person.invitationStatus === 'invited';
                 invite.addEventListener('click', async () => {
                     readBuilderIntoModel(builderModel);
@@ -408,21 +408,23 @@ document.addEventListener('DOMContentLoaded', () => {
     async function openInfoPopup(nb) {
         if (openingInfo) return;
         let defaults;
-        if (!nb) {
-            openingInfo = true;
-            try {
-                await Promise.all([window.MyMaintenanceProfileData.hydrate(), window.MyMaintenanceAssets.hydrate()]);
-                const profile = window.MyMaintenanceProfileData.getProfile();
-                Object.assign(me, { id: profile.id || '', name: profile.name || '', email: profile.email || '', phone: profile.phone || '' });
+        openingInfo = true;
+        try {
+            const loads = [window.MyMaintenanceProfileData.hydrate()];
+            if (!nb) loads.push(window.MyMaintenanceAssets.hydrate());
+            await Promise.all(loads);
+            const profile = window.MyMaintenanceProfileData.getProfile();
+            Object.assign(me, { id: profile.id || '', name: profile.name || '', email: profile.email || '', phone: profile.phone || '' });
+            if (!nb) {
                 defaults = window.MyMaintenanceNeighborhoodDefaults.create(profile,
                     window.MyMaintenanceAssets.getHomes(), window.MyMaintenanceProfileData.getFamily());
                 if (!defaults) {
                     window.MyMaintenanceCommonUi.alert('Register a home with an address in My Homes before creating a neighborhood.');
                     return;
                 }
-            } finally {
-                openingInfo = false;
             }
+        } finally {
+            openingInfo = false;
         }
         clearTimeout(housesTimer);
         document.getElementById('nb-addr-builder').innerHTML = '';
@@ -608,9 +610,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (existing && existing.id === builderModel.id) Object.assign(existing, builderModel);
         else neighborhoods.push(builderModel);
         currentId = builderModel.id;
+        history.replaceState(null, '', 'myneighborhood.html?id=' + encodeURIComponent(currentId));
+        if (onlyInviteTarget) {
+            document.getElementById('nb-info-popup-title').textContent = 'Edit Neighborhood';
+            renderBuilder();
+            render();
+            return;
+        }
         document.getElementById('nb-info-popup').style.display = 'none';
         builderModel = null;
-        history.replaceState(null, '', 'myneighborhood.html?id=' + encodeURIComponent(currentId));
         render();
     }
 
@@ -700,8 +708,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const access = document.createElement('div');
                 access.className = 'nb-person-cell nb-access-cell';
                 const tag = document.createElement('span');
-                tag.className = 'nb-access-tag ' + (p.role || 'view');
-                tag.textContent = roleLabel(p.role);
+                const pending = p.invitationStatus === 'invited';
+                tag.className = 'nb-access-tag ' + (pending ? 'pending' : (p.role || 'view'));
+                tag.textContent = pending ? 'Invite pending' : roleLabel(p.role);
                 access.appendChild(tag);
 
                 const name = document.createElement('div');
@@ -1019,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (control) control.hidden = sharedReadOnly;
         });
         const neighborAction = document.getElementById('nb-add-neighbor');
-        if (neighborAction) neighborAction.textContent = current() && !isMeAdmin(current()) ? 'Invite family' : 'Edit neighborhood';
+        if (neighborAction) neighborAction.textContent = 'Edit neighborhood';
         renderNeighbors();
         renderEvents();
         renderDocs();

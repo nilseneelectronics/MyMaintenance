@@ -294,6 +294,12 @@
     opacity: 0.65;
 }
 
+.nb-send-invite-btn.pending {
+    background: transparent;
+    color: #d97706;
+    border: 1px solid #d97706;
+}
+
 .nb-creator-marker {
     color: var(--text-secondary);
     font-size: 0.78rem;
@@ -425,7 +431,7 @@
 .nb-person-header,
 .nb-person-row {
     display: grid;
-    grid-template-columns: 92px 1fr 1fr 1.3fr;
+    grid-template-columns: 124px 1fr 1fr 1.3fr;
     gap: 14px;
     align-items: center;
 }
@@ -486,7 +492,7 @@
 
 .nb-access-tag {
     display: inline-block;
-    width: 68px;
+    min-width: 68px;
     box-sizing: border-box;
     text-align: center;
     font-size: 0.68rem;
@@ -513,6 +519,13 @@
     color: var(--text-secondary);
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
+}
+
+.nb-access-tag.pending {
+    width: auto;
+    color: #d97706;
+    background: transparent;
+    border: 1px solid #d97706;
 }
 
 /* Role dropdown per person (right of the email field, under the person) */
