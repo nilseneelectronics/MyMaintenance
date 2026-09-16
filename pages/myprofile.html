@@ -154,9 +154,6 @@
             <div class="popup-content">
                 <h3>Invite to your family</h3>
                 <div class="done-fields">
-                    <label for="inv-name">Name *</label>
-                    <input type="text" id="inv-name" placeholder="e.g. Jane Doe">
-
                     <label for="inv-email">Email *</label>
                     <input type="email" id="inv-email" placeholder="e.g. jane@example.com">
 
@@ -173,6 +170,11 @@
                             <li><button type="button" data-value="Viewer">Viewer</button></li>
                         </ul>
                     </div>
+
+                    <label class="profile-invite-option" for="inv-neighborhood">
+                        <input type="checkbox" id="inv-neighborhood">
+                        <span>Also invite to MyNeighborhood</span>
+                    </label>
 
                     <p class="profile-popup-hint">Invited people must confirm the invitation before they appear as members.</p>
                 </div>

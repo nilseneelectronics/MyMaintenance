@@ -27,6 +27,24 @@
         return family.find(function (m) { return m.role === 'Owner'; });
     }
 
+    function currentFamilyMember() {
+        return family.find(function (m) {
+            return profile.id ? m.id === profile.id :
+                profile.email && String(m.email || '').toLowerCase() === profile.email.toLowerCase();
+        });
+    }
+
+    function canManageFamily() {
+        var current = currentFamilyMember();
+        return !!current && current.role === 'Owner' && !isPendingInvite(current);
+    }
+
+    function renderFamilyManagementControls() {
+        var display = canManageFamily() ? '' : 'none';
+        if ($('fam-invite')) $('fam-invite').style.display = display;
+        if ($('access-invite')) $('access-invite').style.display = display;
+    }
+
     /* ===================== TOAST ===================== */
     var toastEl = null;
     function toast(message, isError) {
@@ -173,13 +191,15 @@
         openOverlay($('profile-edit-popup'));
     }
 
-    function saveEditProfile() {
+    async function saveEditProfile() {
+        if ($('pe-save').disabled) return;
         var name = $('pe-name').value.trim();
         var email = $('pe-email').value.trim();
         if (!name) { toast('Please enter your name.', true); return; }
         if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
 
         profile = {
+            id: profile.id,
             name: name,
             email: email,
             phone: $('pe-phone').value.trim(),
@@ -188,9 +208,17 @@
             city: $('pe-city').value.trim(),
             avatar: peAvatar
         };
-        PD.saveProfile(profile);
+        $('pe-save').disabled = true;
+        try {
+            await PD.saveProfile(profile, true);
+        } catch (error) {
+            toast('Could not save your name to your account. Please try again.', true);
+            return;
+        } finally {
+            $('pe-save').disabled = false;
+        }
 
-        var owner = ownerMember();
+        var owner = family.find(function (m) { return m.id === profile.id; });
         if (owner) {
             owner.name = name;
             owner.email = email;
@@ -215,14 +243,33 @@
         return ['invited', 'pending', 'draft'].includes(member.status);
     }
 
+    function isIncomingInvite(member) {
+        return !!member.incomingInvitation;
+    }
+
     function renderMembers(listId) {
         var listEl = $(listId);
         if (!listEl) return;
         listEl.innerHTML = '';
+        renderFamilyManagementControls();
 
-        family.forEach(function (m) {
+        var error = PD.getFamilyLoadError();
+        if (error || !family.length) {
+            var hint = document.createElement('p');
+            hint.className = 'profile-popup-hint';
+            hint.textContent = error || 'No family members to display.';
+            listEl.appendChild(hint);
+        }
+
+        var currentMember = currentFamilyMember();
+        var mayManage = canManageFamily();
+        var members = currentMember
+            ? [currentMember].concat(family.filter(function (m) { return m !== currentMember; }))
+            : family;
+        members.forEach(function (m) {
             var pending = isPendingInvite(m);
-            if (pending && listId === 'access-list') return;
+            var incoming = isIncomingInvite(m);
+            if ((pending || incoming) && listId === 'access-list') return;
             var row = document.createElement('div');
             row.className = 'profile-list-row';
             row.setAttribute('role', 'button');
@@ -242,7 +289,7 @@
 
             var title = document.createElement('div');
             title.className = 'profile-row-title';
-            title.textContent = m.name || 'Unnamed';
+            title.textContent = incoming ? (pending ? 'Family invitation' : 'Your family membership') : (m.name || 'Unnamed');
             var badge = document.createElement('span');
             badge.className = 'role-badge ' + (pending ? 'pending' : String(m.role || 'Member').toLowerCase());
             badge.textContent = pending ? 'Invite pending' : (m.role || 'Member');
@@ -250,16 +297,31 @@
 
             var sub = document.createElement('div');
             sub.className = 'profile-row-sub';
-            sub.textContent = m.email + (pending ? (m.sentAt ? ' — Awaiting acceptance' : ' — Email not sent') : '');
+            sub.textContent = incoming
+                ? (pending ? 'Accept this invitation to join the family.' : 'You are an active member of this family.')
+                : m.email + (pending ? (m.sentAt ? ' — Awaiting acceptance' : ' — Email not sent') : '');
 
             main.appendChild(title);
             main.appendChild(sub);
 
             var actions = document.createElement('div');
             actions.className = 'profile-row-actions';
-            if (pending) {
+            if (incoming && pending) {
+                var acceptInvite = document.createElement('button');
+                acceptInvite.type = 'button'; acceptInvite.className = 'profile-row-btn'; acceptInvite.textContent = 'Accept invite';
+                acceptInvite.onclick = async function (event) {
+                    event.stopPropagation(); acceptInvite.disabled = true;
+                    try {
+                        await window.MyMaintenanceAuth.familyRequest('accept', { id: m.id });
+                        await PD.hydrateFamily();
+                        toast('Invitation accepted. You are now a family member.');
+                    } catch (error) { toast(error.message, true); }
+                    finally { acceptInvite.disabled = false; }
+                };
+                actions.appendChild(acceptInvite);
+            } else if (pending && mayManage) {
                 var cancelInvite = document.createElement('button');
-                cancelInvite.type = 'button'; cancelInvite.className = 'profile-row-btn'; cancelInvite.textContent = 'Cancel invite';
+                cancelInvite.type = 'button'; cancelInvite.className = 'profile-row-btn cancel-invite'; cancelInvite.textContent = 'Cancel invite';
                 cancelInvite.onclick = async function (event) {
                     event.stopPropagation(); cancelInvite.disabled = true;
                     try {
@@ -270,7 +332,7 @@
                 };
                 actions.appendChild(cancelInvite);
             }
-            if (!pending && (m.role || 'Member') !== 'Owner') {
+            if (mayManage && !pending && (m.role || 'Member') !== 'Owner') {
                 var manage = document.createElement('button');
                 manage.type = 'button';
                 manage.className = 'profile-row-btn';
@@ -285,26 +347,61 @@
             row.appendChild(main);
             row.appendChild(actions);
 
-            if (pending) {
+            if (incoming && pending) {
+                row.addEventListener('click', function () { toast('Use Accept invite to join this family.'); });
+            } else if (pending) {
                 row.addEventListener('click', function () {
                     toast(m.sentAt ? 'Waiting for this person to accept the invitation.' : 'This invitation has not been emailed. Email sending must be configured first.', !m.sentAt);
                 });
             } else if ((m.role || 'Member') === 'Owner') {
-                row.addEventListener('click', function () { toast('You are the account owner.'); });
-            } else {
+                row.addEventListener('click', function () { toast(m.name + ' is the family owner.'); });
+            } else if (mayManage) {
                 row.addEventListener('click', function () { openMemberAccess(m.id); });
             }
             listEl.appendChild(row);
         });
     }
 
-    function buildToggleRows(container, items, values, locked) {
+    async function inviteMemberToNeighborhood(member, button) {
+        if (!member || button.disabled) return;
+        button.disabled = true;
+        button.textContent = 'Sending…';
+        try {
+            await window.MyMaintenanceAuth.familyRequest('invite-neighborhood', { recipientId: member.id });
+            member.neighborhoodStatus = 'invited';
+            PD.saveFamily(family);
+            button.textContent = 'Invited';
+            toast('Neighborhood invitation sent to ' + member.email);
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = 'Invite';
+            toast(error.message || 'Could not send neighborhood invitation.', true);
+        }
+    }
+
+    function buildToggleRows(container, items, values, locked, member) {
         container.innerHTML = '';
         items.forEach(function (item) {
             var label = document.createElement('label');
             label.className = 'profile-toggle' + (locked ? ' disabled' : '');
             var text = document.createElement('span');
             text.textContent = item.label;
+            if (item.invitation) {
+                var invite = document.createElement('button');
+                invite.type = 'button';
+                invite.className = 'profile-access-invite';
+                var status = member && member.neighborhoodStatus;
+                invite.textContent = locked ? 'Owner' : (status === 'active' ? 'Shared' : (status === 'invited' ? 'Invited' : 'Invite'));
+                invite.disabled = locked || status === 'active' || status === 'invited';
+                invite.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    inviteMemberToNeighborhood(member, invite);
+                });
+                label.appendChild(text);
+                label.appendChild(invite);
+                container.appendChild(label);
+                return;
+            }
             var input = document.createElement('input');
             input.type = 'checkbox';
             input.checked = !!values[item.key];
@@ -320,6 +417,10 @@
     }
 
     function openMemberAccess(id) {
+        if (!canManageFamily()) {
+            toast('Only the family owner can manage access.', true);
+            return;
+        }
         var m = family.find(function (x) { return x.id === id; });
         if (!m) return;
         if (isPendingInvite(m)) { toast('This person must accept their invitation before receiving access.', true); return; }
@@ -341,11 +442,11 @@
                 m.role = value;
                 var preset = PD.presetAccess(value);
                 PD.ACCESS_AREAS.forEach(function (a) { m.access[a.key] = preset[a.key]; });
-                buildToggleRows($('ma-toggles'), PD.ACCESS_AREAS, m.access, false);
+                buildToggleRows($('ma-toggles'), PD.ACCESS_AREAS, m.access, false, m);
             };
         }
 
-        buildToggleRows($('ma-toggles'), PD.ACCESS_AREAS, m.access, isOwner);
+        buildToggleRows($('ma-toggles'), PD.ACCESS_AREAS, m.access, isOwner, m);
         openOverlay($('member-access-popup'));
     }
 
@@ -382,8 +483,8 @@
 
     /* ===================== INVITE ===================== */
     function openInvite() {
-        $('inv-name').value = '';
         $('inv-email').value = '';
+        $('inv-neighborhood').checked = false;
         invRole = 'Member';
         setDropdownValue($('inv-role-dropdown'), 'Member');
         openOverlay($('invite-popup'));
@@ -391,10 +492,9 @@
 
     async function sendInvite() {
         if ($('inv-send').disabled) return;
-        var name = $('inv-name').value.trim();
         var email = $('inv-email').value.trim();
-        if (!name) { toast('Please enter the name.', true); return; }
         if (!EMAIL_RE.test(email)) { toast('Please enter a valid email address.', true); return; }
+        var name = email.split('@')[0];
         if (family.some(function (x) { return x.email.toLowerCase() === email.toLowerCase() && (!isPendingInvite(x) || x.sentAt); })) {
             toast('This email is already part of your family.', true);
             return;
@@ -403,22 +503,31 @@
         $('inv-send').disabled = true;
         $('inv-send').textContent = 'Sending…';
         try {
-            const result = await window.MyMaintenanceAuth.familyRequest('send', { name, email, role: invRole === 'Viewer' ? 'Viewer' : 'Member' });
+            const inviteNeighborhood = $('inv-neighborhood').checked;
+            const result = await window.MyMaintenanceAuth.familyRequest('send', { name, email, role: invRole === 'Viewer' ? 'Viewer' : 'Member', inviteNeighborhood });
+            if (inviteNeighborhood) result.member.neighborhoodStatus = 'invited';
             family = family.filter(x => x.email.toLowerCase() !== email.toLowerCase());
             family.push(result.member); PD.saveFamily(family);
             renderMembers('family-list'); renderMembers('access-list'); closeOverlay($('invite-popup'));
-            toast('Invitation sent. Waiting for acceptance.');
+            toast(inviteNeighborhood ? 'Family and neighborhood invitation sent.' : 'Invitation sent. Waiting for acceptance.');
         } catch (error) { toast(error.message, true); }
         finally { $('inv-send').disabled = false; $('inv-send').textContent = 'Send invite'; }
     }
 
     /* ===================== CONNECTED ASSETS ===================== */
     function ownerLine(asset) {
-        var owner = ownerMember();
-        if (!asset.ownerId || asset.ownerId === (owner && owner.id)) return 'Owner: You';
+        var me = family.find(function (m) {
+            return profile.email && String(m.email || '').toLowerCase() === profile.email.toLowerCase();
+        });
+        var myId = profile.id || (me && me.id);
         var found = family.find(function (m) { return m.id === asset.ownerId; });
-        if (found) return 'Owner: ' + found.name;
-        return asset.ownerName ? 'Owner: ' + asset.ownerName : 'Owner: Someone else';
+        var names = (!asset.ownerId || asset.ownerId === myId)
+            ? [profile.name, found && found.name, asset.ownerName]
+            : [asset.ownerName, found && found.name];
+        var name = names.find(function (value) {
+            return typeof value === 'string' && value.trim() && !/^(family member|you)$/i.test(value.trim());
+        });
+        return 'Owner: ' + (name ? name.trim() : 'Name unavailable');
     }
 
     function labelOf(kind, asset) {
@@ -547,23 +656,21 @@
         openOverlay($('transfer-popup'));
     }
 
-    function transferTo(m, note) {
-        if (transferContext.kind === 'home') {
-            window.MyMaintenanceAssets.updateHome(transferContext.id, { ownerId: m.id, ownerName: m.name });
-        } else {
-            window.MyMaintenanceAssets.updateVehicle(transferContext.id, { ownerId: m.id, ownerName: m.name });
-        }
+    async function transferTo(m) {
+        var result = await window.MyMaintenanceAuth.familyRequest('transfer', {
+            kind: transferContext.kind, assetId: transferContext.id, recipientId: m.id
+        });
+        await window.MyMaintenanceAssets.hydrate();
         renderAssets('home');
         renderAssets('vehicle');
         closeOverlay($('transfer-popup'));
         transferContext = null;
-        toast('Ownership transferred to ' + m.name + note);
+        toast('Ownership transferred to ' + m.name + (result.notified ? '. Email sent.' : '. Email could not be sent.'));
     }
 
-    function confirmTransfer() {
-        if (!transferContext) return;
+    async function confirmTransfer() {
+        if (!transferContext || $('transfer-save').disabled) return;
         var m = null;
-        var note = '';
         if (transferRecipientId) {
             m = family.find(function (x) { return x.id === transferRecipientId; });
             if (!m || isPendingInvite(m)) {
@@ -579,7 +686,10 @@
             toast('Invite this person first. Ownership can be transferred after they accept.', true);
             return;
         }
-        transferTo(m, note);
+        $('transfer-save').disabled = true;
+        try { await transferTo(m); }
+        catch (error) { toast(error.message || 'Could not transfer ownership.', true); }
+        finally { $('transfer-save').disabled = false; }
     }
 
     /* ===================== CONFIRM ===================== */
@@ -718,6 +828,7 @@
         $('btn-family-settings').addEventListener('click', function () {
             renderMembers('family-list');
             openOverlay($('family-popup'));
+            PD.hydrateFamily();
         });
         $('btn-connected-homes').addEventListener('click', function () {
             renderAssets('home');
@@ -730,6 +841,7 @@
         $('btn-access-control').addEventListener('click', function () {
             renderMembers('access-list');
             openOverlay($('access-popup'));
+            PD.hydrateFamily();
         });
         $('btn-view-terms').addEventListener('click', function () { openOverlay($('terms-popup')); });
         $('btn-change-password').addEventListener('click', openPassword);
@@ -848,6 +960,9 @@
         /* asset edit events refresh the lists */
         window.addEventListener('home:registered', function () { renderAssets('home'); });
         window.addEventListener('vehicle:registered', function () { renderAssets('vehicle'); });
+        window.addEventListener('assets:changed', function () {
+            renderAssets('home'); renderAssets('vehicle');
+        });
 
         /* Escape cancels, Enter saves (edit popup, picture confirm, manage access, confirm dialogs) */
         function isOpen(id) {
@@ -904,6 +1019,7 @@
             loadAll();
             renderHeader();
             renderMembers('family-list'); renderMembers('access-list');
+            renderAssets('home'); renderAssets('vehicle');
         });
         window.addEventListener('focus', function () { PD.hydrateFamily(); });
         PD.hydrate();

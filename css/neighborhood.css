@@ -251,6 +251,72 @@
     white-space: nowrap;
 }
 
+.nb-house-invite-row {
+    display: grid;
+    grid-template-columns: auto minmax(180px, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.nb-house-invite-row > span:first-child {
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.nb-house-invite-row input,
+.nb-house-invite-row select {
+    width: 100%;
+    min-width: 0;
+}
+
+.nb-invite-status {
+    color: var(--accent-primary);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.nb-send-invite-btn {
+    padding: 9px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: #fff;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+.nb-send-invite-btn:disabled {
+    cursor: default;
+    opacity: 0.65;
+}
+
+.nb-send-invite-btn.pending {
+    background: transparent;
+    color: #d97706;
+    border: 1px solid #d97706;
+}
+
+.nb-creator-marker {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.nb-stepper button:disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.nb-house-residents {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
 .nb-add-people-btn {
     margin-left: auto;
     flex: none;
@@ -365,7 +431,7 @@
 .nb-person-header,
 .nb-person-row {
     display: grid;
-    grid-template-columns: 92px 1fr 1fr 1.3fr;
+    grid-template-columns: 124px 1fr 1fr 1.3fr;
     gap: 14px;
     align-items: center;
 }
@@ -426,7 +492,7 @@
 
 .nb-access-tag {
     display: inline-block;
-    width: 68px;
+    min-width: 68px;
     box-sizing: border-box;
     text-align: center;
     font-size: 0.68rem;
@@ -453,6 +519,13 @@
     color: var(--text-secondary);
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
+}
+
+.nb-access-tag.pending {
+    width: auto;
+    color: #d97706;
+    background: transparent;
+    border: 1px solid #d97706;
 }
 
 /* Role dropdown per person (right of the email field, under the person) */
@@ -635,6 +708,7 @@
 #nb-info-popup input[type="number"],
 #nb-info-popup input[type="tel"],
 #nb-info-popup input[type="email"],
+#nb-info-popup select,
 #nb-doc-add-popup input[type="text"] {
     width: 100%;
     padding: 10px 14px;
@@ -676,6 +750,14 @@
    560px media == ~420px physical.
    ======================================= */
 @media (max-width: 747px) {
+    .nb-house-invite-row {
+        grid-template-columns: 1fr;
+    }
+
+    .nb-send-invite-btn {
+        width: 100%;
+    }
+
     .nb-person-header,
     .nb-person-row {
         grid-template-columns: 80px 1fr 1fr;

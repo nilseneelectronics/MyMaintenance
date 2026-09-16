@@ -11,6 +11,12 @@ These changes are local source code until published. No SMTP passwords belong in
 5. Publish `pages/email-action.html`, its CSS/JS, and the updated login/auth code before using the new email links.
 6. In Confirm signup and Reset password email templates, keep the button linked to `{{ .ConfirmationURL }}`. The app supplies the redirect URL. Do not replace this with a plain link to the site; it must retain Supabase's verification token.
 
+The six branded Supabase Auth templates are in `supabase/templates`: confirmation, invitation, magic link, email change, password recovery, and reauthentication. Their matching local CLI configuration is in `supabase/config.toml`. Hosted projects use copies saved in **Authentication → Emails → Templates** in the Supabase Dashboard; editing these files alone does not update hosted Auth emails.
+
+Every template loads the exact Vedlikeholdt mark from the public, immutable endpoint below so email clients that reject inline SVG still show the logo:
+
+`https://nrmhojdkoxnlvssdksvf.supabase.co/functions/v1/family-invitations/email-logo.png`
+
 Auth has one SMTP configuration and default From address per project. Changing it switches Auth emails to the new mailbox; it does not create the mailbox or add another inbox. Use cPanel/Roundcube for receiving email.
 
 ## Family invitations
@@ -37,6 +43,8 @@ Auth has one SMTP configuration and default From address per project. Changing i
 Only after SMTP accepts a message does its status become pending. The recipient must sign in or register with the invited email address and explicitly accept. Opening the invitation URL alone does not add a member. Links expire after seven days. Cancel an expired pending invitation before sending a new one. The owner can cancel an invitation or remove an accepted membership.
 
 SMTP acceptance is not proof of inbox delivery. Check cPanel Track Delivery for rejected or delayed messages. Authentication messages and invitation emails share the hosting provider's domain quota, although Supabase Auth and the invitation function have separate rate counters. A timeout can leave delivery uncertain: check logs before retrying. If SMTP accepted a message but saving pending status failed, the link will not activate membership; inspect the record/logs before retrying.
+
+The `family-invitations` function sends branded HTML and plain-text invitations. It also handles asset-owner transfers between active family members, checks that the caller currently owns the asset, and emails the new owner after the database transfer. If SMTP fails, the transfer still completes and the UI reports that the notification could not be sent.
 
 Existing local-only family entries are retained for compatibility and never treated as emailed invitations. Pending invitations have no access-management controls. Accepted memberships are stored on the server; fine-grained family resource sharing still requires resource-specific RLS and is not granted by this migration.
 

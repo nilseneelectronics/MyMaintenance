@@ -25,13 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function rowToNeighborhood(row) {
         const details = row && row.details && typeof row.details === 'object' ? row.details : {};
-        return Object.assign({}, details, { id: row.id, _dbId: row.id, name: row.name || details.name || '' });
+        return Object.assign({}, details, { id: row.id, _dbId: row.id, _ownerId: row.owner_id, name: row.name || details.name || '' });
     }
 
     function neighborhoodDetails(nb) {
         const copy = JSON.parse(JSON.stringify(nb || {}));
         delete copy.id;
         delete copy._dbId;
+        delete copy._ownerId;
         delete copy.name;
         delete copy._deletedAddresses;
         ['photos', 'docs'].forEach(function (key) {
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete item.dataUrl;
                 delete item.data;
                 delete item.loading;
+                delete item.loadError;
             });
         });
         return copy;
@@ -81,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!db) return;
         try {
             const rows = await db.request('neighborhoods', {
-                query: { select: 'id,name,details', order: 'name.asc' }
+                query: { select: 'id,owner_id,name,details', order: 'name.asc' }
             });
             neighborhoods = (rows || []).map(rowToNeighborhood);
             if (!currentId || !current()) currentId = neighborhoods[0] ? neighborhoods[0].id : null;
@@ -122,55 +124,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ---- Address / people builder ---- */
+    function isCreatorPerson(person) {
+        if (!person) return false;
+        return Boolean((me.id && person.userId === me.id) ||
+            (me.email && String(person.email || '').toLowerCase() === String(me.email).toLowerCase()) ||
+            (me.name && String(person.name || '').trim().toLowerCase() === String(me.name).trim().toLowerCase()));
+    }
+
+    function ensureAddressPeople(addr, idx) {
+        addr.people = Array.isArray(addr.people) ? addr.people : [];
+        if (addr.inviteEmail) {
+            addr.people.push({ name: '', phone: '', email: addr.inviteEmail, role: 'edit', invitationStatus: addr.invitationStatus || '' });
+            delete addr.inviteEmail;
+            delete addr.invitationStatus;
+        }
+        if (idx === 0 && isAdmin && !addr.people.some(isCreatorPerson)) {
+            addr.people.unshift({ userId: me.id || '', name: me.name || '', phone: me.phone || '', email: me.email || '', role: 'admin' });
+        }
+        if (!addr.people.length) addr.people.push({ name: '', phone: '', email: '', role: 'edit' });
+    }
+
     function removePerson(addr) {
         const people = addr.people || [];
-        if (!people.length) return;
-        // remove an unfilled person first, otherwise the last one
-        let target = -1;
-        for (let i = 0; i < people.length; i++) {
-            if (!(people[i].name || people[i].phone || people[i].email)) { target = i; break; }
+        if (people.length <= 1) return;
+        let target = people.findIndex(person => !isCreatorPerson(person) && !(person.name || person.phone || person.email));
+        if (target < 0) {
+            for (let i = people.length - 1; i >= 0; i--) {
+                if (!isCreatorPerson(people[i])) { target = i; break; }
+            }
         }
         if (target >= 0) people.splice(target, 1);
-        else people.splice(people.length - 1, 1);
     }
 
     function addPerson(addr) {
         addr.people = addr.people || [];
-        addr.people.push({ name: '', phone: '', email: '' });
+        addr.people.push({ name: '', phone: '', email: '', role: 'edit' });
     }
 
     function makePeopleControl(addr, idx) {
         const wrap = document.createElement('div');
         wrap.className = 'nb-people-control';
         const count = (addr.people || []).length;
-        if (count === 0) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'nb-add-people-btn';
-            btn.textContent = 'Add people';
-            btn.addEventListener('click', () => { readBuilderIntoModel(builderModel); addPerson(addr); renderBuilder(); });
-            wrap.appendChild(btn);
-        } else {
-            const stepper = document.createElement('div');
-            stepper.className = 'nb-stepper';
-            const minus = document.createElement('button');
-            minus.type = 'button';
-            minus.className = 'minus';
-            minus.textContent = '−';
-            minus.addEventListener('click', () => { readBuilderIntoModel(builderModel); removePerson(addr); renderBuilder(); });
-            const num = document.createElement('span');
-            num.className = 'nb-people-count';
-            num.textContent = String(count);
-            const plus = document.createElement('button');
-            plus.type = 'button';
-            plus.className = 'plus';
-            plus.textContent = '+';
-            plus.addEventListener('click', () => { readBuilderIntoModel(builderModel); addPerson(addr); renderBuilder(); });
-            stepper.appendChild(minus);
-            stepper.appendChild(num);
-            stepper.appendChild(plus);
-            wrap.appendChild(stepper);
-        }
+        const stepper = document.createElement('div');
+        stepper.className = 'nb-stepper';
+        const minus = document.createElement('button');
+        minus.type = 'button';
+        minus.className = 'minus';
+        minus.textContent = '−';
+        minus.disabled = count <= 1 || !addr.people.some(person => !isCreatorPerson(person));
+        minus.addEventListener('click', () => { readBuilderIntoModel(builderModel); removePerson(addr); renderBuilder(); });
+        const num = document.createElement('span');
+        num.className = 'nb-people-count';
+        num.textContent = String(count);
+        const plus = document.createElement('button');
+        plus.type = 'button';
+        plus.className = 'plus';
+        plus.textContent = '+';
+        plus.addEventListener('click', () => { readBuilderIntoModel(builderModel); addPerson(addr); renderBuilder(); });
+        stepper.appendChild(minus);
+        stepper.appendChild(num);
+        stepper.appendChild(plus);
+        wrap.appendChild(stepper);
         return wrap;
     }
 
@@ -184,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* Whether the current user can administer (edit roles / delete). */
     let isAdmin = false;
     function isMeAdmin(nb) {
-        return true; // current user is a superuser with admin rights
+        return Boolean(nb && nb._ownerId && me.id && nb._ownerId === me.id);
     }
 
     function makeRoleDropdown(p) {
@@ -236,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function buildAddressBlock(addr, idx) {
+        ensureAddressPeople(addr, idx);
         const block = document.createElement('div');
         block.className = 'nb-address-block';
         block.dataset.addrIdx = String(idx);
@@ -249,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.placeholder = 'Street and number';
         input.value = addr.address || '';
         input.dataset.field = 'address';
+        input.disabled = !isAdmin;
         head.appendChild(lbl);
         head.appendChild(input);
         head.appendChild(makePeopleControl(addr, idx));
@@ -256,28 +272,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const peopleWrap = document.createElement('div');
         peopleWrap.className = 'nb-people-wrap';
-        (addr.people || []).forEach((p, pi) => {
-            const grp = document.createElement('div');
-            grp.className = 'nb-person-group';
-            const lbl2 = document.createElement('div');
-            lbl2.className = 'nb-person-label';
-            lbl2.textContent = 'Person ' + (pi + 1);
-            const fields = document.createElement('div');
-            fields.className = 'nb-person-fields';
-            ['name', 'phone', 'email'].forEach(field => {
-                const f = document.createElement('input');
-                f.type = field === 'phone' ? 'tel' : (field === 'email' ? 'email' : 'text');
-                f.placeholder = field.charAt(0).toUpperCase() + field.slice(1);
-                f.value = p[field] || '';
-                f.dataset.field = field;
-                f.dataset.person = String(pi);
-                fields.appendChild(f);
-            });
-            grp.appendChild(lbl2);
-            grp.appendChild(fields);
-            // Role dropdown right of the email field (under the person).
-            grp.appendChild(makeRoleDropdown(p));
-            peopleWrap.appendChild(grp);
+        addr.people.forEach((person, personIndex) => {
+            const creator = isCreatorPerson(person);
+            const joined = Boolean(person.userId && !creator);
+            const line = document.createElement('div');
+            line.className = 'nb-house-invite-row nb-person-invite-line';
+            const personLabel = document.createElement('span');
+            personLabel.textContent = creator ? 'Creator' : ('Person ' + (personIndex + 1));
+            let emailControl;
+            if (!isAdmin && !creator && !joined) {
+                emailControl = document.createElement('select');
+                const empty = document.createElement('option');
+                empty.value = '';
+                empty.textContent = 'Select family member';
+                emailControl.appendChild(empty);
+                window.MyMaintenanceProfileData.getFamily().filter(member =>
+                    member.id !== me.id && !['invited', 'pending', 'draft'].includes(member.status)
+                ).forEach(member => {
+                    const option = document.createElement('option');
+                    option.value = member.email || '';
+                    option.textContent = member.name + (member.email ? ' (' + member.email + ')' : '');
+                    option.selected = option.value === (person.email || '');
+                    if (option.value) emailControl.appendChild(option);
+                });
+            } else {
+                emailControl = document.createElement('input');
+                emailControl.type = 'email';
+                emailControl.placeholder = 'resident@example.com';
+                emailControl.value = person.email || '';
+                emailControl.readOnly = creator || joined;
+            }
+            emailControl.dataset.field = 'personEmail';
+            emailControl.dataset.person = String(personIndex);
+            const status = document.createElement('span');
+            status.className = 'nb-invite-status';
+            status.textContent = creator ? (person.name || me.name || 'Neighborhood creator') :
+                (joined ? (person.name || 'Joined') : (person.invitationStatus === 'invited' ? 'Invite pending' : ''));
+            line.appendChild(personLabel);
+            line.appendChild(emailControl);
+            line.appendChild(status);
+            if (!creator) {
+                const invite = document.createElement('button');
+                invite.type = 'button';
+                invite.className = 'nb-send-invite-btn' + (person.invitationStatus === 'invited' ? ' pending' : '');
+                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Invite sent' : 'Send invite');
+                invite.disabled = joined || person.invitationStatus === 'invited';
+                invite.addEventListener('click', async () => {
+                    readBuilderIntoModel(builderModel);
+                    await saveNeighborhoodForm({ addressIndex: idx, personIndex });
+                });
+                line.appendChild(invite);
+            } else {
+                const marker = document.createElement('span');
+                marker.className = 'nb-creator-marker';
+                marker.textContent = 'Added automatically';
+                line.appendChild(marker);
+            }
+            peopleWrap.appendChild(line);
         });
         block.appendChild(peopleWrap);
         return block;
@@ -291,13 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const a = model.addresses[idx];
             const addrInput = block.querySelector('input[data-field="address"]');
             if (addrInput) a.address = addrInput.value;
-            const personEls = block.querySelectorAll('.nb-person-group');
-            personEls.forEach((pgrp, pi) => {
-                if (!a.people[pi]) a.people[pi] = { name: '', phone: '', email: '' };
-                ['name', 'phone', 'email'].forEach(field => {
-                    const f = pgrp.querySelector('input[data-field="' + field + '"][data-person="' + pi + '"]');
-                    if (f) a.people[pi][field] = f.value;
-                });
+            block.querySelectorAll('[data-field="personEmail"]').forEach(emailControl => {
+                const personIndex = Number(emailControl.dataset.person);
+                if (!a.people[personIndex]) a.people[personIndex] = { name: '', phone: '', role: 'edit' };
+                a.people[personIndex].email = emailControl.value.trim().toLowerCase();
             });
         });
     }
@@ -349,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < n; i++) {
             if (cur[i]) next.push(cur[i]);
             else if (builderModel._deletedAddresses.length) next.push(builderModel._deletedAddresses.shift());
-            else next.push({ id: 'a' + Date.now() + '_' + i, address: '', people: [] });
+            else next.push({ id: 'a' + Date.now() + '_' + i, address: '', people: [{ name: '', phone: '', email: '', role: 'edit' }] });
         }
         builderModel.addresses = next;
         renderBuilder();
@@ -360,26 +408,28 @@ document.addEventListener('DOMContentLoaded', () => {
     async function openInfoPopup(nb) {
         if (openingInfo) return;
         let defaults;
-        if (!nb) {
-            openingInfo = true;
-            try {
-                await Promise.all([window.MyMaintenanceProfileData.hydrate(), window.MyMaintenanceAssets.hydrate()]);
-                const profile = window.MyMaintenanceProfileData.getProfile();
-                Object.assign(me, { name: profile.name || '', email: profile.email || '', phone: profile.phone || '' });
+        openingInfo = true;
+        try {
+            const loads = [window.MyMaintenanceProfileData.hydrate()];
+            if (!nb) loads.push(window.MyMaintenanceAssets.hydrate());
+            await Promise.all(loads);
+            const profile = window.MyMaintenanceProfileData.getProfile();
+            Object.assign(me, { id: profile.id || '', name: profile.name || '', email: profile.email || '', phone: profile.phone || '' });
+            if (!nb) {
                 defaults = window.MyMaintenanceNeighborhoodDefaults.create(profile,
                     window.MyMaintenanceAssets.getHomes(), window.MyMaintenanceProfileData.getFamily());
                 if (!defaults) {
                     window.MyMaintenanceCommonUi.alert('Register a home with an address in My Homes before creating a neighborhood.');
                     return;
                 }
-            } finally {
-                openingInfo = false;
             }
+        } finally {
+            openingInfo = false;
         }
         clearTimeout(housesTimer);
         document.getElementById('nb-addr-builder').innerHTML = '';
         document.getElementById('nb-info-popup-title').textContent = nb ? 'Edit Neighborhood' : 'Register a neighborhood';
-        isAdmin = isMeAdmin(nb);
+        isAdmin = !nb || isMeAdmin(nb);
         builderModel = nb ? JSON.parse(JSON.stringify(nb)) : defaults;
         if (!builderModel.addresses) builderModel.addresses = [];
         const delBtn = document.getElementById('nb-info-delete');
@@ -391,6 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nb-zip').value = builderModel.zip || '';
         document.getElementById('nb-city').value = builderModel.city || '';
         document.getElementById('nb-other').value = builderModel.other || '';
+        ['nb-name', 'nb-houses', 'nb-houses-minus', 'nb-houses-plus', 'nb-country', 'nb-zip', 'nb-city', 'nb-other'].forEach(id => {
+            document.getElementById(id).disabled = Boolean(nb && !isAdmin);
+        });
         syncAddressCount(builderModel.addresses.length || (document.getElementById('nb-houses').value || 0));
         document.getElementById('nb-info-popup').style.display = 'flex';
         const nameEl = document.getElementById('nb-name');
@@ -447,8 +500,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('nb-info-cancel').addEventListener('click', closeInfoPopup);
 
-    async function saveNeighborhoodForm() {
+    async function saveNeighborhoodForm(inviteTarget) {
         if (!builderModel) return;
+        const onlyInviteTarget = inviteTarget && Number.isInteger(inviteTarget.addressIndex) && Number.isInteger(inviteTarget.personIndex)
+            ? inviteTarget : null;
         clearTimeout(housesTimer);
         syncAddressCount(document.getElementById('nb-houses').value);
         // Validate all required fields at once so they all turn red together.
@@ -475,6 +530,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 clearRequiredInvalid(ai);
             }
         });
+        document.querySelectorAll('#nb-addr-builder [data-field="personEmail"]').forEach(emailInput => {
+            const email = emailInput.value.trim();
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                markRequiredInvalid(emailInput);
+                invalid = true;
+                firstInvalid = firstInvalid || emailInput;
+            } else {
+                clearRequiredInvalid(emailInput);
+            }
+        });
+        if (onlyInviteTarget) {
+            const targetBlock = document.querySelector('#nb-addr-builder .nb-address-block[data-addr-idx="' + onlyInviteTarget.addressIndex + '"]');
+            const targetEmail = targetBlock && targetBlock.querySelector('[data-field="personEmail"][data-person="' + onlyInviteTarget.personIndex + '"]');
+            if (targetEmail && !targetEmail.value.trim()) {
+                markRequiredInvalid(targetEmail);
+                invalid = true;
+                firstInvalid = firstInvalid || targetEmail;
+            }
+        }
         if (invalid) {
             if (firstInvalid) firstInvalid.focus();
             return;
@@ -506,16 +580,49 @@ document.addEventListener('DOMContentLoaded', () => {
             window.MyMaintenanceCommonUi.alert(error.message || 'Could not save neighborhood.');
             return;
         }
+        const inviteTargets = [];
+        (builderModel.addresses || []).forEach((address, addressIndex) => {
+            (address.people || []).forEach((person, personIndex) => {
+                if (onlyInviteTarget && (onlyInviteTarget.addressIndex !== addressIndex || onlyInviteTarget.personIndex !== personIndex)) return;
+                if (!person.email || person.userId || isCreatorPerson(person) || person.invitationStatus === 'invited') return;
+                inviteTargets.push({ address, person });
+            });
+        });
+        try {
+            for (const target of inviteTargets) {
+                await window.MyMaintenanceAuth.familyRequest('invite-neighborhood-address', {
+                    neighborhoodId: builderModel.id,
+                    address: target.address.address,
+                    email: target.person.email
+                });
+                target.person.invitationStatus = 'invited';
+            }
+            if (inviteTargets.length) await persistNeighborhood(builderModel);
+        } catch (error) {
+            const savedNeighborhood = current();
+            if (savedNeighborhood && savedNeighborhood.id === builderModel.id) Object.assign(savedNeighborhood, builderModel);
+            else if (!neighborhoods.some(item => item.id === builderModel.id)) neighborhoods.push(builderModel);
+            currentId = builderModel.id;
+            renderBuilder();
+            window.MyMaintenanceCommonUi.alert(error.message || 'The neighborhood was saved, but the invitation could not be sent.');
+            return;
+        }
         if (existing && existing.id === builderModel.id) Object.assign(existing, builderModel);
         else neighborhoods.push(builderModel);
         currentId = builderModel.id;
+        history.replaceState(null, '', 'myneighborhood.html?id=' + encodeURIComponent(currentId));
+        if (onlyInviteTarget) {
+            document.getElementById('nb-info-popup-title').textContent = 'Edit Neighborhood';
+            renderBuilder();
+            render();
+            return;
+        }
         document.getElementById('nb-info-popup').style.display = 'none';
         builderModel = null;
-        history.replaceState(null, '', 'myneighborhood.html?id=' + encodeURIComponent(currentId));
         render();
     }
 
-    document.getElementById('nb-info-save').addEventListener('click', saveNeighborhoodForm);
+    document.getElementById('nb-info-save').addEventListener('click', () => saveNeighborhoodForm());
 
     /* Delete neighborhood (admin only, edit mode) */
     document.getElementById('nb-info-delete').addEventListener('click', async () => {
@@ -601,8 +708,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const access = document.createElement('div');
                 access.className = 'nb-person-cell nb-access-cell';
                 const tag = document.createElement('span');
-                tag.className = 'nb-access-tag ' + (p.role || 'view');
-                tag.textContent = roleLabel(p.role);
+                const pending = p.invitationStatus === 'invited';
+                tag.className = 'nb-access-tag ' + (pending ? 'pending' : (p.role || 'view'));
+                tag.textContent = pending ? 'Invite pending' : roleLabel(p.role);
                 access.appendChild(tag);
 
                 const name = document.createElement('div');
@@ -669,19 +777,42 @@ document.addEventListener('DOMContentLoaded', () => {
         return nb.photos;
     }
     function loadPrivateFile(item, onReady) {
-        if (!item || item.dataUrl || item.loading || !item.filePath) return;
+        if (!item || item.dataUrl || item.loading || item.loadError || !item.filePath) return;
         const db = window.MyMaintenanceData;
         if (!db) return;
         item.loading = true;
         db.downloadDataUrl(item.filePath, item.type).then(function (dataUrl) {
             item.dataUrl = dataUrl;
             item.loading = false;
+            item.loadError = false;
             if (typeof onReady === 'function') onReady();
-        }).catch(function () { item.loading = false; });
+        }).catch(function () {
+            item.loading = false;
+            item.loadError = true;
+            if (typeof onReady === 'function') onReady();
+        });
+    }
+    function photoPlaceholder(label) {
+        const failed = label === 'Picture could not be loaded';
+        const errorMark = failed
+            ? '<path d="M354 132l34 34m0-34-34 34" fill="none" stroke="#AFEEEE" stroke-width="7" stroke-linecap="round"/>'
+            : '';
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+            <rect width="640" height="360" fill="#05141c"/>
+            <g transform="translate(0 2)">
+                <rect x="270" y="105" width="100" height="78" rx="10" fill="none" stroke="#20B2AA" stroke-width="7"/>
+                <circle cx="300" cy="132" r="9" fill="#20B2AA"/>
+                <path d="M280 169l27-25 19 18 13-12 21 19" fill="none" stroke="#20B2AA" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                ${errorMark}
+                <text x="320" y="224" text-anchor="middle" fill="#AFEEEE" font-family="Arial" font-size="18">${label}</text>
+            </g>
+        </svg>`;
+        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
     }
     function photoSource(photo) {
         loadPrivateFile(photo, function () { render(); });
-        return photo && photo.dataUrl ? photo.dataUrl : '';
+        if (photo && photo.dataUrl) return photo.dataUrl;
+        return photoPlaceholder(photo && photo.loadError ? 'Picture could not be loaded' : 'Loading picture…');
     }
     function displayPhotosFor(nb) {
         return photosFor(nb);
@@ -891,6 +1022,13 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSelector();
         if (!currentId && neighborhoods.length) currentId = neighborhoods[0].id;
         selectorLabel.textContent = current() ? (current().name || 'Neighborhood') : '-- Select neighborhood --';
+        const sharedReadOnly = false;
+        ['nb-add-photo-btn', 'nb-add-event', 'nb-add-document', 'nb-add-neighbor'].forEach(function (id) {
+            const control = document.getElementById(id);
+            if (control) control.hidden = sharedReadOnly;
+        });
+        const neighborAction = document.getElementById('nb-add-neighbor');
+        if (neighborAction) neighborAction.textContent = 'Edit neighborhood';
         renderNeighbors();
         renderEvents();
         renderDocs();

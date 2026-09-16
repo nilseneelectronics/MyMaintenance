@@ -3,3 +3,27 @@ project_id = "MyMaintenance"
 [functions.family-invitations]
 # JWTs are validated with Auth's get-user endpoint inside the function.
 verify_jwt = false
+
+[auth.email.template.confirmation]
+subject = "Confirm your Vedlikeholdt account"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Vedlikeholdt password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.invite]
+subject = "You've been invited to Vedlikeholdt"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Your Vedlikeholdt sign-in link"
+content_path = "./supabase/templates/magic-link.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new Vedlikeholdt email address"
+content_path = "./supabase/templates/email-change.html"
+
+[auth.email.template.reauthentication]
+subject = "{{ .Token }} is your Vedlikeholdt verification code"
+content_path = "./supabase/templates/reauthentication.html"

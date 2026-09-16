@@ -1,7 +1,77 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Vedlikeholdt</title><link rel="stylesheet" href="../css/global.css"><link rel="stylesheet" href="../css/email-action.css"></head>
-<body><main class="email-card"><h1 id="action-title">Account email</h1><p id="action-message" role="status">Checking your link…</p>
-<button id="verify-link" hidden>Verify email</button>
-<form id="reset-form" hidden><label for="new-password">New password</label><input id="new-password" type="password" autocomplete="new-password" minlength="8" required><label for="repeat-password">Repeat new password</label><input id="repeat-password" type="password" autocomplete="new-password" minlength="8" required><button type="submit">Save new password</button></form>
-<button id="accept-invite" hidden>Accept family invitation</button><a id="sign-in" href="login.html">Sign in</a></main>
-<script src="../script/app-config.js"></script><script src="../script/modules/auth.js"></script><script src="../script/pages/email-action.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Vedlikeholdt</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="stylesheet" href="../css/global.css">
+    <link rel="stylesheet" href="../css/header.css">
+    <link rel="stylesheet" href="../css/footer.css">
+    <link rel="stylesheet" href="../css/button.css">
+    <link rel="stylesheet" href="../css/banner.css">
+    <link rel="stylesheet" href="../css/email-action.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="left">
+            <a href="../index.html" class="brand-link">
+                <svg class="logo" height="45" viewBox="0 -960 960 960" width="45" aria-hidden="true"><path d="M480-510ZM240-160q-33 0-56.5-23.5T160-240v-295l-40 31q-13 10-29.5 8T64-512q-10-13-7.5-29T72-567l359-276q11-8 23.5-12t25.5-4q13 0 25.5 4t23.5 12l359 275q13 10 15.5 26t-7.5 30q-10 14-26 15.5t-30-8.5L480-780 240-596v356h81q17 0 28 11.5t11 28.5q0 17-11.5 28.5T320-160h-80Zm357 63q-8 0-15-3t-13-9L456-222q-12-12-12-28t12-28q12-12 28-12t28 12l85 84 198-198q12-12 28.5-11.5T852-391q12 12 12 28t-12 28L625-109q-6 6-13 9t-15 3Z" fill="currentColor"/></svg>
+                <span class="name">Vedlikeholdt</span>
+            </a>
+        </div>
+        <div class="right"></div>
+    </header>
+
+    <main class="email-action-main">
+        <section class="email-card" aria-labelledby="action-title">
+            <h1 id="action-title">Account email</h1>
+            <p id="action-message" role="status">Checking your link…</p>
+            <p id="action-detail" class="email-card-detail" hidden></p>
+            <button id="verify-link" hidden>Verify email</button>
+            <form id="reset-form" hidden>
+                <label for="new-password">New password</label>
+                <input id="new-password" type="password" autocomplete="new-password" minlength="8" required>
+                <label for="repeat-password">Repeat new password</label>
+                <input id="repeat-password" type="password" autocomplete="new-password" minlength="8" required>
+                <button type="submit">Save new password</button>
+            </form>
+            <button id="accept-invite" hidden>Accept family invitation</button>
+            <a id="sign-in" href="login.html">Sign in</a>
+        </section>
+    </main>
+
+    <footer>
+        <div class="column">
+            <h3>Social Media</h3>
+            <ul>
+                <li><a href="https://twitter.com">Twitter</a></li>
+                <li><a href="https://facebook.com">Facebook</a></li>
+                <li><a href="https://instagram.com">Instagram</a></li>
+            </ul>
+        </div>
+        <div class="column">
+            <h3>Contact Info</h3>
+            <p>Email: info@mymaintenance.com</p>
+            <p>Phone: +1-123-456-7890</p>
+            <p>Address: 123 Street, City, Country</p>
+        </div>
+        <div class="column">
+            <h3>Partners</h3>
+            <ul>
+                <li><a href="https://partner1.com">Partner 1</a></li>
+                <li><a href="https://partner2.com">Partner 2</a></li>
+                <li><a href="https://partner3.com">Partner 3</a></li>
+            </ul>
+        </div>
+    </footer>
+
+    <script src="../script/app-config.js"></script>
+    <script src="../script/modules/auth.js"></script>
+    <script src="../script/modules/common-ui.js"></script>
+    <script src="../script/script.js"></script>
+    <script src="../script/pages/email-action.js"></script>
+</body>
+</html>
