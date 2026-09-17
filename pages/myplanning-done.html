@@ -140,20 +140,14 @@
         </div>
     </div>
 
+    <script src="../script/modules/planning-tasks.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const STORAGE_KEY = 'floorplan_done_tasks';
-        function loadDoneTasks() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) return JSON.parse(saved);
-            } catch (_) {}
-            return [];
-        }
+        const tasks = window.MyMaintenancePlanningTasks;
+        let doneTasks = tasks ? tasks.loadDoneTasks() : [];
         function saveDoneTasks() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(doneTasks));
+            if (tasks) tasks.saveDoneTasks(doneTasks);
         }
-        let doneTasks = loadDoneTasks();
 
         const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -481,6 +475,11 @@
         });
 
         renderList();
+
+        window.addEventListener('planningdone:changed', () => {
+            doneTasks = tasks ? tasks.loadDoneTasks() : [];
+            renderList();
+        });
     });
     </script>
     <script src="../script/app-config.js"></script>

@@ -113,6 +113,13 @@
     touch-action: pan-y pinch-zoom;
 }
 
+/* Change Password popup: lower, smaller buttons */
+#password-popup .popup-btn {
+    padding: 9px 14px;
+    font-size: 0.85em;
+    border-radius: 20px;
+}
+
 .profile-popup-hint {
     font-size: 0.9em;
     color: var(--text-secondary);
@@ -660,6 +667,18 @@
     }
     .profile-info p {
         font-size: 1.05em;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 640px) {
+    .profile-box {
+        gap: 0;
+        justify-content: center;
+    }
+    .profile-info {
+        flex: 0 1 auto;
+        padding-left: 6px;
+        min-width: 350px;
     }
 }
 

@@ -126,7 +126,7 @@
             <div class="floorplan-box" id="floorplan-box">
                 <h3>Floor Plans</h3>
                 
-                <button class="view-button" onclick="window.location.href='coming-soon.html?target=myhome-floorplans.html'">
+                <button class="view-button" id="asset-view-all-floorplans">
                     View all floor plans
                 </button>
                 
@@ -395,11 +395,11 @@
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label>Start date</label>
-                    <input type="text" id="ev-start-date" class="doc-date-field event-date-field" placeholder="dd/mm/yyyy" readonly>
+                    <input type="text" id="ev-start-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
                 <div class="event-modal-field">
                     <label>Finish date</label>
-                    <input type="text" id="ev-finish-date" class="doc-date-field event-date-field" placeholder="dd/mm/yyyy" readonly>
+                    <input type="text" id="ev-finish-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
             </div>
             <div class="event-modal-row">
@@ -463,7 +463,7 @@
                 <label>Name</label>
                 <input type="text" id="doc-name" placeholder="Document name...">
 
-                <label>Connected Asset</label>
+                <label id="doc-asset-label">Connected Asset</label>
                 <div class="asset-dropdown" id="doc-asset-dropdown">
                     <button type="button" class="asset-toggle" id="doc-asset-toggle">
                         <span class="asset-value">-- Select an asset --</span>
@@ -487,7 +487,7 @@
 
                 <label>Date performed</label>
                 <div class="doc-datepicker">
-                    <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" pattern="[0-9/]*" enterkeyhint="done">
+                    <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd.mm.yyyy" autocomplete="off" inputmode="numeric" pattern="[0-9/]*" enterkeyhint="done">
                     <div class="doc-calendar" id="doc-cal-performed"></div>
                 </div>
 
@@ -524,6 +524,7 @@
     <script src="../script/modules/assets.js"></script>
     <script src="../script/modules/home-register.js"></script>
     <script src="../script/modules/event-tools.js"></script>
+    <script src="../script/modules/event-pickers.js"></script>
     <script src="../script/modules/event-modal.js"></script>
     <script src="../script/pages/gallery.js"></script>
     <script src="../script/pages/mydocuments.js"></script>

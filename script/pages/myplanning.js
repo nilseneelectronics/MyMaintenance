@@ -5,8 +5,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!todoList || !newInput || !addBtn) return;
 
-    function createTodoItem(text) {
+    const tasks = window.MyMaintenancePlanningTasks;
+    let todos = tasks ? tasks.loadTodos() : [];
+
+    function saveTodos() {
+        if (tasks) tasks.saveTodos(todos);
+    }
+
+    function createTodoItem(task) {
+        const text = task.text;
         const li = document.createElement('li');
+        li.dataset.taskId = task.id;
         li.innerHTML = `
             <button class="delete-btn" data-task="${text}" aria-label="Delete task">
                 <svg xmlns="http://www.w3.org/2000/svg" height="26" viewBox="0 -960 960 960" width="26" fill="currentColor"><path d="M261-120q-24.75 0-42.37-17.63Q201-155.25 201-180v-570h-11q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h158q0-13 8.63-21.5 8.62-8.5 21.37-8.5h204q12.75 0 21.38 8.62Q612-822.75 612-810h158q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5h-11v570q0 24.75-17.62 42.37Q723.75-120 699-120H261Zm438-630H261v570h438v-570ZM418.5-274.63q8.5-8.62 8.5-21.37v-339q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v339q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63Zm166 0q8.5-8.62 8.5-21.37v-339q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v339q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63ZM261-750v570-570Z"/></svg>
@@ -20,10 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return li;
     }
 
+    function renderTodos() {
+        todoList.innerHTML = '';
+        todos.forEach(task => todoList.appendChild(createTodoItem(task)));
+    }
+
     function addTodoFromInput() {
         const text = newInput.value.trim();
         if (!text) return;
-        todoList.appendChild(createTodoItem(text));
+        todos.push({ id: tasks && tasks.newId ? tasks.newId() : 't_' + Date.now(), text: text });
+        renderTodos();
+        saveTodos();
         newInput.value = '';
     }
 
@@ -50,7 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
         deletePopup.style.display = 'flex';
 
         popupYes.onclick = () => {
+            const taskId = liToDelete.dataset.taskId;
+            todos = todos.filter(t => t.id !== taskId);
             liToDelete.remove();
+            saveTodos();
             deletePopup.style.display = 'none';
         };
 
@@ -59,19 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
+    window.addEventListener('planningtasks:changed', () => {
+        todos = tasks ? tasks.loadTodos() : [];
+        renderTodos();
+    });
+
+    renderTodos();
+
     // === MARK AS DONE ===
-    const DONE_STORAGE_KEY = 'floorplan_done_tasks';
-    function loadDoneTasks() {
-        try {
-            const saved = localStorage.getItem(DONE_STORAGE_KEY);
-            if (saved) return JSON.parse(saved);
-        } catch (_) {}
-        return [];
-    }
+    let doneTasks = tasks ? tasks.loadDoneTasks() : [];
     function saveDoneTasks() {
-        localStorage.setItem(DONE_STORAGE_KEY, JSON.stringify(doneTasks));
+        if (tasks) tasks.saveDoneTasks(doneTasks);
     }
-    let doneTasks = loadDoneTasks();
+    window.addEventListener('planningdone:changed', () => {
+        doneTasks = tasks ? tasks.loadDoneTasks() : [];
+    });
 
     function todayKey() {
         const n = new Date();
@@ -240,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (doneConfirm) doneConfirm.addEventListener('click', () => {
         if (!pendingDoneTask) return;
         doneTasks.push({
-            id: 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            id: tasks && tasks.newId ? tasks.newId() : 't_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
             text: pendingDoneTask,
             doneAt: todayKey(),
             asset: selectedAssetValue === '__other__'
@@ -256,8 +277,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const doneBtn = todoList.querySelector(`.done-btn[data-task="${pendingDoneTask}"]`);
         if (doneBtn) {
             const item = doneBtn.closest('li');
-            if (item) item.remove();
+            if (item) {
+                const taskId = item.dataset.taskId;
+                todos = todos.filter(t => t.id !== taskId);
+                item.remove();
+            }
         }
+        saveTodos();
         closeDonePopup();
     });
 
@@ -266,20 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = 'myplanning-done.html';
         });
     }
-
-    function loadExampleTasks() {
-        const examples = [
-            'Build fence around garden',
-            'Annual service check on Tesla Model Y',
-            'Inspect boat hull before summer'
-        ];
-
-        examples.forEach((text) => {
-            todoList.appendChild(createTodoItem(text));
-        });
-    }
-
-    loadExampleTasks();
 
     // === EVENTS ===
     let EVENTS = window.MyMaintenanceEvents.load();

@@ -146,7 +146,8 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'mytools 2.html',
     'myprofile.html',
     'coming-soon.html',
-    'tool-floorplan.html'
+    'tool-floorplan.html',
+    'myfloorplans.html'
 ];
 
 const KNOWN_PAGE_FILES = new Set(
@@ -191,6 +192,10 @@ const COMMON_LAYOUT = {
                 </a>
             </div>
             <div class="right">
+                <button id="notif-bell" type="button" aria-label="Notifications" title="Notifications">
+                    <svg class="notif-icon notif-read" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" aria-hidden="true"><path d="M190-200q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h50v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h50q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H190Zm290-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>
+                    <svg class="notif-icon notif-unread" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" aria-hidden="true"><path d="M480-80q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80Zm0-422ZM190-200q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h50v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q22.92 0 38.96 14.5T539-830q-12 20-19 42.5t-9 46.5q-8-2-15.28-2.5-7.29-.5-15.72-.5-75 0-127.5 52.5T300-564v304h360v-284q15 3 30 4t30-1v281h50q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5H190Zm433-452.12q-32-32.12-32-78T623.12-808q32.12-32 78-32T779-807.88q32 32.12 32 78T778.88-652q-32.12 32-78 32T623-652.12Z"/></svg>
+                </button>
                 <button id="signout">Sign Out</button>
             </div>
         </header>
@@ -279,6 +284,104 @@ function setActiveSidebarLink() {
     });
 }
 
+/* ==================== NOTIFICATIONS ==================== */
+const NOTIF_STORAGE_KEY = 'mymaintenance_notif_items';
+function notifLoad() {
+    try { return JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY)) || []; } catch (_) { return []; }
+}
+function notifSave(items) {
+    try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(items)); } catch (_) {}
+}
+function notifUnread(items) {
+    return (items || notifLoad()).filter(function (n) { return !n.read; }).length;
+}
+function notifRenderIcon() {
+    const bell = document.getElementById('notif-bell');
+    if (!bell) return;
+    const unread = notifUnread();
+    bell.classList.toggle('has-unread', unread > 0);
+}
+function notifRenderList() {
+    const list = document.getElementById('notif-list');
+    if (!list) return;
+    const items = notifLoad();
+    if (!items.length) {
+        list.innerHTML = '<p class="notif-empty">No notifications yet.</p>';
+        return;
+    }
+    list.innerHTML = items.map(function (n, i) {
+        const when = n.at ? new Date(n.at) : null;
+        const label = when ? when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        return '<div class="notif-item' + (n.read ? ' read' : '') + '" data-i="' + i + '">'
+            + '<div class="notif-item-main"><strong>' + String(n.title || 'Notification') + '</strong>'
+            + '<p>' + String(n.body || '') + '</p></div>'
+            + (label ? '<span class="notif-item-time">' + label + '</span>' : '')
+            + '</div>';
+    }).join('');
+    list.querySelectorAll('.notif-item[data-i]').forEach(function (el) {
+        el.addEventListener('click', function () {
+            const idx = Number(el.getAttribute('data-i'));
+            const items = notifLoad();
+            if (items[idx]) {
+                items[idx].read = true;
+                notifSave(items);
+                notifRenderList();
+                notifRenderIcon();
+            }
+        });
+    });
+}
+function initNotifications() {
+    const bell = document.getElementById('notif-bell');
+    if (!bell) return;
+
+    // Popup markup
+    if (!document.getElementById('notif-popup')) {
+        const ov = document.createElement('div');
+        ov.className = 'popup-overlay notif-overlay';
+        ov.id = 'notif-popup';
+        ov.innerHTML = '<div class="popup-content notif-popup">'
+            + '<h3>Notifications</h3>'
+            + '<div id="notif-list" class="notif-list"></div>'
+            + '<div class="popup-buttons">'
+            + '<button type="button" class="popup-btn cancel" id="notif-close">Close</button>'
+            + '<button type="button" class="popup-btn confirm" id="notif-clear">Clear all</button>'
+            + '</div></div>';
+        document.body.appendChild(ov);
+        ov.addEventListener('click', function (e) { if (e.target === ov) ov.style.display = 'none'; });
+    }
+    const popup = document.getElementById('notif-popup');
+    const clearBtn = document.getElementById('notif-clear');
+    const closeBtn = document.getElementById('notif-close');
+
+    bell.addEventListener('click', function (e) {
+        e.stopPropagation();
+        notifRenderList();
+        popup.style.display = 'flex';
+    });
+    if (clearBtn) clearBtn.addEventListener('click', function () {
+        notifSave([]);
+        notifRenderList();
+        notifRenderIcon();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', function () { popup.style.display = 'none'; });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && popup.style.display === 'flex') {
+            e.preventDefault();
+            popup.style.display = 'none';
+        }
+    });
+
+    // For now, seed a couple of demo notifications so the bell toggles.
+    if (!localStorage.getItem(NOTIF_STORAGE_KEY)) {
+        notifSave([
+            { title: 'Welcome to Vedlikeholdt', body: 'Keep your home, vehicles and neighborhood organized.', at: Date.now(), read: false },
+            { title: 'Invitations', body: 'Family members can be invited from your profile.', at: Date.now() - 86400000, read: true }
+        ]);
+    }
+    notifRenderIcon();
+}
+
 /* ==================== MAIN SCRIPT ==================== */
 document.addEventListener('DOMContentLoaded', () => {
     normalizePlaceholderLinks();
@@ -286,6 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.MyMaintenanceAuth.enforceAuthRouting();
     }
     insertCommonLayout();
+
+    initNotifications();
 
     // Language button on EVERY page (including index.html)
     const navbarRight = document.querySelector('.navbar .right');

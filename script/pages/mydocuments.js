@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAssetId = '';
     let selectedAssetKind = '';
     let selectedDocType = '';
+    let lockedAsset = '';
     let docSort = 'uploaded';
     let docReverse = false;
     let scanMode = false;
@@ -64,6 +65,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!it.privacy) it.privacy = 'private';
         return it;
     });
+
+    // If we were sent here from a neighborhood ("Show all documents"), render
+    // that neighborhood's docs with a dedicated header instead of the main list.
+    const docContext = window.MyMaintenanceDocumentContext || null;
+    window.MyMaintenanceDocumentContext = null;
+    let neighborhoodOnly = false;
+    if (docContext && Array.isArray(docContext.neighborhoodDocs)) {
+        neighborhoodOnly = true;
+        items = docContext.neighborhoodDocs.map(function (d) {
+            const id = d.id || d.filePath || ('nb_' + (d.name || 'doc'));
+            return {
+                id: id,
+                name: d.name || d.fileName || 'Document',
+                docType: d.docType || '',
+                performed: d.performed || '',
+                uploaded: String(d.uploaded || '').slice(0, 10),
+                filePath: d.filePath || '',
+                size: d.size,
+                asset: d.asset || docContext.asset || 'Neighborhood',
+                privacy: d.privacy || 'private',
+                type: d.type || ''
+            };
+        });
+        const ctxHead = document.getElementById('doc-context-header');
+        const ctxTitle = document.getElementById('doc-context-title');
+        const mainH1 = document.querySelector('main.main h1');
+        if (ctxHead) ctxHead.style.display = '';
+        if (ctxTitle) ctxTitle.textContent = (docContext.asset || 'Neighborhood') + ' · Documents';
+        if (mainH1) mainH1.style.display = 'none';
+        ['doc-add-btn', 'doc-scan-btn', 'doc-search'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+    }
 
     function store() {
         items.forEach(persistDocument);
@@ -113,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filePath: row.file_path || '',
             homeId: row.home_id || '',
             vehicleId: row.vehicle_id || '',
-            uploaded: extra.uploaded || String(row.created_at || '').slice(0, 10),
+            uploaded: String(extra.uploaded || row.created_at || '').slice(0, 10),
             created: extra.created || new Date(row.created_at || Date.now()).getTime()
         });
     }
@@ -591,8 +626,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
         selectedAssetValue = '';
         selectedAssetId = ''; selectedAssetKind = '';
+        lockedAsset = '';
+        const assetLabelEl = document.getElementById('doc-asset-label');
+        if (assetLabelEl) assetLabelEl.textContent = 'Connected Asset';
         if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
-        if (assetDropdown) assetDropdown.classList.remove('open');
+        if (assetDropdown) {
+            assetDropdown.classList.remove('open');
+            assetDropdown.style.display = '';
+            const t = assetDropdown.querySelector('.asset-toggle');
+            if (t) t.disabled = false;
+        }
         if (assetMenu) assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
         if (docAssetOther) {
             docAssetOther.value = '';
@@ -683,27 +726,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const known = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
             known.forEach((b) => b.classList.remove('selected'));
             const a = it.asset ? String(it.asset).trim() : '';
-            const match = known.find((b) => b.dataset.value === a);
-            if (match) {
+            lockedAsset = /^Neighborhood:/i.test(a) ? a : '';
+            if (lockedAsset) {
+                // Neighborhood documents are fixed to their neighborhood; hide
+                // the asset picker and show the locked value instead.
+                const neighborhoodLabel = document.getElementById('doc-asset-label');
+                if (neighborhoodLabel) neighborhoodLabel.textContent = 'Connected neighborhood:';
                 selectedAssetValue = a;
-                if (assetValueEl) assetValueEl.textContent = match.textContent;
-                match.classList.add('selected');
-                if (docAssetOther) {
-                    docAssetOther.value = '';
-                    docAssetOther.style.display = 'none';
+                const displayName = a.replace(/^Neighborhood:\s*/i, '');
+                if (assetValueEl) assetValueEl.textContent = displayName;
+                if (assetDropdown) {
+                    assetDropdown.classList.remove('open');
+                    assetDropdown.style.display = 'none';
+                    const t = assetDropdown.querySelector('.asset-toggle');
+                    if (t) t.disabled = true;
                 }
-            } else if (a) {
-                selectedAssetValue = '__other__';
-                if (assetValueEl) assetValueEl.textContent = a;
-                const otherBtn = known.find((b) => b.dataset.value === '__other__');
-                if (otherBtn) otherBtn.classList.add('selected');
                 if (docAssetOther) {
                     docAssetOther.style.display = '';
-                    docAssetOther.value = a;
+                    docAssetOther.value = displayName;
+                    docAssetOther.readOnly = true;
                 }
             } else {
-                selectedAssetValue = '';
-                if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
+                const neighborhoodLabel = document.getElementById('doc-asset-label');
+                if (neighborhoodLabel) neighborhoodLabel.textContent = 'Connected Asset';
+                const match = known.find((b) => b.dataset.value === a);
+                if (match) {
+                    selectedAssetValue = a;
+                    if (assetValueEl) assetValueEl.textContent = match.textContent;
+                    match.classList.add('selected');
+                    if (docAssetOther) {
+                        docAssetOther.value = '';
+                        docAssetOther.style.display = 'none';
+                        docAssetOther.readOnly = false;
+                    }
+                } else if (a) {
+                    selectedAssetValue = '__other__';
+                    if (assetValueEl) assetValueEl.textContent = a;
+                    const otherBtn = known.find((b) => b.dataset.value === '__other__');
+                    if (otherBtn) otherBtn.classList.add('selected');
+                    if (docAssetOther) {
+                        docAssetOther.style.display = '';
+                        docAssetOther.value = a;
+                        docAssetOther.readOnly = false;
+                    }
+                } else {
+                    selectedAssetValue = '';
+                    if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
+                }
             }
         }
         if (assetDropdown) assetDropdown.classList.remove('open');
@@ -738,14 +807,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function documentStateSnapshot() {
         return JSON.stringify({
-            name: nameInput.value, performed: performedInput.value, asset: selectedAssetValue,
-            otherAsset: docAssetOther ? docAssetOther.value : '', type: selectedDocType,
-            privacy: privacyValue(), file: selectedFile ? selectedFile.name + ':' + selectedFile.size : ''
+            name: nameInput.value, performed: performedInput.value,
+            otherAsset: docAssetOther ? docAssetOther.value : ''
+        });
+    }
+
+    function hasDocumentText() {
+        return [nameInput, performedInput, docAssetOther].some(function (el) {
+            return el && String(el.value || '').trim() !== '';
         });
     }
 
     function requestClosePopup() {
-        if (documentStateSnapshot() === initialDocState) return closePopup();
+        if (!hasDocumentText() || documentStateSnapshot() === initialDocState) return closePopup();
         window.MyMaintenanceCommonUi.confirmDiscard(closePopup);
     }
 
@@ -1791,9 +1865,11 @@ document.addEventListener('DOMContentLoaded', () => {
             markNameError();
             return;
         }
-        const asset = selectedAssetValue === '__other__'
-                ? (docAssetOther ? docAssetOther.value.trim() : '')
-                : selectedAssetValue;
+        const asset = lockedAsset
+                ? lockedAsset
+                : (selectedAssetValue === '__other__'
+                        ? (docAssetOther ? docAssetOther.value.trim() : '')
+                        : selectedAssetValue);
         const performedDt = parseDateStr(performedInput.value);
         const privacy = privacyValue();
         let rec = editingId ? items.find(function (item) { return item.id === editingId; }) : null;
@@ -2104,7 +2180,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!byAsset.has(key)) byAsset.set(key, []);
                 byAsset.get(key).push(it);
             });
-            byAsset.forEach(function (arr, key) {
+            const groupKeys = Array.from(byAsset.keys()).sort(function (a, b) {
+                const aNb = /^Neighborhood:/i.test(a);
+                const bNb = /^Neighborhood:/i.test(b);
+                if (aNb !== bNb) return aNb ? 1 : -1;
+                return a < b ? -1 : 1;
+            });
+            groupKeys.forEach(function (key) {
+                const arr = byAsset.get(key);
                 const sortedArr = arr.slice().sort(sortComparator());
                 const grp = document.createElement('div');
                 grp.className = 'subgroup doc-group';
@@ -2316,11 +2399,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initDocSort();
     updateView();
-    hydrateDocuments();
+    if (!neighborhoodOnly) hydrateDocuments();
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },
         openPreview: openPreview,
+        openEdit: function (it) {
+            const doc = items.filter(function (d) { return d.id === (it && it.id); })[0] || it;
+            if (doc) openEditPopup(doc);
+        },
+        refresh: function () { return hydrateDocuments(); },
         render: render,
         headerRowHtml: headerRowHtml,
         rowHtml: rowHtml

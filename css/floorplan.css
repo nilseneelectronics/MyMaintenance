@@ -278,6 +278,39 @@ main.floorplan-main {
   border-color: var(--accent-primary, #20B2AA);
 }
 
+.fp-modal-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #999);
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.fp-asset-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.fp-asset-select:focus {
+  border-color: var(--accent-primary, #20B2AA);
+}
+
+#newPlanModal .fp-asset-select {
+  margin-bottom: 16px;
+}
+
+#rightPanel .fp-asset-select {
+  margin-bottom: 4px;
+}
+
 .fp-modal-export-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -834,5 +867,167 @@ footer {
   .fp-dialog {
     width: calc(100% - 32px);
     max-width: 100%;
+  }
+}
+
+/* =======================================
+   View all floor plans page (myfloorplans.html)
+   ======================================= */
+.fp-page {
+  padding-top: 26px;
+}
+
+.fp-group-create {
+  flex: none;
+  width: auto;
+  margin-left: auto;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+
+/* The whole header row (arrow + asset name) toggles show/hide like the
+   document groups on mydocuments. */
+#fp-groups .doc-group-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+#fp-groups .fp-grid-hint {
+  margin-bottom: 26px;
+}
+
+.fp-grid-hint,
+.fp-grid-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px 16px;
+  border: 2px dashed var(--border-color);
+  border-radius: 25px;
+  font-size: 0.95rem;
+  margin-top: 18px;
+}
+
+#fp-groups .fp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.fp-grid-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 14px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.fp-grid-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+.fp-grid-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  margin-bottom: 10px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
+.fp-grid-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fp-grid-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+
+.fp-grid-name:hover {
+  color: var(--accent-primary);
+}
+
+.fp-grid-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: left;
+  margin-top: 4px;
+}
+
+.fp-grid-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fp-grid-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  padding: 7px 12px;
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+  border-radius: 20px;
+  color: var(--accent-primary);
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.82rem;
+  transition: background 0.2s, color 0.2s;
+}
+
+.fp-grid-edit:hover {
+  background: var(--accent-primary);
+  color: #FFFFFF;
+}
+
+.fp-grid-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.fp-grid-del:hover {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+@media (max-width: 480px) {
+  #fp-groups .fp-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
 }

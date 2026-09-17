@@ -69,6 +69,12 @@
         <!-- Right Panel -->
         <div class="fp-panel" id="rightPanel">
           <div class="fp-panel-section">
+            <h3>Connected Asset</h3>
+            <select id="planAssetSelect" class="fp-asset-select">
+              <option value="">-- Not connected --</option>
+            </select>
+          </div>
+          <div class="fp-panel-section">
             <h3>Properties</h3>
             <div id="propertiesContent">
               <p class="fp-hint">Select an element</p>
@@ -112,6 +118,21 @@
       <div class="fp-modal-actions">
         <button class="btn btn-sm btn-primary" onclick="inputConfirm()">Save</button>
         <button class="btn btn-sm" onclick="inputCancel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="fp-modal-overlay" id="newPlanModal" style="display:none">
+    <div class="fp-modal">
+      <p class="fp-modal-message">New Floor Plan</p>
+      <input type="text" class="fp-modal-input" id="newPlanName" value="" placeholder="Floor plan name">
+      <label class="fp-modal-label">Connected Asset</label>
+      <select id="newPlanAsset" class="fp-asset-select">
+        <option value="">-- Not connected --</option>
+      </select>
+      <div class="fp-modal-actions">
+        <button class="btn btn-sm btn-primary" onclick="newPlanConfirm()">Create</button>
+        <button class="btn btn-sm" onclick="newPlanCancel()">Cancel</button>
       </div>
     </div>
   </div>
@@ -167,6 +188,7 @@
 
   <script src="../script/app-config.js"></script>
   <script src="../script/modules/auth.js"></script>
+  <script src="../script/modules/assets.js"></script>
   <script src="../script/modules/common-ui.js"></script>
   <script src="../script/script.js"></script>
   <script src="../script/pages/floorplan.js"></script>

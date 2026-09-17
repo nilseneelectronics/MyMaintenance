@@ -85,7 +85,10 @@
                     <input type="email" id="pe-email" placeholder="e.g. john@example.com">
 
                     <label for="pe-phone">Phone</label>
-                    <input type="text" id="pe-phone" placeholder="e.g. +47 123 45 678">
+                    <div class="phone-group">
+                        <input type="text" class="phone-code" id="pe-phone-code" value="+47" inputmode="tel" aria-label="Country code" title="Country code">
+                        <input type="tel" class="phone-number" id="pe-phone" placeholder="123 45 678" aria-label="Phone number" inputmode="tel">
+                    </div>
 
                     <label for="pe-address">Address</label>
                     <input type="text" id="pe-address" placeholder="e.g. Street 123">

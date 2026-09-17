@@ -30,12 +30,20 @@ const commonDialogs = (function () {
             request.resolve(value);
             next();
         }
-        active = { dialog, finish };
+        active = { dialog, finish, escapeResult: !!request.escapeResult };
         cancel.onclick = () => finish(false);
         confirm.onclick = () => finish(true);
-        dialog.addEventListener('cancel', event => { event.preventDefault(); finish(false); });
+        // Ignore the native Escape "cancel" that belongs to the same keydown
+        // that opened this dialog; only handle cancels from later presses.
+        let cancelReady = false;
+        dialog.addEventListener('cancel', event => {
+            event.preventDefault();
+            if (!cancelReady) return;
+            finish(active.escapeResult);
+        });
         document.body.appendChild(dialog);
         dialog.showModal();
+        setTimeout(function () { cancelReady = true; }, 0);
         (request.confirm ? cancel : confirm).focus();
     }
     // Keep keyboard events from reaching popups underneath this dialog.
@@ -45,7 +53,10 @@ const commonDialogs = (function () {
         if (event.key === 'Escape' || event.key === 'Enter') {
             event.preventDefault();
             suppressKeyUp = event.key;
-            if (!event.repeat) active.finish(event.key === 'Enter' && document.activeElement === active.dialog.querySelector('.mm-message-confirm'));
+            if (!event.repeat) {
+                if (event.key === 'Escape') active.finish(active.escapeResult);
+                else active.finish(document.activeElement === active.dialog.querySelector('.mm-message-confirm'));
+            }
         }
         event.stopImmediatePropagation();
     }, true);
@@ -65,7 +76,7 @@ window.MyMaintenanceCommonUi = {
     confirm: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: true })); },
     confirmDiscard: function (onDiscard) {
         return this.confirm('Your unsaved changes will be lost.', {
-            title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard'
+            title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard', escapeResult: true
         }).then(discard => { if (discard) onDiscard(); });
     },
     initCommonUiInteractions() {
@@ -75,6 +86,28 @@ window.MyMaintenanceCommonUi = {
             const input = event.target.closest('input[type="number"]');
             if (input && document.activeElement === input) input.blur();
         }, { passive: true });
+
+        // Lock body scroll whenever any overlay is open so the page behind a
+        // popup can't be scrolled. Handles inline display, .open and .active
+        // states for every overlay type across the app.
+        const OVERLAY_SELECTOR = '.popup-overlay, .event-modal-overlay, .fp-modal-overlay, .photo-modal, .mm-message-dialog';
+        function isOverlayOpen() {
+            const els = document.querySelectorAll(OVERLAY_SELECTOR);
+            for (let i = 0; i < els.length; i++) {
+                const el = els[i];
+                if (el.classList && (el.classList.contains('open') || el.classList.contains('active'))) return true;
+                const style = window.getComputedStyle(el);
+                if (style.display && style.display !== 'none') return true;
+                if (el.getAttribute('open') !== null) return true;
+            }
+            return false;
+        }
+        function syncBodyLock() {
+            document.body.style.overflow = isOverlayOpen() ? 'hidden' : '';
+        }
+        const lockObserver = new MutationObserver(function () { syncBodyLock(); });
+        lockObserver.observe(document.body, { attributes: true, attributeFilter: ['style', 'class'], subtree: true, childList: true });
+        syncBodyLock();
 
         document.addEventListener('click', function (event) {
             const active = event.target.closest('.asset-dropdown');

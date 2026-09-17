@@ -105,12 +105,25 @@
         box.innerHTML = window.MyMaintenanceDocs.headerRowHtml()
             + recent.map(function (d) { return window.MyMaintenanceDocs.rowHtml(d); }).join('');
         box.querySelectorAll('.doc-row-open[data-doc-id]').forEach(function (el) {
-            el.addEventListener('click', function () {
+            const id = el.getAttribute('data-doc-id');
+            el.addEventListener('click', function (e) {
+                if (e.target.closest('.doc-edit-btn')) return;
                 if (!window.MyMaintenanceDocs) return;
-                const id = el.getAttribute('data-doc-id');
                 const doc = window.MyMaintenanceDocs.getItems().filter(function (d) { return d.id === id; })[0];
                 if (doc) window.MyMaintenanceDocs.openPreview(doc);
             });
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'doc-edit-btn';
+            editBtn.setAttribute('title', 'Edit document');
+            editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
+            editBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (!window.MyMaintenanceDocs) return;
+                const doc = window.MyMaintenanceDocs.getItems().filter(function (d) { return d.id === id; })[0];
+                if (doc) window.MyMaintenanceDocs.openEdit(doc);
+            });
+            el.appendChild(editBtn);
         });
     }
 
@@ -330,6 +343,15 @@
                 + '</div>';
         }).join('');
         renderInfoActions('none');
+    }
+
+    // Hide the floor plan / vehicle diagram when the user has no registered
+    // homes or vehicles yet (fresh account), so no sample drawing shows.
+    function syncDiagramVisibility() {
+        const box = document.getElementById('floorplan-box');
+        if (!box) return;
+        const hasAsset = assetList().length > 0;
+        box.style.display = hasAsset ? '' : 'none';
     }
 
     function renderAssetInfoEdit(rec, cfg) {
@@ -645,6 +667,14 @@
         });
     }
 
+    function wireViewAllFloorplans() {
+        const btn = document.getElementById('asset-view-all-floorplans');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            window.location.href = '../pages/myfloorplans.html?asset=' + encodeURIComponent(currentAsset());
+        });
+    }
+
     function registerAssetHandler() {
         return function (e) {
             const rec = e.detail && e.detail.record;
@@ -674,11 +704,13 @@
         wireShowAllDocs();
         wireAddDocument();
         wireViewAllMaintenance();
+        wireViewAllFloorplans();
         wireEditHome();
         wireInfoKeyboard();
         renderPlanned();
         renderDocs();
         renderAssetInfo();
+        syncDiagramVisibility();
         const params = new URLSearchParams(window.location.search);
         const assetId = params.get('id');
         if (assetId) selectAssetById(assetId);
@@ -691,6 +723,7 @@
             renderPlanned();
             renderDocs();
             renderAssetInfo();
+            syncDiagramVisibility();
         });
         window.addEventListener('home:registered', registerAssetHandler());
         window.addEventListener('vehicle:registered', registerAssetHandler());

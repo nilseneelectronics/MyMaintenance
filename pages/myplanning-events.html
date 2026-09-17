@@ -63,21 +63,21 @@
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Start date</label>
-                    <input type="date" id="ev-start-date" onclick="this.showPicker()">
+                    <input type="text" id="ev-start-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>Finish date</label>
-                    <input type="date" id="ev-finish-date" onclick="this.showPicker()">
+                    <input type="text" id="ev-finish-date" class="doc-date-field event-date-field" placeholder="dd.mm.yyyy" readonly>
                 </div>
             </div>
             <div class="event-modal-row">
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Start time</label>
-                    <input type="time" id="ev-start-time" onclick="this.showPicker()">
+                    <input type="text" id="ev-start-time" class="event-time-field" placeholder="HH:MM" readonly aria-haspopup="dialog">
                 </div>
                 <div class="event-modal-field">
                     <label><svg class="field-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Finish time</label>
-                    <input type="time" id="ev-finish-time" onclick="this.showPicker()">
+                    <input type="text" id="ev-finish-time" class="event-time-field" placeholder="HH:MM" readonly aria-haspopup="dialog">
                 </div>
             </div>
             <div class="event-modal-field">
@@ -168,6 +168,7 @@
     <script src="../script/modules/events.js"></script>
     <script src="../script/modules/assets.js"></script>
     <script src="../script/modules/event-tools.js"></script>
+    <script src="../script/modules/event-pickers.js"></script>
     <script src="../script/modules/event-modal.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>
