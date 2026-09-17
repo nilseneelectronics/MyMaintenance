@@ -980,7 +980,7 @@ main h1 {
 #register-home-popup .popup-content,
 #register-vehicle-popup .popup-content {
     max-width: 520px;
-    height: calc(92vh / var(--ui-zoom) - 24px);
+    max-height: calc(92vh / var(--ui-zoom) - 24px);
     display: flex;
     flex-direction: column;
     text-align: left;
@@ -989,6 +989,7 @@ main h1 {
     border-width: 14px 16px 14px 0;
     padding: 0 16px 0 40px;
     box-shadow: 0 0 0 4px var(--accent-primary), 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
 }
 
 #register-home-popup .popup-content h3,

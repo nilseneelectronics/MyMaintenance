@@ -329,3 +329,175 @@ body:not(.logged-in).shrunk .sidebar,
         padding: 8px 5px;
     }
 }
+
+/* =======================================
+   Notification bell + popup
+   ======================================= */
+#notif-bell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    padding: 0;
+    border: 1px solid var(--bg-primary);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--bg-primary);
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#notif-bell:hover {
+    background: var(--bg-primary);
+    color: var(--accent-primary);
+}
+
+#notif-bell .notif-icon {
+    width: 22px;
+    height: 22px;
+    display: none;
+}
+
+#notif-bell.has-unread .notif-unread {
+    display: block;
+}
+
+#notif-bell:not(.has-unread) .notif-read {
+    display: block;
+}
+
+/* Notification popup (self-contained: also used on pages that don't load
+   planning.css, e.g. the floor plan tool) */
+.notif-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 20000;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
+}
+
+.notif-overlay .notif-popup {
+    max-width: 420px;
+    width: 90%;
+    background: var(--bg-secondary);
+    border: 4px solid var(--accent-primary);
+    border-radius: 25px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
+}
+
+.notif-overlay .notif-popup h3 {
+    color: var(--accent-primary);
+    margin-bottom: 10px;
+}
+
+.notif-overlay .notif-popup .popup-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.notif-overlay .notif-popup .popup-btn {
+    flex: 1;
+    padding: 14px;
+    font-size: 1.1em;
+    border-radius: 25px;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+}
+
+.notif-overlay .notif-popup .popup-btn.cancel {
+    background: transparent;
+    border: 2px solid var(--accent-primary);
+    color: var(--text-secondary);
+}
+
+.notif-overlay .notif-popup .popup-btn.cancel:hover {
+    background: var(--accent-primary);
+    border: 2px solid var(--accent-primary);
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.notif-overlay .notif-popup .popup-btn.confirm {
+    background: var(--accent-primary);
+    border: 2px solid var(--accent-primary);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+.notif-overlay .notif-popup .popup-btn.confirm:hover {
+    background: var(--accent-secondary);
+    border: 2px solid var(--accent-secondary);
+    font-weight: bold;
+}
+
+.notif-list {
+    max-height: 320px;
+    overflow-y: auto;
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.notif-empty {
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 16px 0;
+}
+
+.notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: var(--bg-primary);
+}
+
+.notif-item:hover {
+    border-color: var(--accent-primary);
+}
+
+.notif-item.read {
+    opacity: 0.6;
+}
+
+.notif-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-item-main strong {
+    display: block;
+    font-size: 0.95em;
+}
+
+.notif-item-main p {
+    margin: 4px 0 0;
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.notif-item-time {
+    flex: none;
+    font-size: 0.75em;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}

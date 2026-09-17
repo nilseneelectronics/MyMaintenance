@@ -126,7 +126,7 @@
             <div class="floorplan-box" id="floorplan-box">
                 <h3>Floor Plans</h3>
                 
-                <button class="view-button" onclick="window.location.href='coming-soon.html?target=myhome-floorplans.html'">
+                <button class="view-button" id="asset-view-all-floorplans">
                     View all floor plans
                 </button>
                 
@@ -463,7 +463,7 @@
                 <label>Name</label>
                 <input type="text" id="doc-name" placeholder="Document name...">
 
-                <label>Connected Asset</label>
+                <label id="doc-asset-label">Connected Asset</label>
                 <div class="asset-dropdown" id="doc-asset-dropdown">
                     <button type="button" class="asset-toggle" id="doc-asset-toggle">
                         <span class="asset-value">-- Select an asset --</span>

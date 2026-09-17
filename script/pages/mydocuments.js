@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAssetId = '';
     let selectedAssetKind = '';
     let selectedDocType = '';
+    let lockedAsset = '';
     let docSort = 'uploaded';
     let docReverse = false;
     let scanMode = false;
@@ -625,8 +626,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
         selectedAssetValue = '';
         selectedAssetId = ''; selectedAssetKind = '';
+        lockedAsset = '';
+        const assetLabelEl = document.getElementById('doc-asset-label');
+        if (assetLabelEl) assetLabelEl.textContent = 'Connected Asset';
         if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
-        if (assetDropdown) assetDropdown.classList.remove('open');
+        if (assetDropdown) {
+            assetDropdown.classList.remove('open');
+            assetDropdown.style.display = '';
+            const t = assetDropdown.querySelector('.asset-toggle');
+            if (t) t.disabled = false;
+        }
         if (assetMenu) assetMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
         if (docAssetOther) {
             docAssetOther.value = '';
@@ -717,27 +726,53 @@ document.addEventListener('DOMContentLoaded', () => {
             const known = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
             known.forEach((b) => b.classList.remove('selected'));
             const a = it.asset ? String(it.asset).trim() : '';
-            const match = known.find((b) => b.dataset.value === a);
-            if (match) {
+            lockedAsset = /^Neighborhood:/i.test(a) ? a : '';
+            if (lockedAsset) {
+                // Neighborhood documents are fixed to their neighborhood; hide
+                // the asset picker and show the locked value instead.
+                const neighborhoodLabel = document.getElementById('doc-asset-label');
+                if (neighborhoodLabel) neighborhoodLabel.textContent = 'Connected neighborhood:';
                 selectedAssetValue = a;
-                if (assetValueEl) assetValueEl.textContent = match.textContent;
-                match.classList.add('selected');
-                if (docAssetOther) {
-                    docAssetOther.value = '';
-                    docAssetOther.style.display = 'none';
+                const displayName = a.replace(/^Neighborhood:\s*/i, '');
+                if (assetValueEl) assetValueEl.textContent = displayName;
+                if (assetDropdown) {
+                    assetDropdown.classList.remove('open');
+                    assetDropdown.style.display = 'none';
+                    const t = assetDropdown.querySelector('.asset-toggle');
+                    if (t) t.disabled = true;
                 }
-            } else if (a) {
-                selectedAssetValue = '__other__';
-                if (assetValueEl) assetValueEl.textContent = a;
-                const otherBtn = known.find((b) => b.dataset.value === '__other__');
-                if (otherBtn) otherBtn.classList.add('selected');
                 if (docAssetOther) {
                     docAssetOther.style.display = '';
-                    docAssetOther.value = a;
+                    docAssetOther.value = displayName;
+                    docAssetOther.readOnly = true;
                 }
             } else {
-                selectedAssetValue = '';
-                if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
+                const neighborhoodLabel = document.getElementById('doc-asset-label');
+                if (neighborhoodLabel) neighborhoodLabel.textContent = 'Connected Asset';
+                const match = known.find((b) => b.dataset.value === a);
+                if (match) {
+                    selectedAssetValue = a;
+                    if (assetValueEl) assetValueEl.textContent = match.textContent;
+                    match.classList.add('selected');
+                    if (docAssetOther) {
+                        docAssetOther.value = '';
+                        docAssetOther.style.display = 'none';
+                        docAssetOther.readOnly = false;
+                    }
+                } else if (a) {
+                    selectedAssetValue = '__other__';
+                    if (assetValueEl) assetValueEl.textContent = a;
+                    const otherBtn = known.find((b) => b.dataset.value === '__other__');
+                    if (otherBtn) otherBtn.classList.add('selected');
+                    if (docAssetOther) {
+                        docAssetOther.style.display = '';
+                        docAssetOther.value = a;
+                        docAssetOther.readOnly = false;
+                    }
+                } else {
+                    selectedAssetValue = '';
+                    if (assetValueEl) assetValueEl.textContent = '-- Select an asset --';
+                }
             }
         }
         if (assetDropdown) assetDropdown.classList.remove('open');
@@ -1830,9 +1865,11 @@ document.addEventListener('DOMContentLoaded', () => {
             markNameError();
             return;
         }
-        const asset = selectedAssetValue === '__other__'
-                ? (docAssetOther ? docAssetOther.value.trim() : '')
-                : selectedAssetValue;
+        const asset = lockedAsset
+                ? lockedAsset
+                : (selectedAssetValue === '__other__'
+                        ? (docAssetOther ? docAssetOther.value.trim() : '')
+                        : selectedAssetValue);
         const performedDt = parseDateStr(performedInput.value);
         const privacy = privacyValue();
         let rec = editingId ? items.find(function (item) { return item.id === editingId; }) : null;

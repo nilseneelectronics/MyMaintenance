@@ -4,6 +4,13 @@ window.MyMaintenanceNeighborhoodDefaults = (function () {
         return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
     }
 
+    // Turn a street address into a neighborhood name: drop the street number
+    // (e.g. "Mountain Road 45" -> "Mountain Road", "Street 123B" -> "Street").
+    function streetName(address) {
+        const text = String(address || '').trim();
+        return text.replace(/\s*\d+[a-z]?\s*$/i, '').trim() || text;
+    }
+
     function create(profile, homes, family) {
         profile = profile || {};
         family = Array.isArray(family) ? family : [];
@@ -28,7 +35,7 @@ window.MyMaintenanceNeighborhoodDefaults = (function () {
             people.push({ name: member.name || '', email: member.email, phone: member.phone || '', role: 'view' });
         });
         return {
-            id: null, name: '', other: '', country: home.country || '', zip: home.zip || '', city: home.city || '',
+            id: null, name: streetName(home.address), other: '', country: home.country || '', zip: home.zip || '', city: home.city || '',
             addresses: [{ id: 'home_' + home.id, homeId: home.id, address: home.address, people: people }]
         };
     }

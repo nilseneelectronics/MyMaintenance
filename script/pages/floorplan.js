@@ -272,15 +272,16 @@ function loadPlanData(id) {
   try { return JSON.parse(localStorage.getItem(DATA_PREFIX + id)); } catch { return null; }
 }
 
-function savePlanData(id, data, preview) {
+function savePlanData(id, data, preview, asset) {
   localStorage.setItem(DATA_PREFIX + id, JSON.stringify(data));
   const list = getFileList();
   const idx = list.findIndex(f => f.id === id);
   if (idx >= 0) {
     list[idx].updatedAt = Date.now();
     if (preview) list[idx].preview = preview;
+    if (asset != null) list[idx].asset = asset;
   } else {
-    list.unshift({ id, name: id, preview: preview || '', updatedAt: Date.now() });
+    list.unshift({ id, name: id, preview: preview || '', updatedAt: Date.now(), asset: asset || '' });
   }
   saveFileList(list);
 }
@@ -315,7 +316,7 @@ function closeFileManager() {
 
 function newFromFileManager() {
   closeFileManager();
-  doClear();
+  openNewPlanModal();
 }
 
 function openPlanFromList(id) {
@@ -325,6 +326,9 @@ function openPlanFromList(id) {
   planFileName = id;
   document.getElementById('planTitle').textContent = id;
   canvas.loadFromJSON(data, () => { canvas.renderAll(); isDirty = false; });
+  const rec = getFileList().find(f => f.id === id);
+  if (rec && rec.asset) planAsset = rec.asset;
+  syncPanelAsset();
 }
 
 function renderFileList() {
@@ -505,11 +509,52 @@ document.addEventListener('DOMContentLoaded', () => {
   // Show file manager on load (after layout is ready)
   requestAnimationFrame(() => showFileManager());
 
+// If the page was opened to edit a specific saved plan (?open=<id>),
+// load that plan once the canvas is ready.
+const openId = new URLSearchParams(window.location.search).get('open');
+if (openId && loadPlanData(openId)) {
+  const waitCanvas = setInterval(() => {
+    if (canvas && canvas.upperCanvasEl) {
+      clearInterval(waitCanvas);
+      setTimeout(() => openPlanFromList(openId), 50);
+    }
+  }, 50);
+}
+
   const style = document.createElement('style');
   style.textContent = `
     body.logged-in .navbar { position: fixed; }
   `;
   document.head.appendChild(style);
+
+  // Asset connector: picking an asset in the right panel links this plan to it.
+  const panelAsset = document.getElementById('planAssetSelect');
+  if (panelAsset) {
+    panelAsset.addEventListener('change', () => {
+      planAsset = panelAsset.value;
+    });
+  }
+  populateAssetSelects();
+  syncPanelAsset();
+
+  // New-plan modal: Enter creates, Escape cancels.
+  const newPlanModal = document.getElementById('newPlanModal');
+  const newPlanName = document.getElementById('newPlanName');
+  if (newPlanName) {
+    newPlanName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); newPlanConfirm(); }
+    });
+  }
+  if (newPlanModal) {
+    newPlanModal.addEventListener('click', (e) => {
+      if (e.target === newPlanModal) newPlanCancel();
+    });
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && newPlanModal && newPlanModal.style.display === 'flex') {
+      newPlanCancel();
+    }
+  });
 });
 
 // ====================== UNSAVED CHANGES MODAL ======================
@@ -574,12 +619,63 @@ function inputCancel() {
 }
 
 // ====================== FILE OPERATIONS ======================
+let planAsset = '';
+
+function currentPlanAsset() {
+  if (planAsset) return planAsset;
+  const q = new URLSearchParams(window.location.search);
+  if (q.get('asset')) return q.get('asset');
+  if (window.MyMaintenanceFloorplanContext && window.MyMaintenanceFloorplanContext.asset) {
+    return window.MyMaintenanceFloorplanContext.asset;
+  }
+  return '';
+}
+
+function assetOptionsHtml(selected) {
+  const assets = window.MyMaintenanceAssets;
+  let html = '<option value="">-- Not connected --</option>';
+  if (!assets) return html;
+  const homes = assets.getHomes();
+  const vehicles = assets.getVehicles();
+  if (homes.length) {
+    html += '<option value="" disabled>Addresses</option>';
+    homes.forEach(h => {
+      const label = assets.homeLabel(h);
+      const sel = label === selected ? ' selected' : '';
+      html += `<option value="${label.replace(/"/g, '&quot;')}"${sel}>${label}</option>`;
+    });
+  }
+  if (vehicles.length) {
+    html += '<option value="" disabled>Vehicles</option>';
+    vehicles.forEach(v => {
+      const label = assets.vehicleLabel(v);
+      const sel = label === selected ? ' selected' : '';
+      html += `<option value="${label.replace(/"/g, '&quot;')}"${sel}>${label}</option>`;
+    });
+  }
+  return html;
+}
+
+function populateAssetSelects() {
+  const panel = document.getElementById('planAssetSelect');
+  const modal = document.getElementById('newPlanAsset');
+  const selected = currentPlanAsset();
+  const html = assetOptionsHtml(selected);
+  if (panel) panel.innerHTML = html;
+  if (modal) modal.innerHTML = html;
+}
+
+function syncPanelAsset() {
+  const panel = document.getElementById('planAssetSelect');
+  if (panel) panel.value = currentPlanAsset();
+}
+
 function doSave(name) {
   planFileName = name;
   document.getElementById('planTitle').textContent = name.replace(/\.json$/i, '');
   const data = canvas.toJSON();
   const preview = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
-  savePlanData(name, data, preview);
+  savePlanData(name, data, preview, currentPlanAsset());
   isDirty = false;
 }
 
@@ -743,20 +839,46 @@ function importPlan(e) {
 function clearAll() {
   if (!canvas) return;
   if (!isDirty) {
-    showConfirmModal(
-      'Create a new floor plan?',
-      { label: 'Create', cb: doClear },
-      { label: '', cb: null },
-      { label: 'Cancel', cb: null }
-    );
+    openNewPlanModal();
     return;
   }
   showConfirmModal(
     'You have unsaved changes. Save before starting a new plan?',
-    { label: 'Save & New', cb: () => { doSave(planFileName || 'floorplan'); doClear(); } },
-    { label: 'Discard & New', cb: doClear },
+    { label: 'Save & New', cb: () => { doSave(planFileName || 'floorplan'); openNewPlanModal(); } },
+    { label: 'Discard & New', cb: openNewPlanModal },
     { label: 'Cancel', cb: null }
   );
+}
+
+// ====================== NEW PLAN MODAL ======================
+function openNewPlanModal() {
+  populateAssetSelects();
+  const nameEl = document.getElementById('newPlanName');
+  const assetEl = document.getElementById('newPlanAsset');
+  if (nameEl) nameEl.value = '';
+  if (assetEl) assetEl.value = currentPlanAsset();
+  document.getElementById('newPlanModal').style.display = 'flex';
+  setTimeout(() => nameEl && nameEl.focus(), 50);
+}
+
+function newPlanConfirm() {
+  document.getElementById('newPlanModal').style.display = 'none';
+  const nameEl = document.getElementById('newPlanName');
+  const assetEl = document.getElementById('newPlanAsset');
+  const name = nameEl ? nameEl.value.trim() : '';
+  if (!name) {
+    if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Please enter a name for the floor plan.');
+    return;
+  }
+  planFileName = name;
+  planAsset = assetEl ? assetEl.value : '';
+  doClear();
+  syncPanelAsset();
+  isDirty = true;
+}
+
+function newPlanCancel() {
+  document.getElementById('newPlanModal').style.display = 'none';
 }
 
 function doClear() {
@@ -818,5 +940,6 @@ Object.assign(window, {
   goBack, confirmSave, confirmDiscard, confirmCancel,
   inputConfirm, inputCancel,
   showFileManager, closeFileManager, newFromFileManager,
+  newPlanConfirm, newPlanCancel,
   addRoomFromWalls, autoClassifyWalls, showNewZoneDialog
 });

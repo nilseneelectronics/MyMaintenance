@@ -1165,8 +1165,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         const modal = document.getElementById('nb-event-modal');
-        if (modal && modal.style.display === 'flex') modal.style.display = 'none';
+        if (modal && modal.style.display === 'flex') {
+            e.preventDefault();
+            modal.style.display = 'none';
+        }
     });
+
+    const nbEventModal = document.getElementById('nb-event-modal');
+    if (nbEventModal) {
+        nbEventModal.addEventListener('click', function (e) {
+            if (e.target === nbEventModal) nbEventModal.style.display = 'none';
+        });
+    }
 
     const nbPickers = window.MyMaintenanceEventPickers;
     if (nbPickers) {
@@ -1321,6 +1331,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     document.getElementById('nb-doc-cancel').addEventListener('click', () => { document.getElementById('nb-doc-add-popup').style.display = 'none'; });
+    const nbDocPopup = document.getElementById('nb-doc-add-popup');
+    function closeDocAddPopup() {
+        if (nbDocPopup) nbDocPopup.style.display = 'none';
+    }
+    nbDocPopup.addEventListener('click', (event) => {
+        if (event.target === nbDocPopup) closeDocAddPopup();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !nbDocPopup || nbDocPopup.style.display !== 'flex') return;
+        e.preventDefault();
+        closeDocAddPopup();
+    });
     document.getElementById('nb-doc-pick-btn').addEventListener('click', () => document.getElementById('nb-doc-file').click());
     document.getElementById('nb-doc-file').addEventListener('change', () => {
         const file = document.getElementById('nb-doc-file').files[0];

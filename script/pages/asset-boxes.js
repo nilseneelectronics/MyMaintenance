@@ -345,6 +345,15 @@
         renderInfoActions('none');
     }
 
+    // Hide the floor plan / vehicle diagram when the user has no registered
+    // homes or vehicles yet (fresh account), so no sample drawing shows.
+    function syncDiagramVisibility() {
+        const box = document.getElementById('floorplan-box');
+        if (!box) return;
+        const hasAsset = assetList().length > 0;
+        box.style.display = hasAsset ? '' : 'none';
+    }
+
     function renderAssetInfoEdit(rec, cfg) {
         const grid = document.getElementById('asset-info-grid');
         if (!grid || !rec) return;
@@ -658,6 +667,14 @@
         });
     }
 
+    function wireViewAllFloorplans() {
+        const btn = document.getElementById('asset-view-all-floorplans');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            window.location.href = '../pages/myfloorplans.html?asset=' + encodeURIComponent(currentAsset());
+        });
+    }
+
     function registerAssetHandler() {
         return function (e) {
             const rec = e.detail && e.detail.record;
@@ -687,11 +704,13 @@
         wireShowAllDocs();
         wireAddDocument();
         wireViewAllMaintenance();
+        wireViewAllFloorplans();
         wireEditHome();
         wireInfoKeyboard();
         renderPlanned();
         renderDocs();
         renderAssetInfo();
+        syncDiagramVisibility();
         const params = new URLSearchParams(window.location.search);
         const assetId = params.get('id');
         if (assetId) selectAssetById(assetId);
@@ -704,6 +723,7 @@
             renderPlanned();
             renderDocs();
             renderAssetInfo();
+            syncDiagramVisibility();
         });
         window.addEventListener('home:registered', registerAssetHandler());
         window.addEventListener('vehicle:registered', registerAssetHandler());
