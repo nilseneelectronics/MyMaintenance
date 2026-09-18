@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const docTypeToggle = document.getElementById('doc-type-toggle');
     const docTypeMenu = document.getElementById('doc-type-menu');
     const docTypeValueEl = document.querySelector('#doc-type-toggle .asset-value');
+    const projectDropdown = document.getElementById('doc-project-dropdown');
+    const projectToggle = document.getElementById('doc-project-toggle');
+    const projectMenu = document.getElementById('doc-project-menu');
+    const projectValueEl = document.querySelector('#doc-project-toggle .asset-value');
+    const projectOther = document.getElementById('doc-project-other');
 
     if (!addBtn || !popup) return;
 
@@ -34,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAssetId = '';
     let selectedAssetKind = '';
     let selectedDocType = '';
+    let selectedProject = '';
     let lockedAsset = '';
     let docSort = 'uploaded';
     let docReverse = false;
@@ -144,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             id: row.id,
             name: row.title,
             docType: row.document_type || extra.docType || '',
+            project: extra.project || '',
             performed: row.document_date || '',
             filePath: row.file_path || '',
             homeId: row.home_id || '',
@@ -647,6 +654,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (docTypeValueEl) docTypeValueEl.textContent = '-- Select type --';
         if (docTypeMenu) docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
         if (docTypeDropdown) docTypeDropdown.classList.remove('open');
+        selectedProject = '';
+        if (projectValueEl) projectValueEl.textContent = 'Other';
+        if (projectMenu) {
+            projectMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+            const otherBtn = projectMenu.querySelector('button[data-value="__other__"]');
+            if (otherBtn) otherBtn.classList.add('selected');
+        }
+        if (projectOther) { projectOther.value = ''; projectOther.style.display = 'none'; }
+        if (projectDropdown) projectDropdown.classList.remove('open');
         currentOcrText = '';
         currentOcrItems = [];
         currentOcrExpanded = '';
@@ -670,6 +686,41 @@ document.addEventListener('DOMContentLoaded', () => {
             docAssetOther.style.display = match ? 'none' : '';
             docAssetOther.value = match ? '' : asset;
         }
+        populateProjectMenu(asset);
+    }
+
+    // Projects are stored per asset so they reappear for that asset later.
+    const PROJECTS_KEY = 'mymaintenance_doc_projects';
+    function loadProjects() {
+        try { return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || {}; } catch (_) { return {}; }
+    }
+    function saveProjects(map) {
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(map));
+    }
+    function projectsForAsset(asset) {
+        const map = loadProjects();
+        return (map[asset] || []).slice();
+    }
+    function addProjectForAsset(asset, name) {
+        if (!asset || !name) return;
+        const map = loadProjects();
+        const list = map[asset] || [];
+        if (list.indexOf(name) === -1) list.unshift(name);
+        map[asset] = list;
+        saveProjects(map);
+    }
+
+    function populateProjectMenu(asset) {
+        if (!projectMenu) return;
+        const projects = projectsForAsset(asset || selectedAssetValue);
+        // Projects first; "Other" sits at the bottom behind a divider, like the
+        // split between Addresses and Vehicles in the asset dropdown.
+        let html = projects.map(function (name) {
+            return '<li><button type="button" data-value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button></li>';
+        }).join('');
+        html += '<li class="asset-optgroup"></li>';
+        html += '<li><button type="button" data-value="__other__">Other</button></li>';
+        projectMenu.innerHTML = html;
     }
 
     function openPopup() {
@@ -677,6 +728,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const context = window.MyMaintenanceDocumentContext;
         window.MyMaintenanceDocumentContext = null;
         if (context && context.asset) selectAsset(context.asset);
+        if (context && context.project) {
+            selectedProject = context.project;
+            if (projectValueEl) projectValueEl.textContent = context.project;
+            if (projectMenu) {
+                projectMenu.querySelectorAll('button').forEach(function (b) {
+                    b.classList.toggle('selected', b.dataset.value === context.project);
+                });
+            }
+        }
         scanMode = false;
         fileInput.accept = '';
         fileInput.removeAttribute('capture');
@@ -777,6 +837,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (assetDropdown) assetDropdown.classList.remove('open');
         if (cal) cal.classList.remove('open');
+        if (selectedAssetValue && selectedAssetValue !== '__other__' && !lockedAsset) {
+            populateProjectMenu(selectedAssetValue);
+        } else {
+            populateProjectMenu('');
+        }
         ensureDeleteBtn();
         const d = popup.querySelector('.doc-delete-btn');
         if (d) d.style.display = '';
@@ -795,6 +860,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (docTypeDropdown) docTypeDropdown.classList.remove('open');
+        const projectVal = it.project || '';
+        selectedProject = projectVal;
+        if (projectMenu) {
+            const projBtns = Array.prototype.slice.call(projectMenu.querySelectorAll('button[data-value]'));
+            projBtns.forEach((b) => b.classList.remove('selected'));
+            if (projectVal) {
+                const projMatch = projBtns.find((b) => b.dataset.value === projectVal);
+                if (projMatch) {
+                    projMatch.classList.add('selected');
+                    if (projectValueEl) projectValueEl.textContent = projectVal;
+                    if (projectOther) { projectOther.style.display = 'none'; projectOther.value = ''; }
+                } else {
+                    if (projectValueEl) projectValueEl.textContent = projectVal;
+                    if (projectOther) { projectOther.style.display = ''; projectOther.value = projectVal; }
+                }
+            } else {
+                if (projectValueEl) projectValueEl.textContent = 'Other';
+                const otherProj = projBtns.find((b) => b.dataset.value === '__other__');
+                if (otherProj) otherProj.classList.add('selected');
+                if (projectOther) { projectOther.style.display = 'none'; projectOther.value = ''; }
+            }
+        }
+        if (projectDropdown) projectDropdown.classList.remove('open');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
@@ -910,6 +998,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 docAssetOther.style.display = selectedAssetValue === '__other__' ? '' : 'none';
                 if (selectedAssetValue === '__other__') docAssetOther.focus();
             }
+            // Projects are tied to the selected asset.
+            if (selectedAssetValue && selectedAssetValue !== '__other__') {
+                populateProjectMenu(selectedAssetValue);
+            }
         });
     }
     if (docTypeToggle) {
@@ -929,12 +1021,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if (docTypeDropdown) docTypeDropdown.classList.remove('open');
         });
     }
+    if (projectToggle) {
+        projectToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (projectDropdown) projectDropdown.classList.toggle('open');
+        });
+    }
+    if (projectMenu) {
+        projectMenu.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-value]');
+            if (!btn) return;
+            selectedProject = btn.dataset.value === '__other__' ? '' : btn.dataset.value;
+            if (projectValueEl) projectValueEl.textContent = btn.textContent;
+            projectMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            if (projectDropdown) projectDropdown.classList.remove('open');
+            if (projectOther) {
+                const showInput = btn.dataset.value === '__other__';
+                projectOther.style.display = showInput ? '' : 'none';
+                if (showInput) projectOther.focus();
+            }
+        });
+    }
     document.addEventListener('click', (e) => {
         if (assetDropdown && !assetDropdown.contains(e.target)) {
             assetDropdown.classList.remove('open');
         }
         if (docTypeDropdown && !docTypeDropdown.contains(e.target)) {
             docTypeDropdown.classList.remove('open');
+        }
+        if (projectDropdown && !projectDropdown.contains(e.target)) {
+            projectDropdown.classList.remove('open');
         }
         if (cal && !cal.contains(e.target) && e.target !== performedInput) {
             cal.classList.remove('open');
@@ -1884,6 +2001,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
+        rec.project = selectedProject
+            ? selectedProject
+            : (projectOther ? projectOther.value.trim() : '');
+        if (rec.project && asset && asset !== '__other__') addProjectForAsset(asset, rec.project);
         rec.performed = performedDt ? toISO(performedDt) : '';
 
         if (file) {
@@ -2021,9 +2142,10 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-name doc-col-label">Document</span>';
         const right = document.createElement('div');
         right.className = 'doc-row-right';
-        right.innerHTML = '<span class="doc-cell doc-cell-performed doc-col-label">Date Performed</span>'
-            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Date Uploaded</span>'
+        right.innerHTML = '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
+            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
+            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
             + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
             + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
@@ -2048,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         right.innerHTML = '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
             + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || info.label) + '</span>'
+            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>';
@@ -2067,6 +2190,7 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
             + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
             + '</div>'
@@ -2083,6 +2207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
+            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '</div>'
@@ -2106,6 +2231,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return fileTypeInfo(a).label < fileTypeInfo(b).label;
             case 'asset':
                 return String(a.asset || '').toLowerCase() < String(b.asset || '').toLowerCase();
+            case 'project':
+                return String(a.project || '').toLowerCase() < String(b.project || '').toLowerCase();
             case 'performed':
                 return String(a.performed || '') > String(b.performed || '');
             default:
@@ -2162,6 +2289,123 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function docCost(it) {
+        if (!it || !Array.isArray(it.receiptItems)) return 0;
+        let total = 0;
+        it.receiptItems.forEach(function (item) {
+            const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
+            const qty = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
+            if (!isNaN(price)) total += price * (isNaN(qty) ? 1 : qty);
+        });
+        return total;
+    }
+
+    function formatCost(n) {
+        if (!n) return 'kr 0';
+        return 'kr ' + n.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+function openAddDocPopup() {
+        openPopup();
+    }
+
+    function renderProjectFolders(assetKey, assetDocs) {
+        const wrap = document.createElement('div');
+        wrap.className = 'doc-projects';
+        const projects = projectsForAsset(assetKey);
+        // Only show folders that still have documents, or keep all saved projects.
+        const projectSet = new Set((assetDocs || []).map(function (d) { return d.project || ''; }).filter(Boolean));
+        projects.forEach(function (name) { projectSet.add(name); });
+        const projectNames = Array.from(projectSet);
+
+        function folderHtml(name) {
+            const docs = (assetDocs || []).filter(function (d) { return (d.project || '') === name; });
+            const count = docs.length;
+            const cost = docs.reduce(function (sum, d) { return sum + docCost(d); }, 0);
+            return '<div class="doc-project-folder" data-project="' + escapeHtml(name) + '">'
+                + '<div class="doc-project-folder-name">' + escapeHtml(name) + '</div>'
+                + '<div class="doc-project-folder-meta">' + count + ' document' + (count === 1 ? '' : 's') + '</div>'
+                + '<div class="doc-project-folder-cost">' + formatCost(cost) + '</div>'
+                + '</div>';
+        }
+
+        projectNames.forEach(function (name) {
+            wrap.insertAdjacentHTML('beforeend', folderHtml(name));
+        });
+
+        // Always offer an "Add project" folder; clicking it turns into an input
+        // field to type a project name.
+        const add = document.createElement('div');
+        add.className = 'doc-project-folder doc-project-add';
+        add.innerHTML = '<div class="doc-project-folder-name">+ Add project</div>';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'doc-project-input';
+        input.placeholder = 'Project name...';
+        input.style.display = 'none';
+        add.appendChild(input);
+
+        const showInput = function () {
+            add.classList.add('adding');
+            add.querySelector('.doc-project-folder-name').style.display = 'none';
+            input.style.display = '';
+            input.focus();
+        };
+        const commit = function () {
+            const name = input.value.trim();
+            add.classList.remove('adding');
+            add.querySelector('.doc-project-folder-name').style.display = '';
+            input.style.display = 'none';
+            input.value = '';
+            if (name && assetKey && assetKey !== '__other__') {
+                addProjectForAsset(assetKey, name);
+                render();
+            }
+        };
+        add.addEventListener('click', function (e) {
+            if (e.target === input) return;
+            showInput();
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') {
+                add.classList.remove('adding');
+                add.querySelector('.doc-project-folder-name').style.display = '';
+                input.style.display = 'none';
+                input.value = '';
+            }
+        });
+        input.addEventListener('blur', commit);
+        wrap.appendChild(add);
+
+        // Fill columns first, capped at six per row. The columns adapt to the
+        // number of boxes so every row fills the full width (e.g. 3 boxes use
+        // 3 columns; 8 boxes use 6 columns and wrap to a second row).
+        const vw = window.innerWidth;
+        let maxCols = 6;
+        if (vw <= 460) maxCols = 2;
+        else if (vw <= 640) maxCols = 3;
+        else if (vw <= 900) maxCols = 4;
+        const cols = Math.max(1, Math.min(maxCols, wrap.children.length));
+        wrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+
+        // When the Add-project box is the only box on its row (e.g. exactly six
+        // projects already fill the previous row), it spans the whole row.
+        const boxCount = wrap.children.length;
+        if (boxCount % cols === 1) {
+            add.style.gridColumn = '1 / -1';
+        }
+
+        // Clicking a project folder opens that project's own page.
+        wrap.querySelectorAll('.doc-project-folder[data-project]').forEach(function (el) {
+            el.addEventListener('click', function () {
+                window.location.href = 'myproject.html?asset=' + encodeURIComponent(assetKey) + '&project=' + encodeURIComponent(el.dataset.project);
+            });
+        });
+
+        return wrap;
+    }
+
     function render() {
         if (!items.length) {
             const groupsEl = document.getElementById('doc-groups');
@@ -2197,6 +2441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 head.innerHTML = '<button class="collapse-toggle"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><h4>' + escapeHtml(title) + '</h4>';
                 const content = document.createElement('div');
                 content.className = 'subgroup-content';
+                content.appendChild(renderProjectFolders(key, byAsset.get(key)));
                 content.appendChild(renderHeaderRow());
                 sortedArr.forEach(function (it) { content.appendChild(renderRow(it)); });
                 grp.appendChild(head);
@@ -2410,6 +2655,10 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         refresh: function () { return hydrateDocuments(); },
         render: render,
+        persistItem: function (it) {
+            persistDocument(it);
+            window.dispatchEvent(new CustomEvent('mydocs:changed'));
+        },
         headerRowHtml: headerRowHtml,
         rowHtml: rowHtml
     };

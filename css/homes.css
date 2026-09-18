@@ -290,7 +290,13 @@ main h1 {
     border-radius: 20px;
     overflow: hidden;
     z-index: 2;
-    background-color: #e8f5e9;
+    background: transparent;
+}
+
+/* Vehicle diagram box: smaller than the home floor plan box */
+.vehicle-diagram-container {
+    width: 55%;
+    margin: 0 auto;
 }
 
 .big-floorplan-container svg {
@@ -302,6 +308,102 @@ main h1 {
 
 .big-floorplan-container:hover svg {
     transform: scale(1.03);
+}
+
+/* Saved floor plans / diagrams inside the asset floor plan box */
+#floorplan-render {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+#floorplan-render .fp-grid-empty {
+    color: var(--accent-primary);
+    text-align: center;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    font-size: 1.2rem;
+    margin: 0;
+    border: none;
+}
+
+/* One big floor plan preview filling the container, like the photo gallery */
+#floorplan-render .fp-big-plan {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#floorplan-render .fp-big-plan-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: left;
+    color: var(--text-primary);
+    padding: 0 4px 10px;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#floorplan-render .fp-big-plan-open {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: block;
+    padding: 0;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    /* White page with a light grid, like the floor plan editor. */
+    background-color: #ffffff;
+    background-image:
+        linear-gradient(#e8e8e8 1px, transparent 1px),
+        linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+#floorplan-render .fp-big-plan-open img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+#floorplan-render .fp-big-plan-edit {
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--accent-primary);
+    border-radius: 25px;
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 1;
+    transition: background 0.2s, color 0.2s;
+}
+
+#floorplan-render .fp-big-plan-edit:hover {
+    background: var(--accent-primary);
+    color: #FFFFFF;
 }
 
 .photo-arrows {
@@ -340,6 +442,12 @@ main h1 {
 
 .photo-arrows button:hover {
     transform: scale(1.15);
+}
+
+/* Center the browse arrows over the floor plan image (below the name). */
+.big-floorplan-container .photo-arrows {
+    top: 60%;
+    transform: translateY(-50%);
 }
 
 .planned-box, .docs-box {

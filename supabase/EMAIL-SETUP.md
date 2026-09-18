@@ -8,6 +8,8 @@ These changes are local source code until published. No SMTP passwords belong in
 2. Supabase → Authentication → Email → SMTP Settings: use the mailbox's exact outgoing hostname, port 465 (SSL/TLS), username `noreply@vedlikeholdt.no`, and its mailbox password. Sender email: `noreply@vedlikeholdt.no`; sender name: `Vedlikeholdt`.
 3. Enable **Confirm email** for email/password signup in Supabase. This is enforced by Supabase, not only the page.
 4. URL Configuration: Site URL `https://vedlikeholdt.no`; add the exact redirect URL `https://vedlikeholdt.no/pages/email-action.html` to the allowlist.
+
+   > **Password reset links.** The button inside the "Reset your Vedlikeholdt password" email uses `{{ .ConfirmationURL }}`. That URL is built by Supabase from the Site URL and the `redirect_to` passed by the app (`https://vedlikeholdt.no/pages/email-action.html`). If the Site URL is still the old MyMaintenance host, or `https://vedlikeholdt.no/pages/email-action.html` is missing from the redirect allowlist, the reset link points to MyMaintenance and fails. Set both values in the Dashboard and re-verify. The app and the template already use Vedlikeholdt everywhere.
 5. Publish `pages/email-action.html`, its CSS/JS, and the updated login/auth code before using the new email links.
 6. In Confirm signup and Reset password email templates, keep the button linked to `{{ .ConfirmationURL }}`. The app supplies the redirect URL. Do not replace this with a plain link to the site; it must retain Supabase's verification token.
 

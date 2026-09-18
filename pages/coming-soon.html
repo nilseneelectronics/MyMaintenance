@@ -77,6 +77,20 @@
         if (target && targetLink) {
             targetLink.textContent = `Requested page: ${target}`;
         }
+        // A signed-in user should land on their dashboard, not the public home page.
+        document.addEventListener('DOMContentLoaded', () => {
+            let loggedIn = Boolean(localStorage.getItem('mymaintenance.authToken'));
+            if (!loggedIn && window.MyMaintenanceAuth && window.MyMaintenanceAuth._readSupabaseSession) {
+                const session = window.MyMaintenanceAuth._readSupabaseSession();
+                loggedIn = Boolean(session && session.access_token);
+            }
+            if (loggedIn) {
+                const brandLink = document.querySelector('header.navbar .brand-link');
+                if (brandLink) brandLink.setAttribute('href', 'dashboard.html');
+                const homeLink = document.getElementById('target-link');
+                if (homeLink && !target) homeLink.setAttribute('href', 'dashboard.html');
+            }
+        });
     </script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/auth.js"></script>

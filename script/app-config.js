@@ -47,6 +47,8 @@ window.MyMaintenanceConfig = {
         'myprofile.html',
         'tool-floorplan.html',
         'myfloorplans.html',
+        'myproject.html',
+        'vehicle-diagrams.html',
         'coming-soon.html'
     ]
 };

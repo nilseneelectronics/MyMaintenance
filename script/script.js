@@ -147,7 +147,9 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'myprofile.html',
     'coming-soon.html',
     'tool-floorplan.html',
-    'myfloorplans.html'
+    'myfloorplans.html',
+    'myproject.html',
+    'vehicle-diagrams.html'
 ];
 
 const KNOWN_PAGE_FILES = new Set(
@@ -233,7 +235,13 @@ function insertCommonLayout() {
 
     const h = document.createElement('div'); h.innerHTML = COMMON_LAYOUT.header.trim(); document.body.prepend(h.firstElementChild);
     const s = document.createElement('div'); s.innerHTML = COMMON_LAYOUT.sidebar.trim(); document.querySelector('header.navbar').after(s.firstElementChild);
-    const f = document.createElement('div'); f.innerHTML = COMMON_LAYOUT.footer.trim(); document.body.appendChild(f.firstElementChild);
+
+    // Full-screen tools (e.g. the floor plan maker) skip the footer so they
+    // can fill the viewport below the navbar and sidebar.
+    const pageFile = decodeURIComponent(location.pathname.split('/').pop() || '');
+    if (!/^tool-/.test(pageFile)) {
+        const f = document.createElement('div'); f.innerHTML = COMMON_LAYOUT.footer.trim(); document.body.appendChild(f.firstElementChild);
+    }
 
     setActiveSidebarLink();
     initAppSidebar();
