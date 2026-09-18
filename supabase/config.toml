@@ -27,3 +27,11 @@ content_path = "./supabase/templates/email-change.html"
 [auth.email.template.reauthentication]
 subject = "{{ .Token }} is your Vedlikeholdt verification code"
 content_path = "./supabase/templates/reauthentication.html"
+
+[auth]
+# Emails use Vedlikeholdt's domain so recovery/confirmation links never fall
+# back to the old MyMaintenance host. The redirect URL below must also be
+# added to Auth -> URL Configuration -> Redirect URLs in the Supabase
+# Dashboard (hosted projects ignore this file for that setting).
+site_url = "https://vedlikeholdt.no"
+additional_redirect_urls = ["https://vedlikeholdt.no/pages/email-action.html"]

@@ -22,9 +22,9 @@ function initCanvas() {
   canvas.on('mouse:wheel', onMouseWheel);
   wrapper.addEventListener('wheel', e => e.preventDefault(), { passive: false });
 
-  canvas.on('object:modified', () => isDirty = true);
-  canvas.on('object:added', () => isDirty = true);
-  canvas.on('object:removed', () => isDirty = true);
+  canvas.on('object:modified', () => { isDirty = true; syncSaveButton(); });
+  canvas.on('object:added', () => { isDirty = true; syncSaveButton(); });
+  canvas.on('object:removed', () => { isDirty = true; syncSaveButton(); });
 
   // Center world origin at canvas center
   canvas.viewportTransform = [1, 0, 0, 1, canvas.width / 2, canvas.height / 2];
@@ -35,6 +35,7 @@ function initCanvas() {
   createGrid();
   setupPlanTitle();
   updateZoomDisplay();
+  syncSaveButton();
 
   window.addEventListener('resize', resizeCanvas);
 
@@ -325,7 +326,7 @@ function openPlanFromList(id) {
   closeFileManager();
   planFileName = id;
   document.getElementById('planTitle').textContent = id;
-  canvas.loadFromJSON(data, () => { canvas.renderAll(); isDirty = false; });
+  canvas.loadFromJSON(data, () => { canvas.renderAll(); isDirty = false; syncSaveButton(); });
   const rec = getFileList().find(f => f.id === id);
   if (rec && rec.asset) planAsset = rec.asset;
   syncPanelAsset();
@@ -490,7 +491,7 @@ function downloadSavedPlan(id) {
 async function deleteSavedPlan(id) {
   if (!await window.MyMaintenanceCommonUi.confirm('Delete "' + id + '"?', { title: 'Delete floor plan?', confirmLabel: 'Delete' })) return;
   deletePlanData(id);
-  if (planFileName === id) { planFileName = ''; document.getElementById('planTitle').textContent = 'Untitled Plan'; isDirty = false; doClear(); }
+  if (planFileName === id) { planFileName = ''; document.getElementById('planTitle').textContent = 'Untitled Plan'; isDirty = false; syncSaveButton(); doClear(); }
   renderFileList();
 }
 
@@ -528,14 +529,22 @@ if (openId && loadPlanData(openId)) {
   document.head.appendChild(style);
 
   // Asset connector: picking an asset in the right panel links this plan to it.
-  const panelAsset = document.getElementById('planAssetSelect');
-  if (panelAsset) {
-    panelAsset.addEventListener('change', () => {
-      planAsset = panelAsset.value;
-    });
-  }
-  populateAssetSelects();
+  wireAssetDropdown('planAssetDropdown', 'planAssetToggle', 'planAssetMenu', 'planAssetValue', (label) => {
+    planAsset = label;
+  });
+  wireAssetDropdown('newPlanAssetDropdown', 'newPlanAssetToggle', 'newPlanAssetMenu', 'newPlanAssetValue', () => {});
+  populateAssetMenus();
   syncPanelAsset();
+  // Assets are loaded asynchronously from the database; re-populate the
+  // asset dropdowns when they arrive so registered homes/vehicles appear.
+  window.addEventListener('assets:changed', () => {
+    const current = planAsset;
+    populateAssetMenus();
+    if (current) {
+      planAsset = current;
+      syncPanelAsset();
+    }
+  });
 
   // New-plan modal: Enter creates, Escape cancels.
   const newPlanModal = document.getElementById('newPlanModal');
@@ -631,43 +640,84 @@ function currentPlanAsset() {
   return '';
 }
 
-function assetOptionsHtml(selected) {
+function escAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function assetMenuHtml(selected) {
   const assets = window.MyMaintenanceAssets;
-  let html = '<option value="">-- Not connected --</option>';
-  if (!assets) return html;
+  if (!assets) return '<li class="fp-asset-none">No assets yet</li>';
+  // Floor plans are only linked to homes/addresses, never vehicles.
   const homes = assets.getHomes();
-  const vehicles = assets.getVehicles();
+  let html = '';
   if (homes.length) {
-    html += '<option value="" disabled>Addresses</option>';
+    html += '<li class="fp-asset-optgroup">Addresses</li>';
     homes.forEach(h => {
       const label = assets.homeLabel(h);
-      const sel = label === selected ? ' selected' : '';
-      html += `<option value="${label.replace(/"/g, '&quot;')}"${sel}>${label}</option>`;
+      const cls = label === selected ? ' class="selected"' : '';
+      html += `<li><button type="button" data-value="${escAttr(label)}"${cls}>${escAttr(label)}</button></li>`;
     });
   }
-  if (vehicles.length) {
-    html += '<option value="" disabled>Vehicles</option>';
-    vehicles.forEach(v => {
-      const label = assets.vehicleLabel(v);
-      const sel = label === selected ? ' selected' : '';
-      html += `<option value="${label.replace(/"/g, '&quot;')}"${sel}>${label}</option>`;
-    });
-  }
+  if (!html) html = '<li class="fp-asset-none">No assets yet</li>';
   return html;
 }
 
-function populateAssetSelects() {
-  const panel = document.getElementById('planAssetSelect');
-  const modal = document.getElementById('newPlanAsset');
+function populateAssetMenus() {
   const selected = currentPlanAsset();
-  const html = assetOptionsHtml(selected);
+  const panel = document.getElementById('planAssetMenu');
+  const modal = document.getElementById('newPlanAssetMenu');
+  const html = assetMenuHtml(selected);
   if (panel) panel.innerHTML = html;
   if (modal) modal.innerHTML = html;
 }
 
+function assetDisplayName() {
+  const v = currentPlanAsset();
+  return v || '-- Not connected --';
+}
+
 function syncPanelAsset() {
-  const panel = document.getElementById('planAssetSelect');
-  if (panel) panel.value = currentPlanAsset();
+  const value = document.getElementById('planAssetValue');
+  if (value) value.textContent = assetDisplayName();
+}
+
+function currentPanelAsset() {
+  const value = document.getElementById('planAssetValue');
+  return value && value.textContent !== '-- Not connected --' ? value.textContent : '';
+}
+
+function currentModalAsset() {
+  const value = document.getElementById('newPlanAssetValue');
+  return value && value.textContent !== '-- Not connected --' ? value.textContent : '';
+}
+
+function wireAssetDropdown(ddId, toggleId, menuId, valueId, onSelect) {
+  const dd = document.getElementById(ddId);
+  const toggle = document.getElementById(toggleId);
+  const menu = document.getElementById(menuId);
+  const valueEl = document.getElementById(valueId);
+  if (!dd || !toggle || !menu) return;
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dd.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', dd.classList.contains('open') ? 'true' : 'false');
+  });
+  menu.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-value]');
+    if (!btn) return;
+    const label = btn.dataset.value;
+    if (valueEl) valueEl.textContent = label;
+    menu.querySelectorAll('button').forEach((b) => b.classList.toggle('selected', b.dataset.value === label));
+    dd.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+    if (onSelect) onSelect(label);
+  });
+  document.addEventListener('click', (e) => {
+    if (!dd.contains(e.target)) {
+      dd.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
 }
 
 function doSave(name) {
@@ -677,10 +727,19 @@ function doSave(name) {
   const preview = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
   savePlanData(name, data, preview, currentPlanAsset());
   isDirty = false;
+  syncSaveButton();
+}
+
+// Save stays dimmed until the user actually makes a change.
+function syncSaveButton() {
+  const btn = document.getElementById('saveBtn');
+  if (!btn) return;
+  btn.classList.toggle('dimmed', !isDirty);
 }
 
 function savePlan() {
-  showInputModal('Save plan as:', 'Plan name', planFileName.replace(/\.json$/i, ''), doSave);
+  // Save directly with the current title; never ask for a new name.
+  doSave(planFileName || document.getElementById('planTitle').textContent.replace(/\.json$/i, '') || 'floorplan');
 }
 
 function sharePlan() {
@@ -852,11 +911,11 @@ function clearAll() {
 
 // ====================== NEW PLAN MODAL ======================
 function openNewPlanModal() {
-  populateAssetSelects();
+  populateAssetMenus();
   const nameEl = document.getElementById('newPlanName');
-  const assetEl = document.getElementById('newPlanAsset');
+  const valueEl = document.getElementById('newPlanAssetValue');
   if (nameEl) nameEl.value = '';
-  if (assetEl) assetEl.value = currentPlanAsset();
+  if (valueEl) valueEl.textContent = currentPlanAsset() || '-- Not connected --';
   document.getElementById('newPlanModal').style.display = 'flex';
   setTimeout(() => nameEl && nameEl.focus(), 50);
 }
@@ -864,14 +923,13 @@ function openNewPlanModal() {
 function newPlanConfirm() {
   document.getElementById('newPlanModal').style.display = 'none';
   const nameEl = document.getElementById('newPlanName');
-  const assetEl = document.getElementById('newPlanAsset');
   const name = nameEl ? nameEl.value.trim() : '';
   if (!name) {
     if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Please enter a name for the floor plan.');
     return;
   }
   planFileName = name;
-  planAsset = assetEl ? assetEl.value : '';
+  planAsset = currentModalAsset();
   doClear();
   syncPanelAsset();
   isDirty = true;
@@ -886,17 +944,49 @@ function doClear() {
   planFileName = '';
   document.getElementById('planTitle').textContent = 'Untitled Plan';
   isDirty = false;
+  syncSaveButton();
   createGrid();
   canvas.renderAll();
 }
 
 // ====================== PLAN TITLE ======================
+function commitPlanTitle() {
+  const title = document.getElementById('planTitle');
+  const check = document.getElementById('planTitleCheck');
+  if (!title || title.contentEditable !== 'true') return;
+  const oldName = planFileName || (title.getAttribute('data-original') || '').replace(/\.json$/i, '');
+  let newName = title.textContent.trim();
+  title.contentEditable = 'false';
+  title.classList.remove('editing');
+  if (check) check.style.display = 'none';
+  if (!newName) newName = 'Untitled Plan';
+  // Renaming the title saves the plan immediately under the new name, so the
+  // user does not need to press Save again.
+  if (oldName && newName !== oldName) {
+    deletePlanData(oldName);
+  }
+  doSave(newName);
+}
+
+function cancelPlanTitle() {
+  const title = document.getElementById('planTitle');
+  const check = document.getElementById('planTitleCheck');
+  if (!title) return;
+  title.textContent = title.getAttribute('data-original') || planFileName || 'Untitled Plan';
+  title.contentEditable = 'false';
+  title.classList.remove('editing');
+  if (check) check.style.display = 'none';
+}
+
 function setupPlanTitle() {
   const title = document.getElementById('planTitle');
+  const check = document.getElementById('planTitleCheck');
   if (!title) return;
   title.addEventListener('dblclick', () => {
+    title.setAttribute('data-original', planFileName || title.textContent);
     title.contentEditable = 'true';
     title.classList.add('editing');
+    if (check) check.style.display = 'inline-flex';
     title.focus();
     const range = document.createRange();
     range.selectNodeContents(title);
@@ -907,24 +997,22 @@ function setupPlanTitle() {
   title.addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      title.contentEditable = 'false';
-      title.classList.remove('editing');
+      commitPlanTitle();
     }
     if (e.key === 'Escape') {
-      title.textContent = title.getAttribute('data-original') || 'Untitled Plan';
-      title.contentEditable = 'false';
-      title.classList.remove('editing');
+      e.preventDefault();
+      cancelPlanTitle();
     }
   });
   title.addEventListener('blur', () => {
-    if (title.contentEditable === 'true') {
-      title.contentEditable = 'false';
-      title.classList.remove('editing');
-    }
+    if (title.contentEditable === 'true') commitPlanTitle();
   });
-  title.addEventListener('input', () => {
-    if (!title.textContent.trim()) title.textContent = 'Untitled Plan';
-  });
+  if (check) {
+    check.addEventListener('click', (e) => {
+      e.stopPropagation();
+      commitPlanTitle();
+    });
+  }
 }
 function addRoomFromWalls() { console.log('addRoomFromWalls'); }
 function autoClassifyWalls() { console.log('autoClassifyWalls'); }

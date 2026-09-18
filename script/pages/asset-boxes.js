@@ -259,6 +259,7 @@
         renderDocs();
         infoEditMode = false;
         renderAssetInfo();
+        renderFloorplans();
     }
 
     function selectAssetById(id) {
@@ -280,6 +281,7 @@
         renderDocs();
         infoEditMode = false;
         renderAssetInfo();
+        renderFloorplans();
     }
 
     function syncSelectedAsset() {
@@ -345,13 +347,88 @@
         renderInfoActions('none');
     }
 
-    // Hide the floor plan / vehicle diagram when the user has no registered
-    // homes or vehicles yet (fresh account), so no sample drawing shows.
-    function syncDiagramVisibility() {
+    const FLOORPLAN_STORE_KEY = 'floorplan_files';
+    const FLOORPLAN_DATA_PREFIX = 'floorplan_data_';
+
+    function loadFloorplans() {
+        try { return JSON.parse(localStorage.getItem(FLOORPLAN_STORE_KEY)) || []; } catch (_) { return []; }
+    }
+
+    function floorplanPreview(p) {
+        if (p.preview) return p.preview;
+        return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#1A1A1A"/><text x="150" y="105" text-anchor="middle" fill="#20B2AA" font-family="Arial" font-size="16">No preview</text></svg>'
+        );
+    }
+
+    function formatPlanDate(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+    }
+
+    // Render the saved floor plans / diagrams linked to the selected asset.
+    // There is intentionally no built-in sample diagram anymore.
+    let floorplanIndex = 0;
+    function renderFloorplans() {
+        // Vehicles have no floor plans; the vehicle diagrams feature is under
+        // development, so leave the static message in place on that page.
+        if (pageAssetType() !== 'homes') return;
+        const container = document.getElementById('floorplan-render');
+        if (!container) return;
+        const asset = currentAsset();
+        const plans = asset
+            ? loadFloorplans().filter(function (p) { return p.asset === asset; })
+            : [];
         const box = document.getElementById('floorplan-box');
-        if (!box) return;
-        const hasAsset = assetList().length > 0;
-        box.style.display = hasAsset ? '' : 'none';
+        if (box) {
+            const hasAsset = assetList().length > 0;
+            box.style.display = hasAsset ? '' : 'none';
+        }
+        // Hide the left/right arrows unless there are at least two plans to browse.
+        const arrows = box ? box.querySelectorAll('.photo-arrows') : [];
+        arrows.forEach(function (a) { a.style.display = plans.length > 1 ? '' : 'none'; });
+        if (!plans.length) {
+            floorplanIndex = 0;
+            container.innerHTML = '<div class="fp-grid-empty">No floor plans for this asset yet.</div>';
+            return;
+        }
+        if (floorplanIndex >= plans.length) floorplanIndex = plans.length - 1;
+        const plan = plans[floorplanIndex];
+        container.innerHTML = '<div class="fp-big-plan" data-id="' + esc(plan.id) + '">'
+            + '<span class="fp-big-plan-name">' + esc(plan.name || plan.id) + '</span>'
+            + '<button type="button" class="fp-big-plan-open" aria-label="Open ' + esc(plan.name || 'floor plan') + '"><img src="' + esc(floorplanPreview(plan)) + '" alt="' + esc(plan.name || 'Floor plan') + '"></button>'
+            + '<button type="button" class="fp-big-plan-edit" data-id="' + esc(plan.id) + '" aria-label="Edit floor plan"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg> Edit</button>'
+            + '</div>';
+
+        const openBtn = container.querySelector('.fp-big-plan-open');
+        if (openBtn) {
+            openBtn.addEventListener('click', function () {
+                window.location.href = '../pages/tool-floorplan.html?open=' + encodeURIComponent(plan.id) + '&asset=' + encodeURIComponent(asset);
+            });
+        }
+        const editBtn = container.querySelector('.fp-big-plan-edit');
+        if (editBtn) {
+            editBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                window.location.href = '../pages/tool-floorplan.html?open=' + encodeURIComponent(plan.id) + '&asset=' + encodeURIComponent(asset);
+            });
+        }
+
+        // Prev/next arrows browse through the saved plans.
+        const prev = box ? box.querySelector('#prev-floorplan-arrow') : null;
+        const next = box ? box.querySelector('#next-floorplan-arrow') : null;
+        if (prev) prev.onclick = function (e) {
+            e.stopPropagation();
+            floorplanIndex = (floorplanIndex - 1 + plans.length) % plans.length;
+            renderFloorplans();
+        };
+        if (next) next.onclick = function (e) {
+            e.stopPropagation();
+            floorplanIndex = (floorplanIndex + 1) % plans.length;
+            renderFloorplans();
+        };
     }
 
     function renderAssetInfoEdit(rec, cfg) {
@@ -710,7 +787,7 @@
         renderPlanned();
         renderDocs();
         renderAssetInfo();
-        syncDiagramVisibility();
+        renderFloorplans();
         const params = new URLSearchParams(window.location.search);
         const assetId = params.get('id');
         if (assetId) selectAssetById(assetId);
@@ -723,7 +800,7 @@
             renderPlanned();
             renderDocs();
             renderAssetInfo();
-            syncDiagramVisibility();
+            renderFloorplans();
         });
         window.addEventListener('home:registered', registerAssetHandler());
         window.addEventListener('vehicle:registered', registerAssetHandler());

@@ -56,23 +56,36 @@
         <div class="fp-canvas-wrapper" id="canvasWrapper">
           <div class="fp-filebar">
             <button class="btn btn-sm" onclick="clearAll()" title="New plan">New</button>
-            <button class="btn btn-sm btn-primary" onclick="savePlan()" title="Save plan">Save</button>
+            <button class="btn btn-sm btn-primary" id="saveBtn" onclick="savePlan()" title="Save plan">Save</button>
             <button class="btn btn-sm" onclick="importPlan()" title="Import plan">Import</button>
             <button class="btn btn-sm" onclick="exportPlan()" title="Export plan">Export</button>
             <button class="btn btn-sm" onclick="sharePlan()" title="Share plan">Share</button>
           </div>
           <canvas id="gridCanvas"></canvas>
           <canvas id="canvas"></canvas>
-          <div class="fp-plan-title" id="planTitle">Untitled Plan</div>
+          <div class="fp-plan-title-wrap" id="planTitleWrap">
+            <div class="fp-plan-title" id="planTitle">Untitled Plan</div>
+            <button type="button" class="fp-plan-title-check" id="planTitleCheck" title="Save name" aria-label="Save name">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- Right Panel -->
         <div class="fp-panel" id="rightPanel">
           <div class="fp-panel-section">
             <h3>Connected Asset</h3>
-            <select id="planAssetSelect" class="fp-asset-select">
-              <option value="">-- Not connected --</option>
-            </select>
+            <div class="fp-asset-dropdown" id="planAssetDropdown">
+              <button type="button" class="fp-asset-toggle" id="planAssetToggle" aria-expanded="false">
+                <span class="fp-asset-value" id="planAssetValue">-- Not connected --</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <ul class="fp-asset-menu" id="planAssetMenu"></ul>
+            </div>
           </div>
           <div class="fp-panel-section">
             <h3>Properties</h3>
@@ -127,9 +140,15 @@
       <p class="fp-modal-message">New Floor Plan</p>
       <input type="text" class="fp-modal-input" id="newPlanName" value="" placeholder="Floor plan name">
       <label class="fp-modal-label">Connected Asset</label>
-      <select id="newPlanAsset" class="fp-asset-select">
-        <option value="">-- Not connected --</option>
-      </select>
+      <div class="fp-asset-dropdown" id="newPlanAssetDropdown">
+        <button type="button" class="fp-asset-toggle" id="newPlanAssetToggle" aria-expanded="false">
+          <span class="fp-asset-value" id="newPlanAssetValue">-- Not connected --</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <ul class="fp-asset-menu" id="newPlanAssetMenu"></ul>
+      </div>
       <div class="fp-modal-actions">
         <button class="btn btn-sm btn-primary" onclick="newPlanConfirm()">Create</button>
         <button class="btn btn-sm" onclick="newPlanCancel()">Cancel</button>
