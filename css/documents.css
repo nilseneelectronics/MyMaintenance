@@ -190,6 +190,15 @@
     color: var(--accent-primary);
 }
 
+.doc-project-folder-cost-label {
+    margin-right: 6px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 .doc-project-add {
     display: flex;
     align-items: center;
@@ -209,10 +218,11 @@
 }
 
 .doc-project-input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 8px 10px;
     border: 1px solid var(--accent-primary);
-    border-radius: 10px;
+    border-radius: 18px;
     background: var(--bg-primary);
     color: var(--text-primary);
     font-family: 'Poppins', sans-serif;
@@ -221,7 +231,27 @@
     outline: none;
 }
 
+.doc-project-confirm {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: #fff;
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.doc-project-confirm:hover {
+    filter: brightness(1.12);
+}
+
 .doc-project-add.adding {
+    flex-direction: row;
+    align-items: center;
     border-style: solid;
     border-color: var(--accent-primary);
     background: var(--bg-primary);

@@ -167,6 +167,9 @@
                     </ul>
                 </div>
 
+                <label>Receipt total (kr)</label>
+                <input type="text" id="doc-receipt-total" placeholder="Total amount..." inputmode="decimal">
+
                 <label>Date performed</label>
                 <div class="doc-datepicker">
                     <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd/mm/yyyy" autocomplete="off" inputmode="numeric" pattern="[0-9/]*" enterkeyhint="done">
@@ -219,18 +222,10 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script type="module">
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
-        try { env.allowLocalModels = false; } catch (e) {}
-        window.__fpEmbed = { pipeline: pipeline };
-    </script>
     <script src="../script/modules/assets.js"></script>
     <script src="../script/pages/mydocuments.js"></script>
-    <script src="../script/modules/pdfviewer.js"></script>
-    <script src="../script/modules/stlviewer.js"></script>
-    <script src="../script/modules/officeviewer.js"></script>
     <script src="../script/app-config.js"></script>
+    <script src="../script/modules/projects-cloud.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
     <script src="../script/script.js"></script>

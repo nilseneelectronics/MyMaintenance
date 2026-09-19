@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const performedInput = document.getElementById('doc-performed');
     const uploadedInput = document.getElementById('doc-uploaded');
     const sizeInput = document.getElementById('doc-size');
+    const receiptTotalInput = document.getElementById('doc-receipt-total');
     const formatInput = document.getElementById('doc-format');
     const cancelBtn = document.getElementById('doc-cancel');
     const saveBtn = document.getElementById('doc-save');
@@ -49,9 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOcrExpanded = '';
     let currentOcrEmbedding = null;
     let currentReceiptItems = [];
+    const viewerLoadPromises = {};
     let selectedFile = null;
     let initialDocState = '';
     let ocrWorkerPromise = null;
+    let tesseractLoadPromise = null;
+    let embedLibraryPromise = null;
     const EMBED_MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
     const SEMANTIC_WEIGHT = 100;
     const SEMANTIC_MIN = 0.3;
@@ -403,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
         if (!terms.length) { resetSearch(); return; }
         if (docListHead) docListHead.style.display = 'none';
-        if (!semanticReady && !embedModelPromise && window.__fpEmbed) {
+        if (!semanticReady && !embedModelPromise) {
             getEmbedder().catch(function () {});
         }
         const keywordResults = searchResults(searchQuery);
@@ -554,7 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-        let editingId = null;
+    let editingId = null;
+    let saveInProgress = false;
 
     function ensureDeleteBtn() {
         if (popup.querySelector('.doc-delete-btn')) return;
@@ -629,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         performedInput.classList.remove('invalid');
         uploadedInput.value = toInputDate(new Date());
         sizeInput.value = '';
+        if (receiptTotalInput) receiptTotalInput.value = '';
         if (formatInput) formatInput.value = '';
         if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
         selectedAssetValue = '';
@@ -708,6 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (list.indexOf(name) === -1) list.unshift(name);
         map[asset] = list;
         saveProjects(map);
+        if (window.MyMaintenanceProjects) window.MyMaintenanceProjects.add(asset, name);
     }
 
     function populateProjectMenu(asset) {
@@ -780,6 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
         performedInput.classList.remove('invalid');
         uploadedInput.value = formatDateLabel(it.uploaded) || '';
         sizeInput.value = formatSize(it.size);
+        if (receiptTotalInput) receiptTotalInput.value = it.receiptTotal != null ? String(it.receiptTotal).replace('.', ',') : receiptItemsTotal(it.receiptItems);
         if (formatInput) formatInput.value = fileTypeInfo(it).label;
         if (fileNameLabel) fileNameLabel.textContent = it.fileName || 'No file selected';
         if (assetMenu) {
@@ -1114,14 +1122,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getOcrWorker() {
-        if (!window.Tesseract) return Promise.reject(new Error('OCR not available'));
         if (ocrWorkerPromise) return ocrWorkerPromise;
-        ocrWorkerPromise = window.Tesseract.createWorker('nor+eng', 1, {
+        const loadTesseract = window.Tesseract
+            ? Promise.resolve()
+            : (tesseractLoadPromise || (tesseractLoadPromise = new Promise(function (resolve, reject) {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                script.onload = resolve;
+                script.onerror = function () { reject(new Error('OCR not available')); };
+                document.head.appendChild(script);
+            })));
+        ocrWorkerPromise = loadTesseract.then(function () {
+            if (!window.Tesseract) throw new Error('OCR not available');
+            return window.Tesseract.createWorker('nor+eng', 1, {
             logger: function (m) {
                 if (m && m.status === 'recognizing text') {
                     showScanStatus('Scanning document... ' + Math.round(m.progress * 100) + '%');
                 }
             }
+            });
         });
         return ocrWorkerPromise;
     }
@@ -1218,10 +1237,23 @@ document.addEventListener('DOMContentLoaded', () => {
         [/bauhaus/i, 'Bauhaus'],
         [/biltema/i, 'Biltema'],
         [/plantasjen/i, 'Plantasjen'],
+        [/hageland/i, 'Hageland'],
         [/clas ohlson/i, 'Clas Ohlson'],
         [/europris/i, 'Europris'],
         [/fargerike/i, 'Fargerike'],
+        [/flisekompaniet/i, 'Flisekompaniet'],
+        [/malia/i, 'Malia'],
+        [/bohus/i, 'Bohus'],
+        [/skeidar/i, 'Skeidar'],
+        [/m[øo]belringen/i, 'Møbelringen'],
+        [/kid interi[øo]r/i, 'Kid Interiør'],
+        [/princess interi[øo]r/i, 'Princess Interiør'],
+        [/s[øo]strene grene/i, 'Søstrene Grene'],
         [/elkj[\u00f8o]p/i, 'Elkj\u00f8p'],
+        [/kjell\s*(?:&|and)\s*company/i, 'Kjell & Company'],
+        [/dustin/i, 'Dustin'],
+        [/proshop/i, 'Proshop'],
+        [/phonehouse/i, 'Phonehouse'],
         [/mekonomen/i, 'Mekonomen'],
         [/thansen/i, 'Thansen'],
         [/jysk/i, 'Jysk'],
@@ -1231,6 +1263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [/obs[ -]?mega/i, 'OBS'],
         [/kiwi/i, 'Kiwi'],
         [/rema[ -]?1000/i, 'Rema 1000'],
+        [/rema/i, 'Rema 1000'],
         [/bunnpris/i, 'Bunnpris'],
         [/extra/i, 'Extra'],
         [/meny/i, 'Meny'],
@@ -1244,6 +1277,8 @@ document.addEventListener('DOMContentLoaded', () => {
         [/tiger/i, 'Tiger'],
         [/s[\u00f8o]strene grene|sostrene grene/i, 'S\u00f8strene Grene'],
         [/nille/i, 'Nille'],
+        [/fretex/i, 'Fretex'],
+        [/vinmonopolet/i, 'Vinmonopolet'],
         [/cubus/i, 'Cubus'],
         [/kappahl/i, 'KappAhl'],
         [/xxl/i, 'XXL'],
@@ -1252,12 +1287,22 @@ document.addEventListener('DOMContentLoaded', () => {
         [/intersport/i, 'Intersport'],
         [/sportsmann/i, 'Sportsmann'],
         [/fjellsport/i, 'Fjellsport'],
+        [/intersport/i, 'Intersport'],
+        [/sport outlet/i, 'Sport Outlet'],
+        [/m[øo]ller bil/i, 'Møller Bil'],
+        [/naf/i, 'NAF'],
         [/power/i, 'Power'],
         [/komplett/i, 'Komplett'],
+        [/bildeler(?:\.no)?/i, 'Bildeler'],
         [/netonnet/i, 'NetOnNet'],
         [/gigaboks/i, 'Gigaboks'],
         [/epleh(?:uset|uset)/i, 'Eplehuset'],
         [/humac/i, 'Humac'],
+        [/norli/i, 'Norli'],
+        [/ark\s+bokhandel/i, 'ARK'],
+        [/obs bygg/i, 'OBS Bygg'],
+        [/coop bygg/i, 'Coop Bygg'],
+        [/foer/i, 'Føtex'],
         [/apotek ?1/i, 'Apotek 1'],
         [/vitusapotek/i, 'Vitusapotek'],
         [/boots/i, 'Boots'],
@@ -1357,7 +1402,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function detectStoreHeader(lines) {
         const candidates = [];
-        const header = (lines || []).slice(0, 10).map(function (line) { return cleanStoreTitle(line); });
+        const header = (lines || []).slice(0, 20).map(function (line) { return cleanStoreTitle(line); });
         for (let i = 0; i < header.length; i++) {
             const options = [header[i]];
             // Logos are often split across two OCR lines, e.g. "TØNSBERG" + "UR".
@@ -1406,7 +1451,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const DOC_TYPE_PATTERNS = [
         [/\b(receipt|re\u00e7u|recu|kassasjekk|kvitto|quittung|kassenbon|recibo|ricevuta|kassabon)\b|(?:salgs?|kassa|kj\u00f8ps|kj\u00f8pe)?kvit{1,2}ering\b/i, 'Receipt'],
-        [/\b(warranty|guarantee|garantie|garanzia|garant\u00eda|garantia)\b|garanti(?:bevis|periode|sak|e|en|er)?\b/i, 'Warranty']
+        [/\b(warranty|guarantee|garantie|garanzia|garant\u00eda|garantia)\b|garanti(?:bevis|periode|sak|e|en|er)?\b/i, 'Warranty'],
+        [/\b(invoice|faktura|fakturanr|invoice\s*no|regning|forfallsdato|due\s*date)\b/i, 'Invoice'],
+        [/\b(contract|agreement|kontrakt|avtale|leieavtale|terms\s+and\s+conditions)\b/i, 'Contract'],
+        [/\b(manual|user\s+guide|bruksanvisning|instruksjon|documentation|dokumentasjon|installasjon)\b/i, 'Manual']
     ];
 
     function detectDocType(text) {
@@ -1504,17 +1552,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function detectReceiptDate(text) {
         const lines = String(text || '').split(/\r?\n/);
-        let best = null;
+        const currentYear = new Date().getFullYear();
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        const candidates = [];
         let bestScore = -1;
-        lines.slice(0, 30).forEach(function (line, index) {
+        lines.slice(0, 50).forEach(function (line, index) {
             const date = detectDate(line);
             if (!date) return;
+            const dateValue = new Date(date.year, date.month - 1, date.day);
+            if (dateValue > today) return;
             let score = 30 - index;
-            if (/\b(date|dato|kjøpsdato|kjopsdato|purchase|transaction|tid)\b/i.test(line)) score += 50;
-            if (/\b(due|forfall|expiry|utløp|utlop)\b/i.test(line)) score -= 50;
-            if (score > bestScore) { best = date; bestScore = score; }
+            if (/\b(date|dato|kjøpsdato|kjopsdato|purchase|purchased|transaction|transaksjon|sale|salgsdato|tid|time)\b/i.test(line)) score += 60;
+            if (/\b(receipt|kvittering|kasse|terminal|betalt|betaling)\b/i.test(line)) score += 20;
+            if (/\b(due|forfall|expiry|utløp|utlop|valid until|gyldig til)\b/i.test(line)) score -= 70;
+            // Receipts often contain several dates. Prefer the current year when
+            // context is otherwise equal, without overriding an explicit label.
+            if (date.year === currentYear) score += 25;
+            if (date.year > currentYear + 1) score -= 25;
+            candidates.push({ date: date, score: score });
         });
-        return best || detectDate(text);
+        candidates.sort(function (a, b) { return b.score - a.score; });
+        if (candidates.length) return candidates[0].date;
+        const fallback = detectDate(text);
+        if (!fallback) return null;
+        const fallbackValue = new Date(fallback.year, fallback.month - 1, fallback.day);
+        return fallbackValue <= today ? fallback : null;
+    }
+
+    function ensureViewer(info) {
+        let globalName = '';
+        let source = '';
+        if (info.cls === 'file-pdf') { globalName = 'MyPdfViewer'; source = '../script/modules/pdfviewer.js'; }
+        else if (info.cls === 'file-3d') { globalName = 'My3dViewer'; source = '../script/modules/stlviewer.js'; }
+        else if (info.cls === 'file-xls' || info.cls === 'file-csv' || info.cls === 'file-docx') { globalName = 'MyOfficeViewer'; source = '../script/modules/officeviewer.js'; }
+        if (!source || window[globalName]) return Promise.resolve();
+        if (viewerLoadPromises[source]) return viewerLoadPromises[source];
+        viewerLoadPromises[source] = new Promise(function (resolve, reject) {
+            const script = document.createElement('script');
+            script.src = source;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+        return viewerLoadPromises[source];
     }
 
     function applyOcrResult(text) {
@@ -1525,6 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const parts = [];
             if (store) parts.push(store);
             if (date) parts.push(pad2(date.day) + '.' + pad2(date.month) + '.' + date.year);
+            if (!parts.length) parts.push('Scanned document');
             if (parts.length) nameInput.value = parts.join(' ');
         }
         if (nameInput.value.trim()) clearNameError();
@@ -1532,11 +1614,39 @@ document.addEventListener('DOMContentLoaded', () => {
             performedInput.value = pad2(date.day) + '/' + pad2(date.month) + '/' + date.year;
             performedInput.classList.remove('invalid');
         }
+        if (receiptTotalInput && !receiptTotalInput.value.trim()) {
+            const total = detectReceiptTotal(text);
+            const itemTotal = receiptItemsTotal(currentReceiptItems);
+            if (total != null) receiptTotalInput.value = total.toFixed(2).replace('.', ',');
+            else if (itemTotal) receiptTotalInput.value = itemTotal;
+        }
         if (!selectedDocType && docType) setDocType(docType);
     }
 
     function pad2(n) {
         return String(n).padStart(2, '0');
+    }
+
+    function receiptItemsTotal(items) {
+        if (!Array.isArray(items)) return '';
+        const total = items.reduce(function (sum, item) {
+            const price = parseFloat(String(item.price || '').replace(/\s/g, '').replace(',', '.'));
+            const quantity = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
+            return !isNaN(price) ? sum + price * (isNaN(quantity) ? 1 : quantity) : sum;
+        }, 0);
+        return total ? total.toFixed(2).replace('.', ',') : '';
+    }
+
+    function detectReceiptTotal(text) {
+        let best = null;
+        String(text || '').split(/\r?\n/).forEach(function (line) {
+            if (!/\b(total|totalt|sum|beløp|belop|å betale|a betale|amount due|grand total)\b/i.test(line)) return;
+            const matches = line.match(/\d{1,3}(?:[ .]\d{3})*(?:[,.]\d{2})/g);
+            if (!matches || !matches.length) return;
+            const value = parseFloat(matches[matches.length - 1].replace(/\s/g, '').replace('.', '').replace(',', '.'));
+            if (!isNaN(value)) best = value;
+        });
+        return best;
     }
 
     const PRODUCT_CATEGORIES = [
@@ -1718,11 +1828,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function getEmbedder() {
         if (semanticModel) return Promise.resolve(semanticModel);
         if (embedModelPromise) return embedModelPromise;
-        const lib = window.__fpEmbed;
-        if (!lib || typeof lib.pipeline !== 'function') {
-            return Promise.reject(new Error('Embedding model not available'));
-        }
-        embedModelPromise = lib.pipeline('feature-extraction', EMBED_MODEL).then(function (p) {
+        const library = embedLibraryPromise || (embedLibraryPromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js').then(function (lib) {
+            try { lib.env.allowLocalModels = false; } catch (_) {}
+            return lib;
+        }));
+        embedModelPromise = library.then(function (lib) {
+            if (!lib || typeof lib.pipeline !== 'function') throw new Error('Embedding model not available');
+            return lib.pipeline('feature-extraction', EMBED_MODEL);
+        }).then(function (p) {
             semanticModel = p;
             semanticReady = true;
             backfillEmbeddings();
@@ -2001,6 +2114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
+        const receiptTotal = receiptTotalInput ? parseFloat(String(receiptTotalInput.value || '').replace(/\s/g, '').replace(',', '.')) : NaN;
+        if (!isNaN(receiptTotal)) rec.receiptTotal = receiptTotal;
+        else delete rec.receiptTotal;
         rec.project = selectedProject
             ? selectedProject
             : (projectOther ? projectOther.value.trim() : '');
@@ -2038,6 +2154,18 @@ document.addEventListener('DOMContentLoaded', () => {
         closePopup();
     }
 
+    async function startCommitSave() {
+        if (saveInProgress) return;
+        saveInProgress = true;
+        if (saveBtn) saveBtn.disabled = true;
+        try {
+            await commitSave();
+        } finally {
+            saveInProgress = false;
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
     saveBtn.addEventListener('click', () => {
         const file = selectedFile;
         if (!file && !editingId) {
@@ -2063,13 +2191,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
-        commitSave();
+        startCommitSave();
     });
 
     if (oldDateConfirm) {
         oldDateConfirm.addEventListener('click', () => {
             if (oldDatePopup) oldDatePopup.style.display = 'none';
-            commitSave();
+            startCommitSave();
         });
     }
     if (oldDateCancel) {
@@ -2146,9 +2274,9 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
-            + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
-            + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
-            + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
+             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
+             + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
+             + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
         row.appendChild(left);
         row.appendChild(right);
         return row;
@@ -2191,9 +2319,10 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
-            + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
-            + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
-            + '</div>'
+             + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
+             + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
+             + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>'
+             + '</div>'
             + '</div>';
     }
 
@@ -2208,9 +2337,10 @@ document.addEventListener('DOMContentLoaded', () => {
             + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
             + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
-            + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
-            + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
-            + '</div>'
+             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
+             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document" aria-label="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c-.39-.39 0-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>'
+             + '</div>'
             + '</div>';
     }
 
@@ -2290,7 +2420,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function docCost(it) {
-        if (!it || !Array.isArray(it.receiptItems)) return 0;
+        if (!it) return 0;
+        if (it.receiptTotal != null && !isNaN(Number(it.receiptTotal))) return Number(it.receiptTotal);
+        if (!Array.isArray(it.receiptItems)) return 0;
         let total = 0;
         it.receiptItems.forEach(function (item) {
             const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
@@ -2325,7 +2457,7 @@ function openAddDocPopup() {
             return '<div class="doc-project-folder" data-project="' + escapeHtml(name) + '">'
                 + '<div class="doc-project-folder-name">' + escapeHtml(name) + '</div>'
                 + '<div class="doc-project-folder-meta">' + count + ' document' + (count === 1 ? '' : 's') + '</div>'
-                + '<div class="doc-project-folder-cost">' + formatCost(cost) + '</div>'
+                + '<div class="doc-project-folder-cost"><span class="doc-project-folder-cost-label">Price</span>' + formatCost(cost) + '</div>'
                 + '</div>';
         }
 
@@ -2344,11 +2476,20 @@ function openAddDocPopup() {
         input.placeholder = 'Project name...';
         input.style.display = 'none';
         add.appendChild(input);
+        const confirm = document.createElement('button');
+        confirm.type = 'button';
+        confirm.className = 'doc-project-confirm';
+        confirm.setAttribute('aria-label', 'Confirm project name');
+        confirm.title = 'Confirm project name';
+        confirm.innerHTML = '&#10003;';
+        confirm.style.display = 'none';
+        add.appendChild(confirm);
 
         const showInput = function () {
             add.classList.add('adding');
             add.querySelector('.doc-project-folder-name').style.display = 'none';
             input.style.display = '';
+            confirm.style.display = '';
             input.focus();
         };
         const commit = function () {
@@ -2356,6 +2497,7 @@ function openAddDocPopup() {
             add.classList.remove('adding');
             add.querySelector('.doc-project-folder-name').style.display = '';
             input.style.display = 'none';
+            confirm.style.display = 'none';
             input.value = '';
             if (name && assetKey && assetKey !== '__other__') {
                 addProjectForAsset(assetKey, name);
@@ -2372,8 +2514,14 @@ function openAddDocPopup() {
                 add.classList.remove('adding');
                 add.querySelector('.doc-project-folder-name').style.display = '';
                 input.style.display = 'none';
+                confirm.style.display = 'none';
                 input.value = '';
             }
+        });
+        confirm.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        confirm.addEventListener('click', function (e) {
+            e.stopPropagation();
+            commit();
         });
         input.addEventListener('blur', commit);
         wrap.appendChild(add);
@@ -2425,9 +2573,13 @@ function openAddDocPopup() {
                 byAsset.get(key).push(it);
             });
             const groupKeys = Array.from(byAsset.keys()).sort(function (a, b) {
+                const aOther = a === '__other__';
+                const bOther = b === '__other__';
                 const aNb = /^Neighborhood:/i.test(a);
                 const bNb = /^Neighborhood:/i.test(b);
-                if (aNb !== bNb) return aNb ? 1 : -1;
+                const aRank = aOther ? 1 : (aNb ? 2 : 0);
+                const bRank = bOther ? 1 : (bNb ? 2 : 0);
+                if (aRank !== bRank) return aRank - bRank;
                 return a < b ? -1 : 1;
             });
             groupKeys.forEach(function (key) {
@@ -2494,6 +2646,7 @@ function openAddDocPopup() {
         const title = ov.querySelector('.preview-title');
         title.textContent = it.name + (it.asset ? ' - ' + it.asset : '');
         ov.classList.remove('preview-max');
+        try { await ensureViewer(info); } catch (_) {}
         let data = '';
         try {
             data = await getPayload(it) || '';
@@ -2644,6 +2797,10 @@ function openAddDocPopup() {
 
     initDocSort();
     updateView();
+    if (window.MyMaintenanceProjects) {
+        window.MyMaintenanceProjects.hydrate().then(function () { updateView(); });
+        window.addEventListener('projects:changed', updateView);
+    }
     if (!neighborhoodOnly) hydrateDocuments();
 
     window.MyMaintenanceDocs = {

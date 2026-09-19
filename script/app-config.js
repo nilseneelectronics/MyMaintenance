@@ -22,7 +22,10 @@ window.MyMaintenanceConfig = {
         'myplanning-done.html',
         'mytools.html',
         'mytools 2.html',
-        'myprofile.html'
+        'myprofile.html',
+        'myfloorplans.html',
+        'tool-floorplan.html',
+        'myproject.html'
     ],
     publicOnlyPages: ['login.html'],
     knownPageFiles: [
@@ -48,6 +51,8 @@ window.MyMaintenanceConfig = {
         'tool-floorplan.html',
         'myfloorplans.html',
         'myproject.html',
+        'terms-of-use.html',
+        'privacy-policy.html',
         'vehicle-diagrams.html',
         'coming-soon.html'
     ]
