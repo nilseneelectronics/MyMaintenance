@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const count = docs.length;
         let cost = 0;
         docs.forEach(function (d) {
+            if (d.receiptTotal != null && !isNaN(Number(d.receiptTotal))) {
+                cost += Number(d.receiptTotal);
+                return;
+            }
             if (!Array.isArray(d.receiptItems)) return;
             d.receiptItems.forEach(function (item) {
                 const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
@@ -113,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (popupEl) popupEl.style.display = 'none';
     });
     const editSave = document.getElementById('project-edit-save');
-    if (editSave) editSave.addEventListener('click', function () {
+    if (editSave) editSave.addEventListener('click', async function () {
         const nameInput = document.getElementById('project-edit-name');
         const newName = nameInput ? nameInput.value.trim() : '';
         if (!newName) {
@@ -127,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (list.indexOf(newName) === -1) list.unshift(newName);
         map[asset] = list;
         saveProjects(map);
+        if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.rename(asset, project, newName);
         // Rename the project on all its documents and persist the change.
         window.MyMaintenanceDocs.getItems().forEach(function (d) {
             if ((d.asset || '') === asset && (d.project || '') === project) {
@@ -140,13 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const editDelete = document.getElementById('project-edit-delete');
     if (editDelete) editDelete.addEventListener('click', function () {
-        const doDelete = function () {
+        const doDelete = async function () {
             const map = loadProjects();
             const list = map[asset] || [];
             const idx = list.indexOf(project);
             if (idx !== -1) list.splice(idx, 1);
             map[asset] = list;
             saveProjects(map);
+            if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.remove(asset, project);
             window.MyMaintenanceDocs.getItems().forEach(function (d) {
                 if ((d.asset || '') === asset && (d.project || '') === project) {
                     d.project = '';
@@ -172,5 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.refresh) {
         window.MyMaintenanceDocs.refresh().then(function () { renderList(''); });
     }
+    if (window.MyMaintenanceProjects) {
+        window.MyMaintenanceProjects.hydrate().then(function () { renderList(searchInput ? searchInput.value : ''); });
+    }
+    window.addEventListener('projects:changed', function () { renderList(searchInput ? searchInput.value : ''); });
     setTimeout(function () { renderList(''); }, 300);
 });

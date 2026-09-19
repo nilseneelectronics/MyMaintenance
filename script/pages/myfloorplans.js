@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = loadPlans().filter(function (p) { return p.id !== id; });
         localStorage.setItem(STORE_KEY, JSON.stringify(list));
         try { localStorage.removeItem('floorplan_data_' + id); } catch (_) {}
+        if (window.MyMaintenanceFloorplans) window.MyMaintenanceFloorplans.remove(id);
         render();
     }
 
@@ -208,7 +209,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     render();
+    window.addEventListener('floorplans:changed', render);
     // Assets are loaded asynchronously from the database; re-render when they
     // arrive so every registered home/vehicle shows as a group.
     window.addEventListener('assets:changed', render);
+    const assetsReady = window.MyMaintenanceAssets && window.MyMaintenanceAssets.hydrate
+        ? window.MyMaintenanceAssets.hydrate()
+        : Promise.resolve();
+    const plansReady = window.MyMaintenanceFloorplans
+        ? window.MyMaintenanceFloorplans.hydrate()
+        : Promise.resolve();
+    Promise.all([assetsReady, plansReady]).then(render);
 });

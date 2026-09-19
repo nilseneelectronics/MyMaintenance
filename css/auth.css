@@ -6,7 +6,7 @@
 .auth-page-wrap {
     position: relative;
     width: 75%;
-    margin: calc(var(--navbar-height) + var(--sidebar-height) + 10px) auto 20px;
+    margin: calc(var(--navbar-height) + var(--sidebar-height) - 35px) auto 0;
 }
 
 .auth-back-btn {
@@ -45,7 +45,7 @@
     border-radius: 30px;
     overflow: hidden;
     display: flex;
-    height: 600px;
+    height: 660px;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
     z-index: 10;
 }
@@ -303,10 +303,26 @@
 }
 
 .terms {
-    display: grid;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     align-items: center;
     justify-content: center;
     margin-top: 20px;
+}
+
+.auth-terms-consent {
+    margin: 12px 0 16px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.auth-terms-consent a {
+    color: var(--accent-primary);
+    font-weight: 600;
+    text-decoration: underline;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -338,7 +354,7 @@
     .auth-container {
         flex-direction: column;
         height: auto;
-        min-height: 680px;
+        min-height: 740px;
     }
 
     .form-panel {
@@ -413,7 +429,7 @@
     }
 
     .auth-container {
-        min-height: 640px;
+        min-height: 700px;
     }
 
     .form-panel {

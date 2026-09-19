@@ -336,6 +336,19 @@
                     finally { acceptInvite.disabled = false; }
                 };
                 actions.appendChild(acceptInvite);
+                var rejectInvite = document.createElement('button');
+                rejectInvite.type = 'button'; rejectInvite.className = 'profile-row-btn cancel-invite'; rejectInvite.textContent = 'Reject invite';
+                rejectInvite.onclick = async function (event) {
+                    event.stopPropagation(); rejectInvite.disabled = true;
+                    try {
+                        await window.MyMaintenanceAuth.familyRequest('reject', { id: m.id, kind: 'family' });
+                        family = family.filter(function (item) { return item.id !== m.id; });
+                        PD.saveFamily(family); renderMembers('family-list');
+                        toast('Invitation rejected.');
+                    } catch (error) { toast(error.message, true); }
+                    finally { rejectInvite.disabled = false; }
+                };
+                actions.appendChild(rejectInvite);
             } else if (pending && mayManage) {
                 var cancelInvite = document.createElement('button');
                 cancelInvite.type = 'button'; cancelInvite.className = 'profile-row-btn cancel-invite'; cancelInvite.textContent = 'Cancel invite';
@@ -860,7 +873,8 @@
             openOverlay($('access-popup'));
             PD.hydrateFamily();
         });
-        $('btn-view-terms').addEventListener('click', function () { openOverlay($('terms-popup')); });
+        $('btn-view-terms').addEventListener('click', function () { window.location.href = 'terms-of-use.html?from=myprofile'; });
+        $('btn-view-privacy').addEventListener('click', function () { window.location.href = 'privacy-policy.html?from=myprofile'; });
         $('btn-change-password').addEventListener('click', openPassword);
         $('btn-notification-settings').addEventListener('click', openNotifications);
         $('btn-delete-account').addEventListener('click', openDeleteAccount);

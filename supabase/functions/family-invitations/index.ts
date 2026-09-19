@@ -30,9 +30,9 @@ function mailTransport() {
     return nodemailer.createTransport({ host: env('SMTP_HOST'), port: 465, secure: true,
         auth: { user: env('SMTP_USER'), pass: env('SMTP_PASSWORD') }, connectionTimeout: 10000, socketTimeout: 20000 });
 }
-async function database(path: string, method = 'GET', body?: unknown) {
+async function database(path: string, method = 'GET', body?: unknown, prefer = 'return=representation') {
     const response = await fetch(base + '/rest/v1/' + path, { method,
-        headers: { apikey: adminKey, Authorization: 'Bearer ' + adminKey, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        headers: { apikey: adminKey, Authorization: 'Bearer ' + adminKey, 'Content-Type': 'application/json', Prefer: prefer },
         body: body === undefined ? undefined : JSON.stringify(body)
     });
     const data = await response.json().catch(() => null);
@@ -141,6 +141,7 @@ async function sendNeighborhoodInviteEmail(inviter: Record<string, any>, invitat
         throw new Error('The mail server did not confirm delivery. Neighborhood access was not added.');
     } finally { transport.close(); }
     await database('neighborhood_invitations?id=eq.' + invitation.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
+    await notifyExistingAccount(email);
 }
 async function addAcceptedResident(invitation: Record<string, any>, user: Record<string, any>) {
     if (!invitation?.neighborhood_id) return;
@@ -165,6 +166,40 @@ async function addAcceptedResident(invitation: Record<string, any>, user: Record
         email: user.email, phone: profile.details?.profile?.phone || '', role: 'edit' });
     details.addresses = addresses;
     await database('neighborhoods?id=eq.' + invitation.neighborhood_id, 'PATCH', { details });
+}
+async function syncNotifications(user: Record<string, any>) {
+    const email = encodeURIComponent(String(user.email || '').toLowerCase());
+    const [familyInvites, neighborhoodInvites] = await Promise.all([
+        database('family_invitations?email=eq.' + email + '&status=eq.pending&expires_at=gt.' + encodeURIComponent(new Date().toISOString()) + '&select=id,name,role,inviter_id'),
+        database('neighborhood_invitations?email=eq.' + email + '&status=eq.pending&expires_at=gt.' + encodeURIComponent(new Date().toISOString()) + '&select=id,name,address,inviter_id')
+    ]);
+    const rows = [
+        ...(familyInvites || []).map((invite: Record<string, any>) => ({
+            recipient_id: user.id,
+            kind: 'family_invitation',
+            reference_id: invite.id,
+            title: 'Family invitation',
+            body: `${invite.name || 'Someone'} invited you to join their family as a ${invite.role || 'Member'}.`
+        })),
+        ...(neighborhoodInvites || []).map((invite: Record<string, any>) => ({
+            recipient_id: user.id,
+            kind: 'neighborhood_invitation',
+            reference_id: invite.id,
+            title: 'Neighborhood invitation',
+            body: `${invite.name || 'Someone'} invited you to join their neighborhood${invite.address ? ' at ' + invite.address : ''}.`
+        }))
+    ];
+    if (rows.length) {
+        await database('notifications?on_conflict=recipient_id,kind,reference_id', 'POST', rows, 'resolution=merge-duplicates,return=representation');
+    }
+    return database('notifications?recipient_id=eq.' + user.id + '&order=created_at.desc&select=id,kind,reference_id,title,body,read_at,created_at');
+}
+async function notifyExistingAccount(email: string) {
+    const profiles = await database('profiles?select=id,details');
+    const normalized = email.toLowerCase();
+    const profile = (profiles || []).find((row: Record<string, any>) =>
+        String(row.details?.profile?.email || '').trim().toLowerCase() === normalized);
+    if (profile) await syncNotifications({ id: profile.id, email: normalized });
 }
 Deno.serve(async request => {
     const requestUrl = new URL(request.url);
@@ -203,6 +238,7 @@ Deno.serve(async request => {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid neighborhood invitation.');
             const accepted = await database('rpc/accept_neighborhood_invitation', 'POST', { p_id: body.id, p_user: user.id, p_email: user.email });
             await addAcceptedResident(Array.isArray(accepted) ? accepted[0] : accepted, user);
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + body.id, 'DELETE');
             return reply({ accepted: true });
         }
         if (body.action === 'invite-neighborhood-address') {
@@ -245,6 +281,9 @@ Deno.serve(async request => {
             const inviterName = String(profile.details?.profile?.name || profile.display_name || '').trim() || 'A Vedlikeholdt user';
             const neighborhoodInvites = await database('neighborhood_invitations?inviter_id=eq.' + invitations[0].inviter_id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending&select=id');
             return reply({ invitation: { inviterName, role: invitations[0].role, expiresAt: invitations[0].expires_at, includesNeighborhood: neighborhoodInvites.length > 0 } });
+        }
+        if (body.action === 'notifications') {
+            return reply({ notifications: await syncNotifications(user) });
         }
         if (body.action === 'list') {
             // A family invitation belongs in both people's settings: the sender sees
@@ -299,8 +338,18 @@ Deno.serve(async request => {
             for (const neighborhoodInvite of neighborhoodInvites) {
                 const joined = await database('rpc/accept_neighborhood_invitation', 'POST', { p_id: neighborhoodInvite.id, p_user: user.id, p_email: user.email });
                 await addAcceptedResident(Array.isArray(joined) ? joined[0] : joined, user);
+                await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + neighborhoodInvite.id, 'DELETE');
             }
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.family_invitation&reference_id=eq.' + body.id, 'DELETE');
             return reply({ accepted: true });
+        }
+        if (body.action === 'reject') {
+            if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
+            const table = body.kind === 'neighborhood' ? 'neighborhood_invitations' : 'family_invitations';
+            const rejected = await database(table + '?id=eq.' + body.id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending', 'PATCH', { status: 'rejected' });
+            if (!rejected.length) throw new Error('Invitation not found for your email address.');
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (body.kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'DELETE');
+            return reply({ rejected: true });
         }
         if (body.action === 'cancel') {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
@@ -376,6 +425,7 @@ Deno.serve(async request => {
         } finally { transport.close(); }
         if (createdNeighborhoodInvitation) await database('neighborhood_invitations?id=eq.' + neighborhoodInvitation.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
         const saved = await database('family_invitations?id=eq.' + row.id, 'PATCH', { status: 'pending', sent_at: new Date().toISOString() });
+        await notifyExistingAccount(email);
         return reply({ member: member(saved[0]) });
     } catch (error) { return reply({ error: error instanceof Error ? error.message : 'Could not process invitation.' }, 400); }
 });

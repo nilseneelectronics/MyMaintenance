@@ -285,12 +285,24 @@ function savePlanData(id, data, preview, asset) {
     list.unshift({ id, name: id, preview: preview || '', updatedAt: Date.now(), asset: asset || '' });
   }
   saveFileList(list);
+  if (window.MyMaintenanceFloorplans) {
+    const saved = list.find(f => f.id === id);
+    window.MyMaintenanceFloorplans.save({
+      id: id,
+      name: saved ? saved.name : id,
+      preview: saved ? saved.preview : (preview || ''),
+      updatedAt: saved ? saved.updatedAt : Date.now(),
+      asset: saved ? saved.asset : (asset || ''),
+      data: data
+    });
+  }
 }
 
 function deletePlanData(id) {
   localStorage.removeItem(DATA_PREFIX + id);
   const list = getFileList().filter(f => f.id !== id);
   saveFileList(list);
+  if (window.MyMaintenanceFloorplans) window.MyMaintenanceFloorplans.remove(id);
 }
 
 function renamePlanData(oldId, newId) {
@@ -508,12 +520,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }, 50);
 
   // Show file manager on load (after layout is ready)
+  window.addEventListener('floorplans:changed', renderFileList);
   requestAnimationFrame(() => showFileManager());
 
 // If the page was opened to edit a specific saved plan (?open=<id>),
 // load that plan once the canvas is ready.
 const openId = new URLSearchParams(window.location.search).get('open');
-if (openId && loadPlanData(openId)) {
+function openRequestedPlan() {
+  if (!openId || !loadPlanData(openId)) return;
   const waitCanvas = setInterval(() => {
     if (canvas && canvas.upperCanvasEl) {
       clearInterval(waitCanvas);
@@ -521,6 +535,8 @@ if (openId && loadPlanData(openId)) {
     }
   }, 50);
 }
+if (window.MyMaintenanceFloorplans) window.MyMaintenanceFloorplans.hydrate().then(openRequestedPlan);
+else openRequestedPlan();
 
   const style = document.createElement('style');
   style.textContent = `
@@ -887,7 +903,7 @@ function importPlan(e) {
     reader.onload = () => {
       const data = JSON.parse(reader.result);
       canvas.loadFromJSON(data, () => canvas.renderAll());
-      savePlanData(planFileName, data, canvas.toDataURL({ format: 'png', multiplier: 0.3 }));
+       savePlanData(planFileName, data, canvas.toDataURL({ format: 'png', multiplier: 0.3 }), currentPlanAsset());
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -931,8 +947,10 @@ function newPlanConfirm() {
   planFileName = name;
   planAsset = currentModalAsset();
   doClear();
+  planFileName = name;
+  document.getElementById('planTitle').textContent = name;
   syncPanelAsset();
-  isDirty = true;
+  doSave(name);
 }
 
 function newPlanCancel() {

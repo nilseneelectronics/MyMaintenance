@@ -202,9 +202,13 @@ window.MyMaintenanceProfileData = (function () {
             // account in the same browser into this user's profile row.
             nextProfile.email = authenticatedEmail || nextProfile.email || '';
             // Phone may come from signup metadata until the profile is edited.
-            if (!nextProfile.phone) nextProfile.phone = sessionPhone() || '';
+            var signupPhone = sessionPhone();
+            if (!nextProfile.phone) nextProfile.phone = signupPhone || '';
             localStorage.setItem(PROFILE_KEY, JSON.stringify(nextProfile));
-            if (row && authenticatedEmail && !sameEmail(cloudProfile && cloudProfile.email, authenticatedEmail)) {
+            var cloudPhone = cloudProfile && cloudProfile.phone || '';
+            var needsIdentitySync = row && authenticatedEmail && !sameEmail(cloudProfile && cloudProfile.email, authenticatedEmail);
+            var needsPhoneSync = !!signupPhone && !cloudPhone;
+            if (needsIdentitySync || needsPhoneSync) {
                 queueCloudSync();
             }
 

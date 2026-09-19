@@ -8,15 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const STORAGE_KEY = window.GALLERY_STORAGE_KEY || 'floorplan_home_photos';
     const OVERRIDES_KEY = STORAGE_KEY + '_overrides';
 
+    const pageParams = new URLSearchParams(window.location.search);
+    const assetId = pageParams.get('id') || '';
+    const assetType = window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home';
+
     function loadStoredPhotos() {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) return JSON.parse(saved);
-        } catch (_) {}
         return [];
     }
     function saveStoredPhotos() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPhotos));
+        // Photos are stored in Supabase Storage, not in browser localStorage.
     }
     function loadOverrides() {
         try {
@@ -265,37 +265,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (galleryModal) galleryModal.classList.remove('active');
     }
 
-    function persistPhoto(i, text) {
+    async function persistPhoto(i, text) {
         if (i == null || !photos[i]) return;
         const photo = photos[i];
-        const isDefault = defaultPhotos.some((p) => p.src === photo.src);
-        if (isDefault) {
-            overrides[photo.src] = Object.assign({}, overrides[photo.src], { text: text });
-            saveOverrides();
-        } else {
-            const si = storedPhotos.findIndex((p) => p.src === photo.src);
-            if (si >= 0) {
-                storedPhotos[si].text = text;
-                saveStoredPhotos();
-            }
+        if (photo.id && window.MyMaintenancePhotos) {
+            await window.MyMaintenancePhotos.update(photo.id, text);
+            photo.text = text;
         }
         photos = buildPhotos();
         syncPhotoPresentation();
         renderGallery();
     }
 
-    function deletePhoto(i) {
+    async function deletePhoto(i) {
         const photo = photos[i];
-        const isDefault = defaultPhotos.some((p) => p.src === photo.src);
-        if (isDefault) {
-            overrides[photo.src] = { removed: true };
-            saveOverrides();
-        } else {
-            const si = storedPhotos.findIndex((p) => p.src === photo.src);
-            if (si >= 0) {
-                storedPhotos.splice(si, 1);
-                saveStoredPhotos();
-            }
+        if (photo && photo.id && window.MyMaintenancePhotos) {
+            await window.MyMaintenancePhotos.remove(photo);
+            storedPhotos = storedPhotos.filter((p) => p.id !== photo.id);
         }
         photos = buildPhotos();
         syncPhotoPresentation();
@@ -502,19 +488,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (apCancel) apCancel.addEventListener('click', closeAddPhotos);
-    if (apSave) apSave.addEventListener('click', () => {
+    if (apSave) apSave.addEventListener('click', async () => {
         if (pendingPhotos.length === 0) {
             window.MyMaintenanceCommonUi.alert('Please add at least one picture.');
             return;
         }
-        storedPhotos = storedPhotos.concat(pendingPhotos);
-        saveStoredPhotos();
+        if (!window.MyMaintenancePhotos || !assetId) {
+            window.MyMaintenanceCommonUi.alert('This asset is not ready for photo uploads yet.');
+            return;
+        }
+        try {
+            const uploaded = await Promise.all(pendingPhotos.map(async (photo) => {
+                const response = await fetch(photo.src);
+                const blob = await response.blob();
+                const file = new File([blob], 'photo.' + ((blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')), { type: blob.type || 'image/jpeg' });
+                return window.MyMaintenancePhotos.upload(assetId, assetType, file, photo.text || '');
+            }));
+            storedPhotos = storedPhotos.concat(uploaded);
+        } catch (error) {
+            console.error('Could not upload photos:', error);
+            window.MyMaintenanceCommonUi.alert('Could not upload the photos. Please try again.');
+            return;
+        }
         photos = buildPhotos();
         currentIndex = Math.max(0, photos.length - pendingPhotos.length);
         syncPhotoPresentation();
         closeAddPhotos();
         openGallery();
     });
+
+    if (window.MyMaintenancePhotos && assetId) {
+        window.MyMaintenancePhotos.list(assetId, assetType).then(function (remotePhotos) {
+            storedPhotos = remotePhotos;
+            photos = buildPhotos();
+            syncPhotoPresentation();
+            renderGallery();
+        }).catch(function (error) {
+            console.error('Could not load photos:', error);
+        });
+    }
 
     document.addEventListener('keydown', (event) => {
         if (deletePopup && deletePopup.style.display === 'flex') {

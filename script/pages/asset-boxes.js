@@ -793,6 +793,7 @@
         if (assetId) selectAssetById(assetId);
         window.addEventListener('myevents:changed', renderPlanned);
         window.addEventListener('mydocs:changed', renderDocs);
+        window.addEventListener('floorplans:changed', renderFloorplans);
         window.addEventListener('assets:changed', function () {
             infoEditMode = false;
             buildAssetMenu();
@@ -804,5 +805,6 @@
         });
         window.addEventListener('home:registered', registerAssetHandler());
         window.addEventListener('vehicle:registered', registerAssetHandler());
+        if (window.MyMaintenanceFloorplans) window.MyMaintenanceFloorplans.hydrate();
     });
 })();

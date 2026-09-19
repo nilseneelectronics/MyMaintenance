@@ -149,6 +149,8 @@ const DEFAULT_KNOWN_PAGE_FILES = [
     'tool-floorplan.html',
     'myfloorplans.html',
     'myproject.html',
+    'terms-of-use.html',
+    'privacy-policy.html',
     'vehicle-diagrams.html'
 ];
 
@@ -223,7 +225,7 @@ const COMMON_LAYOUT = {
     footer: `
         <footer>
             <div class="column"><h3>Social Media</h3><ul><li><a href="https://twitter.com">Twitter</a></li><li><a href="https://facebook.com">Facebook</a></li><li><a href="https://instagram.com">Instagram</a></li></ul></div>
-            <div class="column"><h3>Contact Info</h3><p>Email: info@mymaintenance.com</p><p>Phone: +1-123-456-7890</p><p>Address: 123 Street, City, Country</p></div>
+            <div class="column"><h3>Contact Info</h3><p>Email: support@vedlikeholdt.no</p><p>Phone: +1-123-456-7890</p><p>Address: 123 Street, City, Country</p></div>
             <div class="column"><h3>Partners</h3><ul><li><a href="https://partner1.com">Partner 1</a></li><li><a href="https://partner2.com">Partner 2</a></li><li><a href="https://partner3.com">Partner 3</a></li></ul></div>
         </footer>
     `
@@ -294,11 +296,69 @@ function setActiveSidebarLink() {
 
 /* ==================== NOTIFICATIONS ==================== */
 const NOTIF_STORAGE_KEY = 'mymaintenance_notif_items';
+let notifShowingPrevious = false;
+let notifSelectionMode = false;
+let notifSelected = new Set();
+let notifItems = null;
 function notifLoad() {
+    if (Array.isArray(notifItems)) return notifItems;
     try { return JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY)) || []; } catch (_) { return []; }
 }
 function notifSave(items) {
+    notifItems = items;
     try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(items)); } catch (_) {}
+}
+async function notifHydrateCloud() {
+    if (!window.MyMaintenanceAuth || !window.MyMaintenanceData) return;
+    try {
+        const result = await window.MyMaintenanceAuth.familyRequest('notifications');
+        notifItems = (result.notifications || []).map(function (n) {
+            return Object.assign({}, n, {
+                read: Boolean(n.read_at),
+                invitationKind: n.kind === 'neighborhood_invitation' ? 'neighborhood' : (n.kind === 'family_invitation' ? 'family' : '')
+            });
+        });
+        try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notifItems)); } catch (_) {}
+        notifRenderList();
+        notifRenderIcon();
+    } catch (error) {
+        console.warn('Could not load notifications:', error);
+    }
+}
+async function notifUpdateCloud(notification, read) {
+    if (!notification || !notification.id || !window.MyMaintenanceData) return;
+    try {
+        await window.MyMaintenanceData.request('notifications?id=eq.' + notification.id, {
+            method: 'PATCH',
+            body: { read_at: read ? new Date().toISOString() : null },
+            prefer: 'return=minimal'
+        });
+    } catch (error) { console.warn('Could not update notification:', error); }
+}
+async function notifDeleteCloud(notification) {
+    if (!notification || !notification.id || !window.MyMaintenanceData) return;
+    try {
+        await window.MyMaintenanceData.request('notifications?id=eq.' + notification.id, { method: 'DELETE' });
+    } catch (error) { console.warn('Could not delete notification:', error); }
+}
+async function notifInvitationAction(notification, action) {
+    if (!notification || !notification.reference_id || !window.MyMaintenanceAuth) return;
+    try {
+        const requestAction = action === 'accept' && notification.invitationKind === 'neighborhood'
+            ? 'accept-neighborhood'
+            : action;
+        await window.MyMaintenanceAuth.familyRequest(requestAction, {
+            id: notification.reference_id,
+            kind: notification.invitationKind
+        });
+        await notifDeleteCloud(notification);
+        notifItems = notifLoad().filter(function (item) { return item.id !== notification.id; });
+        notifSave(notifItems);
+        notifRenderList();
+        notifRenderIcon();
+    } catch (error) {
+        if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert(error.message || 'Could not update the invitation.');
+    }
 }
 function notifUnread(items) {
     return (items || notifLoad()).filter(function (n) { return !n.read; }).length;
@@ -313,31 +373,67 @@ function notifRenderList() {
     const list = document.getElementById('notif-list');
     if (!list) return;
     const items = notifLoad();
-    if (!items.length) {
-        list.innerHTML = '<p class="notif-empty">No notifications yet.</p>';
+    const visibleItems = items.filter(function (n) { return notifShowingPrevious ? n.read : !n.read; });
+    if (!visibleItems.length) {
+        list.innerHTML = '<p class="notif-empty">' + (notifShowingPrevious ? 'No previous notifications.' : 'No new notifications.') + '</p>';
         return;
     }
-    list.innerHTML = items.map(function (n, i) {
-        const when = n.at ? new Date(n.at) : null;
+    list.innerHTML = visibleItems.map(function (n) {
+        const index = items.indexOf(n);
+        const when = n.at || n.created_at ? new Date(n.at || n.created_at) : null;
         const label = when ? when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-        return '<div class="notif-item' + (n.read ? ' read' : '') + '" data-i="' + i + '">'
+        const invitationActions = !notifSelectionMode && n.invitationKind
+            ? '<div class="notif-item-actions"><button type="button" class="notif-action accept" data-notif-action="accept">Accept</button><button type="button" class="notif-action reject" data-notif-action="reject">Reject</button></div>'
+            : '';
+        return '<div class="notif-item' + (n.read ? ' read' : '') + (notifSelected.has(index) ? ' selected' : '') + '" data-i="' + index + '">'
+            + (notifSelectionMode ? '<span class="notif-select-mark" aria-hidden="true">' + (notifSelected.has(index) ? '&#10003;' : '') + '</span>' : '')
             + '<div class="notif-item-main"><strong>' + String(n.title || 'Notification') + '</strong>'
-            + '<p>' + String(n.body || '') + '</p></div>'
+            + '<p>' + String(n.body || '') + '</p>' + invitationActions + '</div>'
             + (label ? '<span class="notif-item-time">' + label + '</span>' : '')
             + '</div>';
     }).join('');
     list.querySelectorAll('.notif-item[data-i]').forEach(function (el) {
-        el.addEventListener('click', function () {
+        el.addEventListener('click', function (event) {
             const idx = Number(el.getAttribute('data-i'));
             const items = notifLoad();
-            if (items[idx]) {
-                items[idx].read = true;
-                notifSave(items);
-                notifRenderList();
-                notifRenderIcon();
+            const actionButton = event.target.closest('.notif-action');
+            if (actionButton && items[idx]) {
+                event.stopPropagation();
+                notifInvitationAction(items[idx], actionButton.dataset.notifAction);
+                return;
             }
+            if (notifSelectionMode) {
+                if (notifSelected.has(idx)) notifSelected.delete(idx);
+                else notifSelected.add(idx);
+                notifRenderList();
+                notifRenderControls();
+                return;
+            }
+            if (!items[idx] || items[idx].read) return;
+            items[idx].read = true;
+            notifSave(items);
+            notifUpdateCloud(items[idx], true);
+            notifRenderList();
+            notifRenderIcon();
         });
     });
+}
+function notifRenderControls() {
+    const selectBtn = document.getElementById('notif-select');
+    const deleteBtn = document.getElementById('notif-delete');
+    const unreadBtn = document.getElementById('notif-unread');
+    const cancelBtn = document.getElementById('notif-selection-cancel');
+    const previousBtn = document.getElementById('notif-previous');
+    const closeBtn = document.getElementById('notif-close');
+    if (!selectBtn || !deleteBtn || !unreadBtn || !cancelBtn) return;
+    selectBtn.hidden = notifSelectionMode;
+    previousBtn.hidden = notifSelectionMode;
+    closeBtn.hidden = notifSelectionMode;
+    deleteBtn.hidden = !notifSelectionMode;
+    unreadBtn.hidden = !notifSelectionMode;
+    cancelBtn.hidden = !notifSelectionMode;
+    deleteBtn.disabled = notifSelected.size === 0;
+    unreadBtn.disabled = notifSelected.size === 0;
 }
 function initNotifications() {
     const bell = document.getElementById('notif-bell');
@@ -353,41 +449,90 @@ function initNotifications() {
             + '<div id="notif-list" class="notif-list"></div>'
             + '<div class="popup-buttons">'
             + '<button type="button" class="popup-btn cancel" id="notif-close">Close</button>'
-            + '<button type="button" class="popup-btn confirm" id="notif-clear">Clear all</button>'
+            + '<button type="button" class="popup-btn cancel" id="notif-previous">Previous notifications</button>'
+            + '<button type="button" class="popup-btn cancel" id="notif-select">Select</button>'
+            + '<button type="button" class="popup-btn confirm" id="notif-delete" hidden>Delete</button>'
+            + '<button type="button" class="popup-btn confirm" id="notif-unread" hidden>Set unread</button>'
+            + '<button type="button" class="popup-btn cancel" id="notif-selection-cancel" hidden>Cancel</button>'
             + '</div></div>';
         document.body.appendChild(ov);
         ov.addEventListener('click', function (e) { if (e.target === ov) ov.style.display = 'none'; });
     }
     const popup = document.getElementById('notif-popup');
-    const clearBtn = document.getElementById('notif-clear');
+    const selectBtn = document.getElementById('notif-select');
+    const deleteBtn = document.getElementById('notif-delete');
+    const unreadBtn = document.getElementById('notif-unread');
+    const selectionCancelBtn = document.getElementById('notif-selection-cancel');
     const closeBtn = document.getElementById('notif-close');
+    const previousBtn = document.getElementById('notif-previous');
 
     bell.addEventListener('click', function (e) {
         e.stopPropagation();
+        notifShowingPrevious = false;
+        notifSelectionMode = false;
+        notifSelected.clear();
         notifRenderList();
+        notifRenderControls();
         popup.style.display = 'flex';
     });
-    if (clearBtn) clearBtn.addEventListener('click', function () {
-        notifSave([]);
+    if (selectBtn) selectBtn.addEventListener('click', function () {
+        notifSelectionMode = true;
+        notifSelected.clear();
         notifRenderList();
+        notifRenderControls();
+    });
+    if (deleteBtn) deleteBtn.addEventListener('click', function () {
+        if (!notifSelected.size) return;
+        const selected = notifLoad().filter(function (_, index) { return notifSelected.has(index); });
+        selected.forEach(notifDeleteCloud);
+        notifSave(notifLoad().filter(function (_, index) { return !notifSelected.has(index); }));
+        notifSelectionMode = false;
+        notifSelected.clear();
+        notifRenderList();
+        notifRenderControls();
         notifRenderIcon();
+    });
+    if (unreadBtn) unreadBtn.addEventListener('click', function () {
+        if (!notifSelected.size) return;
+        const items = notifLoad();
+        notifSelected.forEach(function (index) {
+            if (items[index]) {
+                items[index].read = false;
+                notifUpdateCloud(items[index], false);
+            }
+        });
+        notifSave(items);
+        notifSelectionMode = false;
+        notifSelected.clear();
+        notifShowingPrevious = false;
+        notifRenderList();
+        notifRenderControls();
+        notifRenderIcon();
+    });
+    if (selectionCancelBtn) selectionCancelBtn.addEventListener('click', function () {
+        notifSelectionMode = false;
+        notifSelected.clear();
+        notifRenderList();
+        notifRenderControls();
+    });
+    if (previousBtn) previousBtn.addEventListener('click', function () {
+        notifShowingPrevious = !notifShowingPrevious;
+        previousBtn.textContent = notifShowingPrevious ? 'New notifications' : 'Previous notifications';
+        notifRenderList();
     });
     if (closeBtn) closeBtn.addEventListener('click', function () { popup.style.display = 'none'; });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && popup.style.display === 'flex') {
             e.preventDefault();
+            notifSelectionMode = false;
+            notifSelected.clear();
             popup.style.display = 'none';
         }
     });
 
-    // For now, seed a couple of demo notifications so the bell toggles.
-    if (!localStorage.getItem(NOTIF_STORAGE_KEY)) {
-        notifSave([
-            { title: 'Welcome to Vedlikeholdt', body: 'Keep your home, vehicles and neighborhood organized.', at: Date.now(), read: false },
-            { title: 'Invitations', body: 'Family members can be invited from your profile.', at: Date.now() - 86400000, read: true }
-        ]);
-    }
+    notifRenderControls();
     notifRenderIcon();
+    notifHydrateCloud();
 }
 
 /* ==================== MAIN SCRIPT ==================== */
@@ -467,9 +612,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
 
     let lastScroll = 0;
-    const scrollTarget = document.body;
+    const scrollTarget = window;
     scrollTarget.addEventListener('scroll', () => {
-        const currentScroll = scrollTarget.scrollTop;
+        const currentScroll = window.scrollY || document.documentElement.scrollTop;
         const hasToggle = !!document.getElementById('sidebar-toggle');
         const isLoggedIn = body.classList.contains('logged-in');
         if (currentScroll > lastScroll) {
