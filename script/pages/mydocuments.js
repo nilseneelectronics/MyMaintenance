@@ -2654,7 +2654,15 @@ function openAddDocPopup() {
             data = '';
         }
         if (info.cls === 'file-image' && data) {
-            body.innerHTML = '<div class="preview-img-wrap"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>';
+            body.innerHTML = '<div class="preview-img-wrap">'
+                + '<div class="doc-image-zoom-controls" aria-label="Image zoom">'
+                + '<button type="button" data-image-zoom="out" aria-label="Zoom out">−</button>'
+                + '<output>100%</output>'
+                + '<button type="button" data-image-zoom="in" aria-label="Zoom in">+</button>'
+                + '</div>'
+                + '<div class="preview-image-stage"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>'
+                + '</div>';
+            initImageZoom(body);
         } else if (info.cls === 'file-pdf' && data) {
             body.innerHTML = '';
             if (window.MyPdfViewer) {
@@ -2705,6 +2713,28 @@ function openAddDocPopup() {
         }
         ov.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+    }
+
+    function initImageZoom(body) {
+        const steps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+        const image = body.querySelector('.preview-media');
+        const output = body.querySelector('.doc-image-zoom-controls output');
+        const zoomOut = body.querySelector('[data-image-zoom="out"]');
+        const zoomIn = body.querySelector('[data-image-zoom="in"]');
+        let index = steps.indexOf(100);
+
+        function setZoom(next) {
+            index = Math.max(0, Math.min(next, steps.length - 1));
+            const value = steps[index];
+            image.style.setProperty('--doc-image-scale', value / 100);
+            output.textContent = value + '%';
+            zoomOut.disabled = index === 0;
+            zoomIn.disabled = index === steps.length - 1;
+        }
+
+        zoomOut.addEventListener('click', function () { setZoom(index - 1); });
+        zoomIn.addEventListener('click', function () { setZoom(index + 1); });
+        setZoom(index);
     }
 
     function dataUrlToBlobUrl(dataUrl) {
