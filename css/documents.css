@@ -853,8 +853,7 @@
     width: auto;
     height: auto;
     object-fit: contain;
-    zoom: var(--doc-image-scale, 1);
-    transition: zoom 0.15s ease;
+    transition: width 0.15s ease, height 0.15s ease;
 }
 
 .preview-frame-wrap {

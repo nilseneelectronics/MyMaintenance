@@ -2636,7 +2636,13 @@ function openAddDocPopup() {
         if (window.My3dViewer) window.My3dViewer.close();
         if (window.MyOfficeViewer) window.MyOfficeViewer.close();
         const ov = document.getElementById('doc-preview-overlay');
-        if (ov) ov.style.display = 'none';
+        if (ov) {
+            const body = ov.querySelector('.preview-body');
+            if (body && typeof body._imageZoomCleanup === 'function') body._imageZoomCleanup();
+            if (body) body._imageZoomCleanup = null;
+            if (body) body._imageZoomRefresh = null;
+            ov.style.display = 'none';
+        }
         document.body.style.overflow = '';
     }
 
@@ -2648,6 +2654,9 @@ function openAddDocPopup() {
         const body = ov.querySelector('.preview-body');
         const actions = ov.querySelector('.preview-actions');
         const title = ov.querySelector('.preview-title');
+        if (typeof body._imageZoomCleanup === 'function') body._imageZoomCleanup();
+        body._imageZoomCleanup = null;
+        body._imageZoomRefresh = null;
         title.textContent = it.name + (it.asset ? ' - ' + it.asset : '');
         ov.classList.remove('preview-max');
         try { await ensureViewer(info); } catch (_) {}
@@ -2726,6 +2735,7 @@ function openAddDocPopup() {
         }
         ov.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (typeof body._imageZoomRefresh === 'function') requestAnimationFrame(body._imageZoomRefresh);
     }
 
     function initImageZoom(body, data, name) {
@@ -2734,8 +2744,10 @@ function openAddDocPopup() {
         const MIN_ZOOM = 50;
         const MAX_ZOOM = 325;
         const NOTCH = 15;
+        const STAGE_PADDING = 40;
         const image = body.querySelector('.preview-media');
         const wrap = body.querySelector('.preview-img-wrap');
+        const stage = body.querySelector('.preview-image-stage');
         const output = body.querySelector('.doc-image-toolbar output');
         const zoomOut = body.querySelector('[data-image-zoom="out"]');
         const zoomIn = body.querySelector('[data-image-zoom="in"]');
@@ -2745,10 +2757,34 @@ function openAddDocPopup() {
         let zoom = 100;
         let wheelAccum = 0;
 
+        function sizeImage() {
+            if (!image.naturalWidth || !image.naturalHeight || !wrap.clientWidth || !wrap.clientHeight) return;
+            const viewportWidth = wrap.clientWidth;
+            const viewportHeight = wrap.clientHeight;
+            const availableWidth = Math.max(1, viewportWidth - STAGE_PADDING);
+            const availableHeight = Math.max(1, viewportHeight - STAGE_PADDING);
+            const fitScale = Math.min(1, availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+            const scale = fitScale * zoom / 100;
+            const imageWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+            const imageHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+            const stageWidth = Math.max(viewportWidth, imageWidth + STAGE_PADDING);
+            const stageHeight = Math.max(viewportHeight, imageHeight + STAGE_PADDING);
+            const centerX = wrap.scrollWidth > viewportWidth ? (wrap.scrollLeft + viewportWidth / 2) / wrap.scrollWidth : 0.5;
+            const centerY = wrap.scrollHeight > viewportHeight ? (wrap.scrollTop + viewportHeight / 2) / wrap.scrollHeight : 0.5;
+            image.style.maxWidth = 'none';
+            image.style.maxHeight = 'none';
+            image.style.width = imageWidth + 'px';
+            image.style.height = imageHeight + 'px';
+            stage.style.width = stageWidth + 'px';
+            stage.style.height = stageHeight + 'px';
+            wrap.classList.toggle('is-zoomed', stageWidth > viewportWidth || stageHeight > viewportHeight);
+            wrap.scrollLeft = Math.max(0, centerX * stageWidth - viewportWidth / 2);
+            wrap.scrollTop = Math.max(0, centerY * stageHeight - viewportHeight / 2);
+        }
+
         function setZoom(next) {
             zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next)));
-            image.style.setProperty('--doc-image-scale', zoom / 100);
-            wrap.classList.toggle('is-zoomed', zoom > 100);
+            sizeImage();
             output.textContent = zoom + '%';
             zoomOut.disabled = zoom === MIN_ZOOM;
             zoomIn.disabled = zoom === MAX_ZOOM;
@@ -2774,6 +2810,14 @@ function openAddDocPopup() {
                 wheelAccum -= wheelAccum > 0 ? NOTCH : -NOTCH;
             }
         }, { passive: false });
+        image.addEventListener('load', sizeImage);
+        const resizeObserver = new ResizeObserver(sizeImage);
+        resizeObserver.observe(wrap);
+        body._imageZoomRefresh = sizeImage;
+        body._imageZoomCleanup = function () {
+            resizeObserver.disconnect();
+            image.removeEventListener('load', sizeImage);
+        };
         setZoom(100);
     }
 
