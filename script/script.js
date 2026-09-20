@@ -125,6 +125,215 @@ const translations = {
 
 let currentLang = 'en';
 
+function initPrivacyConsent() {
+    const key = 'vedlikeholdt.privacyConsent';
+    const version = 1;
+    const read = () => {
+        try {
+            const value = JSON.parse(localStorage.getItem(key));
+            return value && value.version === version ? value : null;
+        } catch (_) {
+            return null;
+        }
+    };
+    const allowed = (category) => category === 'necessary' || Boolean(read()?.[category]);
+    const apply = (value) => {
+        ['preferences', 'analytics', 'marketing'].forEach((category) => {
+            document.documentElement.dataset[`consent${category[0].toUpperCase()}${category.slice(1)}`] = String(Boolean(value?.[category]));
+        });
+        window.dispatchEvent(new CustomEvent('vedlikeholdt:consentchange', { detail: value }));
+    };
+    const save = (choices) => {
+        const value = {
+            version,
+            necessary: true,
+            preferences: Boolean(choices.preferences),
+            analytics: Boolean(choices.analytics),
+            marketing: Boolean(choices.marketing),
+            updatedAt: new Date().toISOString()
+        };
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (_) {}
+        apply(value);
+        return value;
+    };
+
+    window.VedlikeholdtConsent = { allowed, get: read, save, open: () => openSettings() };
+
+    const existing = read();
+    apply(existing);
+
+    const root = document.createElement('div');
+    root.className = 'privacy-consent';
+    root.innerHTML = `
+        <button type="button" class="privacy-settings-button" aria-label="Open privacy choices">Privacy</button>
+        <div class="privacy-consent-backdrop" hidden>
+            <section class="privacy-consent-card" role="dialog" aria-modal="true" aria-labelledby="privacy-consent-title">
+                <div class="privacy-consent-summary">
+                    <span class="privacy-consent-icon" aria-hidden="true">✓</span>
+                    <div>
+                        <h2 id="privacy-consent-title">Your privacy choices</h2>
+                        <p>Vedlikeholdt uses necessary browser storage for sign-in and core features. We currently use no analytics or advertising cookies.</p>
+                    </div>
+                    <div class="privacy-consent-actions">
+                        <button type="button" class="privacy-button privacy-button-secondary" data-consent="reject">Reject optional</button>
+                        <button type="button" class="privacy-button privacy-button-secondary" data-consent="customize">Customize</button>
+                        <button type="button" class="privacy-button privacy-button-primary" data-consent="accept">Accept all</button>
+                    </div>
+                </div>
+                <div class="privacy-consent-customize" hidden>
+                    <div class="privacy-consent-heading">
+                        <div>
+                            <h2>Customize privacy choices</h2>
+                            <p>Choose optional storage categories. Necessary storage cannot be disabled.</p>
+                        </div>
+                        <button type="button" class="privacy-close" data-consent="close" aria-label="Close privacy choices">×</button>
+                    </div>
+                    <div class="privacy-choice-list">
+                        <label class="privacy-choice">
+                            <span><strong>Necessary</strong><small>Authentication, security, and saved app data</small></span>
+                            <input type="checkbox" checked disabled>
+                        </label>
+                        <label class="privacy-choice">
+                            <span><strong>Preferences</strong><small>Language and interface settings</small></span>
+                            <input type="checkbox" name="preferences">
+                        </label>
+                        <label class="privacy-choice">
+                            <span><strong>Analytics</strong><small>Usage measurement; not currently active</small></span>
+                            <input type="checkbox" name="analytics">
+                        </label>
+                        <label class="privacy-choice">
+                            <span><strong>Marketing</strong><small>Advertising and cross-site tracking; not currently active</small></span>
+                            <input type="checkbox" name="marketing">
+                        </label>
+                    </div>
+                    <div class="privacy-consent-actions">
+                        <button type="button" class="privacy-button privacy-button-secondary" data-consent="reject">Reject optional</button>
+                        <button type="button" class="privacy-button privacy-button-primary" data-consent="save">Save choices</button>
+                    </div>
+                </div>
+            </section>
+        </div>`;
+    document.body.appendChild(root);
+
+    const backdrop = root.querySelector('.privacy-consent-backdrop');
+    const summary = root.querySelector('.privacy-consent-summary');
+    const customize = root.querySelector('.privacy-consent-customize');
+    const settingsButton = root.querySelector('.privacy-settings-button');
+    const fields = ['preferences', 'analytics', 'marketing'];
+
+    function fillChoices(value) {
+        fields.forEach((name) => {
+            root.querySelector(`[name="${name}"]`).checked = Boolean(value?.[name]);
+        });
+    }
+
+    function openSummary() {
+        summary.hidden = false;
+        customize.hidden = true;
+        backdrop.hidden = false;
+        settingsButton.hidden = true;
+        root.querySelector('[data-consent="reject"]').focus();
+    }
+
+    function openSettings() {
+        fillChoices(read());
+        summary.hidden = true;
+        customize.hidden = false;
+        backdrop.hidden = false;
+        settingsButton.hidden = true;
+        root.querySelector('[name="preferences"]').focus();
+    }
+
+    function close() {
+        backdrop.hidden = true;
+        settingsButton.hidden = false;
+        settingsButton.focus();
+    }
+
+    root.addEventListener('click', (event) => {
+        const action = event.target.closest('[data-consent]')?.dataset.consent;
+        if (!action) return;
+        if (action === 'customize') openSettings();
+        if (action === 'close') close();
+        if (action === 'accept') {
+            save({ preferences: true, analytics: true, marketing: true });
+            close();
+        }
+        if (action === 'reject') {
+            save({ preferences: false, analytics: false, marketing: false });
+            close();
+        }
+        if (action === 'save') {
+            save(Object.fromEntries(fields.map((name) => [name, root.querySelector(`[name="${name}"]`).checked])));
+            close();
+        }
+    });
+    settingsButton.addEventListener('click', openSettings);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !backdrop.hidden && read()) close();
+    });
+
+    if (existing) settingsButton.hidden = false;
+    else openSummary();
+}
+
+function initIntentPrefetch() {
+    const prefetched = new Set();
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection?.saveData || /(^|-)2g$/.test(connection?.effectiveType || '')) return;
+
+    const pageUrl = (file) => {
+        const inPages = location.pathname.includes('/pages/');
+        if (file === 'index.html') return inPages ? '../index.html' : 'index.html';
+        return inPages ? file : `pages/${file}`;
+    };
+
+    const buttonTargets = {
+        signin: pageUrl('login.html?mode=signin'),
+        signup: pageUrl('login.html?mode=signup'),
+        'cta-signup': pageUrl('login.html?mode=signup'),
+        'final-cta': pageUrl('login.html?mode=signup'),
+        goback: pageUrl('index.html')
+    };
+
+    function prefetch(href) {
+        if (!href) return;
+        let url;
+        try {
+            url = new URL(href, location.href);
+        } catch (_) {
+            return;
+        }
+        if (url.origin !== location.origin || !/^https?:$/.test(url.protocol)) return;
+        url.hash = '';
+        const key = url.href;
+        if (key === location.href.split('#')[0] || prefetched.has(key)) return;
+        prefetched.add(key);
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.as = 'document';
+        link.href = key;
+        document.head.appendChild(link);
+    }
+
+    function targetHref(target) {
+        const element = target instanceof Element ? target.closest('a[href], button, [data-prefetch-href]') : null;
+        if (!element) return '';
+        if (element.matches('a[href]')) {
+            if (element.hasAttribute('download') || element.target === '_blank') return '';
+            return element.getAttribute('href');
+        }
+        return element.dataset.prefetchHref || buttonTargets[element.id] || '';
+    }
+
+    const handleIntent = (event) => prefetch(targetHref(event.target));
+    document.addEventListener('pointerover', handleIntent, { passive: true });
+    document.addEventListener('focusin', handleIntent);
+    document.addEventListener('touchstart', handleIntent, { passive: true });
+}
+
 const DEFAULT_KNOWN_PAGE_FILES = [
     'index.html',
     'about.html',
@@ -537,6 +746,8 @@ function initNotifications() {
 
 /* ==================== MAIN SCRIPT ==================== */
 document.addEventListener('DOMContentLoaded', () => {
+    initPrivacyConsent();
+    initIntentPrefetch();
     normalizePlaceholderLinks();
     if (window.MyMaintenanceAuth && typeof window.MyMaintenanceAuth.enforceAuthRouting === 'function') {
         window.MyMaintenanceAuth.enforceAuthRouting();
@@ -553,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navbarRight.appendChild(langBtn);
     }
 
-    currentLang = localStorage.getItem('lang') || 'en';
+    currentLang = window.VedlikeholdtConsent.allowed('preferences') ? (localStorage.getItem('lang') || 'en') : 'en';
     document.documentElement.lang = currentLang;
 
     const langToggle = document.getElementById('lang-toggle');
@@ -561,7 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
         langToggle.addEventListener('click', () => {
             const newLang = currentLang === 'en' ? 'no' : 'en';
             currentLang = newLang;
-            localStorage.setItem('lang', newLang);
+            if (window.VedlikeholdtConsent.allowed('preferences')) localStorage.setItem('lang', newLang);
             document.documentElement.lang = newLang;
             translateAll();
             langToggle.textContent = newLang.toUpperCase();
@@ -595,6 +806,18 @@ document.addEventListener('DOMContentLoaded', () => {
             else el.textContent = translations[key][lang];
         });
     }
+
+    window.addEventListener('vedlikeholdt:consentchange', (event) => {
+        if (event.detail?.preferences) {
+            localStorage.setItem('lang', currentLang);
+        } else {
+            localStorage.removeItem('lang');
+            currentLang = 'en';
+            document.documentElement.lang = currentLang;
+            translateAll();
+            if (langToggle) langToggle.textContent = currentLang.toUpperCase();
+        }
+    });
 
     initDataKeys();
     translateAll();

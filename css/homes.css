@@ -693,6 +693,8 @@ main h1 {
     display: block;
     border-radius: 25px;
     object-fit: contain;
+    transform: scale(var(--photo-scale, 1));
+    transition: transform 0.15s ease;
 }
 
 .photo-modal-view {
@@ -707,6 +709,44 @@ main h1 {
         linear-gradient(-45deg, transparent 75%, rgba(5,20,28,0.06) 75%);
     background-size: 22px 22px;
     background-position: 0 0, 0 11px, 11px -11px, -11px 0;
+}
+
+.photo-zoom-controls {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    color: #fff;
+    background: rgba(0,0,0,0.72);
+    border-radius: 999px;
+    transform: translateX(-50%);
+}
+
+.photo-zoom-controls button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 50%;
+    font: 600 24px/1 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+.photo-zoom-controls button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.photo-zoom-controls output {
+    min-width: 58px;
+    text-align: center;
+    font-weight: 600;
 }
 
 @media (prefers-color-scheme: dark) {

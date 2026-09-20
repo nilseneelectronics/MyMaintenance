@@ -58,6 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalNext = document.getElementById('modal-next');
     const modalEditButton = document.getElementById('modal-edit');
     const modalDeleteButton = document.getElementById('modal-delete');
+    const modalZoomOut = document.getElementById('modal-zoom-out');
+    const modalZoomIn = document.getElementById('modal-zoom-in');
+    const modalZoomLevel = document.getElementById('modal-zoom-level');
+    const zoomSteps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+    let zoomIndex = zoomSteps.indexOf(100);
 
     const deletePopup = document.getElementById('delete-photo-popup');
     const dpCancel = document.getElementById('dp-cancel');
@@ -108,6 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCaption.textContent = photos.length ? (getPhoto(currentIndex).text || '') : '';
     }
 
+    function setPhotoZoom(index) {
+        zoomIndex = Math.max(0, Math.min(index, zoomSteps.length - 1));
+        const value = zoomSteps[zoomIndex];
+        modalImg.style.setProperty('--photo-scale', value / 100);
+        modalZoomLevel.textContent = `${value}%`;
+        modalZoomOut.disabled = zoomIndex === 0;
+        modalZoomIn.disabled = zoomIndex === zoomSteps.length - 1;
+    }
+
     function enterFullscreenEdit() {
         fullscreenEditMode = true;
         if (photoTextInput) {
@@ -137,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showModalPhoto(index) {
         currentIndex = (index + photos.length) % photos.length;
         if (modalImg) modalImg.src = photos[currentIndex].src;
+        setPhotoZoom(zoomSteps.indexOf(100));
         updateCaption();
         if (fullscreenEditMode && photoTextInput && photos.length) photoTextInput.value = photos[currentIndex].text || '';
     }
@@ -201,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullscreenEditMode = false;
         currentIndex = (index + photos.length) % photos.length;
         if (modalImg) modalImg.src = photos[currentIndex].src;
+        setPhotoZoom(zoomSteps.indexOf(100));
         updateCaption();
         if (modal) modal.classList.add('active');
     }
@@ -389,6 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (closeModalButton) closeModalButton.addEventListener('click', closeFullscreen);
+    if (modalZoomOut) modalZoomOut.addEventListener('click', () => setPhotoZoom(zoomIndex - 1));
+    if (modalZoomIn) modalZoomIn.addEventListener('click', () => setPhotoZoom(zoomIndex + 1));
 
     if (modalPrev) modalPrev.addEventListener('click', () => {
         showModalPhoto(currentIndex - 1);
