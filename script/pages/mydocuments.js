@@ -2716,26 +2716,46 @@ function openAddDocPopup() {
     }
 
     function initImageZoom(body) {
-        const steps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+        const ZOOM_STEP = 15;
+        const WHEEL_STEP = 8;
+        const MIN_ZOOM = 50;
+        const MAX_ZOOM = 325;
+        const NOTCH = 15;
         const image = body.querySelector('.preview-media');
+        const wrap = body.querySelector('.preview-img-wrap');
         const output = body.querySelector('.doc-image-toolbar output');
         const zoomOut = body.querySelector('[data-image-zoom="out"]');
         const zoomIn = body.querySelector('[data-image-zoom="in"]');
-        let index = steps.indexOf(100);
+        let zoom = 100;
+        let wheelAccum = 0;
 
         function setZoom(next) {
-            index = Math.max(0, Math.min(next, steps.length - 1));
-            const value = steps[index];
-            image.style.setProperty('--doc-image-scale', value / 100);
-            output.textContent = value + '%';
-            zoomOut.disabled = index === 0;
-            zoomIn.disabled = index === steps.length - 1;
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next)));
+            image.style.setProperty('--doc-image-scale', zoom / 100);
+            wrap.classList.toggle('is-zoomed', zoom > 100);
+            output.textContent = zoom + '%';
+            zoomOut.disabled = zoom === MIN_ZOOM;
+            zoomIn.disabled = zoom === MAX_ZOOM;
         }
 
-        zoomOut.addEventListener('click', function () { setZoom(index - 1); });
-        zoomIn.addEventListener('click', function () { setZoom(index + 1); });
-        output.addEventListener('click', function () { setZoom(steps.indexOf(100)); });
-        setZoom(index);
+        function changeZoom(delta) {
+            const next = zoom + delta;
+            setZoom((zoom < 100 && next > 100) || (zoom > 100 && next < 100) ? 100 : next);
+        }
+
+        zoomOut.addEventListener('click', function () { changeZoom(-ZOOM_STEP); });
+        zoomIn.addEventListener('click', function () { changeZoom(ZOOM_STEP); });
+        output.addEventListener('click', function () { setZoom(100); });
+        wrap.addEventListener('wheel', function (event) {
+            if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
+            event.preventDefault();
+            wheelAccum += event.deltaY;
+            while (Math.abs(wheelAccum) >= NOTCH) {
+                changeZoom(wheelAccum > 0 ? -WHEEL_STEP : WHEEL_STEP);
+                wheelAccum -= wheelAccum > 0 ? NOTCH : -NOTCH;
+            }
+        }, { passive: false });
+        setZoom(100);
     }
 
     function dataUrlToBlobUrl(dataUrl) {
