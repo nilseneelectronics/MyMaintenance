@@ -2656,13 +2656,22 @@ function openAddDocPopup() {
         if (info.cls === 'file-image' && data) {
             body.innerHTML = '<div class="preview-image-viewer">'
                 + '<div class="pdfv-toolbar doc-image-toolbar" aria-label="Image zoom">'
+                + '<button type="button" class="pdfv-btn" title="Previous image" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>'
+                + '<input type="number" class="pdfv-page-input" min="1" max="1" value="1" aria-label="Image" readonly>'
+                + '<span class="pdfv-page-total">/ 1</span>'
+                + '<button type="button" class="pdfv-btn" title="Next image" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>'
+                + '<span class="pdfv-divider"></span>'
                 + '<button type="button" class="pdfv-btn" data-image-zoom="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg></button>'
                 + '<output class="pdfv-zoom-label" title="Reset zoom">100%</output>'
                 + '<button type="button" class="pdfv-btn" data-image-zoom="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>'
+                + '<button type="button" class="pdfv-btn" data-image-action="fit" title="Fit image"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 4h16v2H4V4zm0 14h16v2H4v-2zm2-8h12v4H6v-4z"/></svg></button>'
+                + '<span class="pdfv-divider"></span>'
+                + '<button type="button" class="pdfv-btn" data-image-action="print" title="Print"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg></button>'
+                + '<button type="button" class="pdfv-btn" data-image-action="share" title="Open / share"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H5v12h12v-6h2v8H3V5h2z"/></svg></button>'
                 + '</div>'
                 + '<div class="preview-img-wrap"><div class="preview-image-stage"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div></div>'
                 + '</div>';
-            initImageZoom(body);
+            initImageZoom(body, data, it.fileName || it.name || 'image');
         } else if (info.cls === 'file-pdf' && data) {
             body.innerHTML = '';
             if (window.MyPdfViewer) {
@@ -2715,7 +2724,7 @@ function openAddDocPopup() {
         document.body.style.overflow = 'hidden';
     }
 
-    function initImageZoom(body) {
+    function initImageZoom(body, data, name) {
         const ZOOM_STEP = 15;
         const WHEEL_STEP = 8;
         const MIN_ZOOM = 50;
@@ -2726,6 +2735,9 @@ function openAddDocPopup() {
         const output = body.querySelector('.doc-image-toolbar output');
         const zoomOut = body.querySelector('[data-image-zoom="out"]');
         const zoomIn = body.querySelector('[data-image-zoom="in"]');
+        const fit = body.querySelector('[data-image-action="fit"]');
+        const print = body.querySelector('[data-image-action="print"]');
+        const share = body.querySelector('[data-image-action="share"]');
         let zoom = 100;
         let wheelAccum = 0;
 
@@ -2746,6 +2758,9 @@ function openAddDocPopup() {
         zoomOut.addEventListener('click', function () { changeZoom(-ZOOM_STEP); });
         zoomIn.addEventListener('click', function () { changeZoom(ZOOM_STEP); });
         output.addEventListener('click', function () { setZoom(100); });
+        fit.addEventListener('click', function () { setZoom(100); });
+        print.addEventListener('click', function () { printImage(data, name); });
+        share.addEventListener('click', function () { shareImage(data, name); });
         wrap.addEventListener('wheel', function (event) {
             if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
             event.preventDefault();
@@ -2758,14 +2773,45 @@ function openAddDocPopup() {
         setZoom(100);
     }
 
+    function printImage(data, name) {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'position:fixed;left:-9999px;width:0;height:0;border:0';
+        document.body.appendChild(frame);
+        const doc = frame.contentDocument;
+        doc.open();
+        doc.write('<!doctype html><html><head><title>' + escapeHtml(name) + '</title><style>html,body{margin:0}img{display:block;max-width:100%;max-height:100vh;margin:auto;object-fit:contain}</style></head><body><img src="' + data + '"></body></html>');
+        doc.close();
+        frame.onload = function () {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+            setTimeout(function () { frame.remove(); }, 100);
+        };
+    }
+
+    function shareImage(data, name) {
+        const blob = dataUrlToBlob(data);
+        const file = new File([blob], name, { type: blob.type });
+        if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+            navigator.share({ files: [file], title: name }).catch(function () {
+                window.open(dataUrlToBlobUrl(data), '_blank');
+            });
+            return;
+        }
+        window.open(dataUrlToBlobUrl(data), '_blank');
+    }
+
+    function dataUrlToBlob(dataUrl) {
+        const parts = dataUrl.split(',');
+        const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+        const bin = atob(parts[1]);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return new Blob([out], { type: mime });
+    }
+
     function dataUrlToBlobUrl(dataUrl) {
         try {
-            const parts = dataUrl.split(',');
-            const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
-            const bin = atob(parts[1]);
-            const out = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-            return URL.createObjectURL(new Blob([out], { type: mime }));
+            return URL.createObjectURL(dataUrlToBlob(dataUrl));
         } catch (err) {
             return dataUrl;
         }
