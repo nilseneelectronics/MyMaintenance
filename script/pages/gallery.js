@@ -9,8 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const OVERRIDES_KEY = STORAGE_KEY + '_overrides';
 
     const pageParams = new URLSearchParams(window.location.search);
-    const assetId = pageParams.get('id') || '';
+    let assetId = pageParams.get('id') || '';
     const assetType = window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home';
+    let photoLoadToken = 0;
 
     function loadStoredPhotos() {
         return [];
@@ -39,6 +40,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return visibleDefaults.concat(storedPhotos);
     }
     let photos = buildPhotos();
+
+    async function loadAssetPhotos(nextId) {
+        assetId = nextId || '';
+        const token = ++photoLoadToken;
+        storedPhotos = [];
+        photos = buildPhotos();
+        currentIndex = 0;
+        syncPhotoPresentation();
+        renderGallery();
+        if (!assetId || !window.MyMaintenancePhotos) return;
+        try {
+            const remotePhotos = await window.MyMaintenancePhotos.list(assetId, assetType);
+            if (token !== photoLoadToken) return;
+            storedPhotos = remotePhotos;
+            photos = buildPhotos();
+            currentIndex = 0;
+            syncPhotoPresentation();
+            renderGallery();
+        } catch (error) {
+            if (token === photoLoadToken) console.error('Could not load photos:', error);
+        }
+    }
 
     let currentIndex = 0;
     let galleryEditMode = false;
@@ -516,12 +539,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            const targetAssetId = assetId;
             const uploaded = await Promise.all(pendingPhotos.map(async (photo) => {
                 const response = await fetch(photo.src);
                 const blob = await response.blob();
                 const file = new File([blob], 'photo.' + ((blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')), { type: blob.type || 'image/jpeg' });
-                return window.MyMaintenancePhotos.upload(assetId, assetType, file, photo.text || '');
+                return window.MyMaintenancePhotos.upload(targetAssetId, assetType, file, photo.text || '');
             }));
+            if (targetAssetId !== assetId) return;
             storedPhotos = storedPhotos.concat(uploaded);
         } catch (error) {
             console.error('Could not upload photos:', error);
@@ -535,16 +560,11 @@ document.addEventListener('DOMContentLoaded', () => {
         openGallery();
     });
 
-    if (window.MyMaintenancePhotos && assetId) {
-        window.MyMaintenancePhotos.list(assetId, assetType).then(function (remotePhotos) {
-            storedPhotos = remotePhotos;
-            photos = buildPhotos();
-            syncPhotoPresentation();
-            renderGallery();
-        }).catch(function (error) {
-            console.error('Could not load photos:', error);
-        });
-    }
+    window.addEventListener('asset:selected', function (event) {
+        if (!event.detail || event.detail.type !== assetType) return;
+        loadAssetPhotos(event.detail.id || '');
+    });
+    if (assetId) loadAssetPhotos(assetId);
 
     document.addEventListener('keydown', (event) => {
         if (deletePopup && deletePopup.style.display === 'flex') {

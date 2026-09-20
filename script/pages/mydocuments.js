@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delete extra.payloadInDB;
         delete extra.homeId;
         delete extra.vehicleId;
+        delete extra.neighborhoodId;
         return {
             id: item.id,
             title: item.name,
@@ -133,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             file_path: item.filePath || null,
             home_id: item.homeId || null,
             vehicle_id: item.vehicleId || null,
+            neighborhood_id: item.neighborhoodId || null,
             extracted_data: extra
         };
     }
@@ -159,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
             filePath: row.file_path || '',
             homeId: row.home_id || '',
             vehicleId: row.vehicle_id || '',
+            neighborhoodId: row.neighborhood_id || '',
             uploaded: String(extra.uploaded || row.created_at || '').slice(0, 10),
             created: extra.created || new Date(row.created_at || Date.now()).getTime()
         });
@@ -171,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rows = await db.request('documents', { query: { select: '*', order: 'created_at.desc' } });
             items = (rows || []).map(documentFromRow);
             updateView();
+            window.dispatchEvent(new CustomEvent('mydocs:changed'));
         } catch (error) {
             console.error('Could not load documents:', error);
         }

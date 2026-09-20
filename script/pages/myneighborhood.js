@@ -970,6 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delete extra.payloadInDB;
         delete extra.homeId;
         delete extra.vehicleId;
+        delete extra.neighborhoodId;
         return {
             id: item.id,
             title: item.name,
@@ -978,19 +979,20 @@ document.addEventListener('DOMContentLoaded', () => {
             file_path: item.filePath || null,
             home_id: null,
             vehicle_id: null,
+            neighborhood_id: item.neighborhoodId || null,
             extracted_data: extra
         };
     }
 
     function persistNeighborhoodDocument(item) {
         const db = window.MyMaintenanceData;
-        if (!db || !item || !item.id) return;
-        db.request('documents', {
+        if (!db || !item || !item.id) return Promise.reject(new Error('Document is not ready to save.'));
+        return db.request('documents', {
             method: 'POST',
             query: { on_conflict: 'id' },
             body: neighborhoodDocumentRow(item),
             prefer: 'resolution=merge-duplicates,return=representation'
-        }).catch(function (error) { console.error('Could not save neighborhood document:', error); });
+        });
     }
 
     function renderDocs() {
@@ -1000,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const asset = 'Neighborhood: ' + (nb ? nb.name || 'Neighborhood' : 'Neighborhood');
         let docs = [];
         if (window.MyMaintenanceDocs) docs = window.MyMaintenanceDocs.getItems().filter(function (d) {
-            return String(d.asset || '').trim() === asset;
+            return d.neighborhoodId === (nb && nb.id) || (!d.neighborhoodId && String(d.asset || '').trim() === asset);
         });
         const recent = docs.slice().sort(function (a, b) {
             return String(b.uploaded || '').localeCompare(String(a.uploaded || ''));
@@ -1370,14 +1372,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: crypto.randomUUID(),
                 name: name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed: performed,
                 asset: 'Neighborhood: ' + (nb.name || 'Neighborhood'), privacy: privacy, docType: docType,
+                neighborhoodId: nb.id,
                 type: db.fileMime ? db.fileMime(file) : file.type, uploaded: new Date().toISOString(),
                 filePath: `${userId}/neighborhoods/${nb.id}/documents/${crypto.randomUUID()}-${safeName}`
             };
             await db.upload(doc.filePath, file);
+            try {
+                await persistNeighborhoodDocument(doc);
+            } catch (error) {
+                await db.removeFile(doc.filePath).catch(function () {});
+                throw error;
+            }
             if (!nb.docs) nb.docs = [];
             nb.docs.push(doc);
-            await saveNeighborhoods();
-            persistNeighborhoodDocument(doc);
+            try {
+                await persistNeighborhood(nb);
+            } catch (error) {
+                console.error('Could not update neighborhood document cache:', error);
+            }
             document.getElementById('nb-doc-add-popup').style.display = 'none';
             if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.refresh) {
                 await window.MyMaintenanceDocs.refresh();
@@ -1422,6 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensurePreview();
 
     /* "Add people" via roles - a small add-role button is useful */
+    window.addEventListener('mydocs:changed', renderDocs);
     render();
     loadNeighborhoods();
 });

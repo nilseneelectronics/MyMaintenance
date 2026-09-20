@@ -222,6 +222,18 @@
         return list.filter(function (r) { return assetLabel(r) === label; })[0] || null;
     }
 
+    function publishAssetSelection() {
+        const record = currentRecord();
+        const id = record && record.id ? record.id : '';
+        const url = new URL(window.location.href);
+        if (id) url.searchParams.set('id', id);
+        else url.searchParams.delete('id');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+        window.dispatchEvent(new CustomEvent('asset:selected', {
+            detail: { id: id, type: pageAssetType() === 'homes' ? 'home' : 'vehicle' }
+        }));
+    }
+
     function buildAssetMenu() {
         const menu = document.querySelector('.address-selector .dropdown-menu');
         if (!menu) return;
@@ -260,6 +272,7 @@
         infoEditMode = false;
         renderAssetInfo();
         renderFloorplans();
+        publishAssetSelection();
     }
 
     function selectAssetById(id) {
@@ -282,6 +295,7 @@
         infoEditMode = false;
         renderAssetInfo();
         renderFloorplans();
+        publishAssetSelection();
     }
 
     function syncSelectedAsset() {
@@ -765,6 +779,8 @@
             renderDocs();
             infoEditMode = false;
             renderAssetInfo();
+            renderFloorplans();
+            publishAssetSelection();
         };
     }
 
@@ -774,8 +790,11 @@
         if (initial && REGISTER_LABELS.indexOf(initial) === -1) {
             currentAssetName = initial;
         }
+        const params = new URLSearchParams(window.location.search);
+        currentAssetId = params.get('id') || null;
         buildAssetMenu();
         syncSelectedAsset();
+        publishAssetSelection();
         wireAddressMenu();
         wireAddMaintenance();
         wireShowAllDocs();
@@ -788,9 +807,6 @@
         renderDocs();
         renderAssetInfo();
         renderFloorplans();
-        const params = new URLSearchParams(window.location.search);
-        const assetId = params.get('id');
-        if (assetId) selectAssetById(assetId);
         window.addEventListener('myevents:changed', renderPlanned);
         window.addEventListener('mydocs:changed', renderDocs);
         window.addEventListener('floorplans:changed', renderFloorplans);
@@ -802,6 +818,7 @@
             renderDocs();
             renderAssetInfo();
             renderFloorplans();
+            publishAssetSelection();
         });
         window.addEventListener('home:registered', registerAssetHandler());
         window.addEventListener('vehicle:registered', registerAssetHandler());
