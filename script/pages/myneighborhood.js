@@ -853,7 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderNbThumbs();
     }
     function renderPhotoThumbs() {
-        const nb = current();
         const grid = document.getElementById('nbp-photo-grid');
         const noPhotos = document.getElementById('nbp-no-photos');
         const imgs = pendingPhotoUploads;
@@ -864,15 +863,25 @@ document.addEventListener('DOMContentLoaded', () => {
             w.className = 'done-photo-thumb';
             const img = document.createElement('img');
             img.src = p.dataUrl;
+            img.alt = 'Picture ' + (i + 1);
             w.appendChild(img);
             const del = document.createElement('button');
-            del.className = 'done-photo-del';
-            del.textContent = '×';
+            del.type = 'button';
+            del.className = 'photo-remove';
+            del.setAttribute('aria-label', 'Remove picture');
+            del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M256-200q-23.53 0-40.26-16.74Q199-233.47 199-257v-483h-13v-60h188v-30h212v30h188v60h-13v483q0 23.53-16.74 40.26Q716.53-200 693-200H256Zm103-100h60v-336h-60v336Zm182 0h60v-336h-60v336Z"/></svg>';
             del.addEventListener('click', () => {
                 imgs.splice(i, 1);
                 renderPhotoThumbs();
             });
+            const txt = document.createElement('input');
+            txt.type = 'text';
+            txt.className = 'ap-photo-text';
+            txt.placeholder = 'Photo text...';
+            txt.value = p.text || '';
+            txt.addEventListener('input', () => { p.text = txt.value; });
             w.appendChild(del);
+            w.appendChild(txt);
             grid.appendChild(w);
         });
     }
@@ -1239,10 +1248,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('nbp-save').addEventListener('click', async () => {
         const nb = current();
-        if (!nb || !pendingPhotoUploads.length) {
-            document.getElementById('nb-add-photos-popup').style.display = 'none';
+        if (!pendingPhotoUploads.length) {
+            window.MyMaintenanceCommonUi.alert('Please add at least one picture.');
             return;
         }
+        if (!nb) return window.MyMaintenanceCommonUi.alert('This neighborhood is not ready for photo uploads yet.');
         const db = window.MyMaintenanceData;
         const userId = db && await db.userId();
         if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
@@ -1254,7 +1264,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     filePath: `${userId}/neighborhoods/${nb.id}/photos/${crypto.randomUUID()}-${safeName}`,
                     fileName: pending.file.name,
                     type: db.fileMime ? db.fileMime(pending.file) : pending.file.type,
-                    dataUrl: pending.dataUrl
+                    dataUrl: pending.dataUrl,
+                    text: pending.text || ''
                 };
                 await db.upload(photo.filePath, pending.file);
                 photos.push(photo);
@@ -1266,11 +1277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload picture.');
         }
-    });
-    nbPhotoPopup.addEventListener('keyup', (event) => {
-        if (event.key !== 'Enter' || event.target.id === 'nbp-save') return;
-        event.preventDefault();
-        document.getElementById('nbp-save').click();
     });
     document.getElementById('nb-view-all-photos').addEventListener('click', () => { renderGallery(); document.getElementById('nb-gallery-modal').style.display = 'flex'; });
     document.getElementById('nb-gallery-close').addEventListener('click', () => { document.getElementById('nb-gallery-modal').style.display = 'none'; });
@@ -1301,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 });
-                pendingPhotoUploads.push({ file: file, dataUrl: dataUrl });
+                pendingPhotoUploads.push({ file: file, dataUrl: dataUrl, text: '' });
             }));
             renderPhotoThumbs();
         } catch (error) {

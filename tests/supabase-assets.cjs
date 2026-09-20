@@ -11,6 +11,7 @@ const assets = read('script/pages/asset-boxes.js');
 const gallery = read('script/pages/gallery.js');
 const documents = read('script/pages/mydocuments.js');
 const neighborhood = read('script/pages/myneighborhood.js');
+const neighborhoodPage = read('pages/myneighborhood.html');
 
 for (const table of ['projects', 'floorplans', 'asset_photos']) {
     assert.match(migration, new RegExp(`grant select, insert, update, delete on public\\.${table} to authenticated, service_role`));
@@ -27,5 +28,10 @@ assert.match(documents, /neighborhood_id: item\.neighborhoodId \|\| null/);
 assert.match(documents, /neighborhoodId: row\.neighborhood_id \|\| ''/);
 assert.match(neighborhood, /await persistNeighborhoodDocument\(doc\)/);
 assert.match(neighborhood, /neighborhoodId: nb\.id/);
+assert.match(neighborhood, /del\.className = 'photo-remove'/);
+assert.match(neighborhood, /txt\.className = 'ap-photo-text'/);
+assert.match(neighborhood, /text: pending\.text \|\| ''/);
+assert.doesNotMatch(neighborhoodPage, /id="nbp-photo-options"/);
+assert.match(neighborhoodPage, /<label>Pictures<\/label>/);
 
-console.log('PASS: Supabase grants, asset photo selection, and neighborhood document persistence are wired.');
+console.log('PASS: Supabase assets, neighborhood documents, and matching photo upload controls are wired.');
