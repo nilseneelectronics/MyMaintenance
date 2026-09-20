@@ -2654,13 +2654,13 @@ function openAddDocPopup() {
             data = '';
         }
         if (info.cls === 'file-image' && data) {
-            body.innerHTML = '<div class="preview-img-wrap">'
-                + '<div class="doc-image-zoom-controls" aria-label="Image zoom">'
-                + '<button type="button" data-image-zoom="out" aria-label="Zoom out">−</button>'
-                + '<output>100%</output>'
-                + '<button type="button" data-image-zoom="in" aria-label="Zoom in">+</button>'
+            body.innerHTML = '<div class="preview-image-viewer">'
+                + '<div class="pdfv-toolbar doc-image-toolbar" aria-label="Image zoom">'
+                + '<button type="button" class="pdfv-btn" data-image-zoom="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg></button>'
+                + '<output class="pdfv-zoom-label" title="Reset zoom">100%</output>'
+                + '<button type="button" class="pdfv-btn" data-image-zoom="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>'
                 + '</div>'
-                + '<div class="preview-image-stage"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>'
+                + '<div class="preview-img-wrap"><div class="preview-image-stage"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div></div>'
                 + '</div>';
             initImageZoom(body);
         } else if (info.cls === 'file-pdf' && data) {
@@ -2718,7 +2718,7 @@ function openAddDocPopup() {
     function initImageZoom(body) {
         const steps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
         const image = body.querySelector('.preview-media');
-        const output = body.querySelector('.doc-image-zoom-controls output');
+        const output = body.querySelector('.doc-image-toolbar output');
         const zoomOut = body.querySelector('[data-image-zoom="out"]');
         const zoomIn = body.querySelector('[data-image-zoom="in"]');
         let index = steps.indexOf(100);
@@ -2734,6 +2734,7 @@ function openAddDocPopup() {
 
         zoomOut.addEventListener('click', function () { setZoom(index - 1); });
         zoomIn.addEventListener('click', function () { setZoom(index + 1); });
+        output.addEventListener('click', function () { setZoom(steps.indexOf(100)); });
         setZoom(index);
     }
 
