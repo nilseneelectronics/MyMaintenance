@@ -11,6 +11,10 @@
 
 /* Uses the shared MyHomes/MyVehicles grid rules. */
 
+#nb-big-photo-container > img {
+    cursor: pointer;
+}
+
 /* Neighborhood becomes a full-width single column sooner on narrow screens. */
 @media (max-width: 747px) {
     .homes-content-grid:has(#nb-photo-box) {
@@ -172,6 +176,62 @@
     background: var(--hover-bg);
 }
 
+.nb-member-move-dropdown {
+    width: 100%;
+    min-width: 0;
+    margin-top: 14px;
+}
+
+.nb-member-move-dropdown .dropdown-toggle {
+    min-height: 42px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
+    background: var(--bg-primary);
+    color: var(--accent-primary);
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
+.nb-member-move-dropdown .dropdown-menu {
+    width: 100% !important;
+    max-height: 0;
+    border: none;
+    border-radius: 0 0 18px 18px;
+}
+
+.nb-member-move-dropdown.open .dropdown-toggle {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.nb-member-move-dropdown.open .dropdown-menu {
+    max-height: 220px;
+    border: 2px solid var(--accent-primary);
+    border-top: none;
+}
+
+.nb-kick-btn {
+    width: 100%;
+    height: 38px;
+    box-sizing: border-box;
+    padding: 9px 16px;
+    border: 2px solid var(--delete-red);
+    border-radius: 25px;
+    background: transparent;
+    color: var(--delete-red);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    margin-top: 14px;
+}
+
+.nb-kick-btn:hover {
+    background: var(--delete-red);
+    color: #fff;
+}
+
 .nb-empty {
     grid-column: 1 / -1;
     color: var(--text-secondary);
@@ -253,7 +313,7 @@
 
 .nb-house-invite-row {
     display: grid;
-    grid-template-columns: 90px minmax(220px, 1fr) minmax(120px, 180px) 140px;
+    grid-template-columns: 90px minmax(220px, 1fr) 140px;
     align-items: center;
     gap: 10px;
     padding-top: 10px;
@@ -284,6 +344,11 @@
 
 .nb-send-invite-btn {
     width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 9px 16px;
     border: 0;
     border-radius: 999px;
@@ -292,6 +357,53 @@
     cursor: pointer;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
+}
+
+.nb-no-move {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border: 2px solid var(--accent-primary);
+    border-radius: 25px;
+    background: var(--bg-primary);
+    color: var(--accent-primary);
+    cursor: pointer;
+    margin-top: 0;
+    font: inherit;
+    font-size: 0.82rem;
+}
+
+.nb-no-move:hover {
+    background: var(--accent-primary);
+    color: #fff;
+}
+
+.nb-house-invite-row .nb-send-invite-btn,
+.nb-house-invite-row .nb-creator-marker {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.nb-house-invite-row .nb-send-invite-btn:not(.pending) {
+    grid-row: 1;
+    align-self: start;
+    margin-top: 0;
+}
+
+.nb-house-invite-row .nb-member-move-dropdown {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 0;
+}
+
+.nb-house-invite-row .nb-kick-btn {
+    grid-column: 3;
+    grid-row: 2;
+    align-self: start;
+    margin-top: 14px;
 }
 
 .nb-send-invite-btn:disabled {
@@ -303,6 +415,8 @@
     background: transparent;
     color: #d97706;
     border: 1px solid #d97706;
+    align-self: start;
+    margin-top: 0;
 }
 
 .nb-send-invite-btn.pending:hover {
@@ -316,7 +430,7 @@
 }
 
 .nb-house-residents {
-    margin-top: 8px;
+    margin-top: 14px;
     color: var(--text-secondary);
     font-size: 0.82rem;
 }
@@ -760,6 +874,15 @@
 
     .nb-send-invite-btn {
         width: 100%;
+    }
+
+    .nb-house-invite-row .nb-send-invite-btn,
+    .nb-house-invite-row .nb-creator-marker,
+    .nb-house-invite-row .nb-member-move-dropdown,
+    .nb-house-invite-row .nb-kick-btn,
+    .nb-house-invite-row .nb-no-move {
+        grid-column: 1;
+        grid-row: auto;
     }
 
     .nb-person-header,

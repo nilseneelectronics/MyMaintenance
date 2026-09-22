@@ -10,7 +10,7 @@ const commonDialogs = (function () {
         const request = queue.shift();
         const previousFocus = document.activeElement;
         const dialog = document.createElement('dialog');
-        dialog.className = 'mm-message-dialog';
+         dialog.className = 'mm-message-dialog' + (request.destructive ? ' destructive' : '');
         dialog.setAttribute('aria-labelledby', 'mm-message-title');
         dialog.setAttribute('aria-describedby', 'mm-message-body');
         dialog.innerHTML = '<h3 id="mm-message-title"></h3><p id="mm-message-body"></p><div class="mm-message-actions"><button type="button" class="mm-message-cancel"></button><button type="button" class="mm-message-confirm"></button></div>';
@@ -71,9 +71,17 @@ const commonDialogs = (function () {
     };
 })();
 
+function friendlyErrorMessage(message) {
+    const text = String(message || '');
+    if (/failed to fetch|networkerror|network request failed|load failed/i.test(text)) {
+        return 'We could not connect to vedlikeholdt.no. Check your internet connection and try again.';
+    }
+    return message;
+}
+
 window.MyMaintenanceCommonUi = {
-    alert: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: false })); },
-    confirm: function (message, options) { return commonDialogs(message, Object.assign({}, options, { confirm: true })); },
+    alert: function (message, options) { return commonDialogs(friendlyErrorMessage(message), Object.assign({}, options, { confirm: false })); },
+    confirm: function (message, options) { return commonDialogs(friendlyErrorMessage(message), Object.assign({}, options, { confirm: true })); },
     confirmDiscard: function (onDiscard) {
         return this.confirm('Your unsaved changes will be lost.', {
             title: 'Discard changes?', cancelLabel: 'Keep editing', confirmLabel: 'Discard', escapeResult: true

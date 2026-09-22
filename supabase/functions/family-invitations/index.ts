@@ -217,10 +217,11 @@ Deno.serve(async request => {
         } });
     }
     const origin = request.headers.get('origin') || '';
-    const cors = { 'Access-Control-Allow-Origin': allowedOrigins.has(origin) ? origin : site,
+    const localOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    const cors = { 'Access-Control-Allow-Origin': allowedOrigins.has(origin) || localOrigin ? origin : site,
         'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info', 'Access-Control-Allow-Methods': 'POST, OPTIONS', Vary: 'Origin' };
     const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
-    if (origin && !allowedOrigins.has(origin)) return reply({ error: 'Origin not allowed.' }, 403);
+    if (origin && !allowedOrigins.has(origin) && !localOrigin) return reply({ error: 'Origin not allowed.' }, 403);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method !== 'POST') return reply({ error: 'Method not allowed.' }, 405);
     const authorization = request.headers.get('authorization') || '';
@@ -288,6 +289,28 @@ Deno.serve(async request => {
         if (body.action === 'notifications') {
             return reply({ notifications: await syncNotifications(user) });
         }
+        if (body.action === 'neighborhood-removed') {
+            if (!/^[0-9a-f-]{36}$/i.test(body.neighborhoodId || '') || !/^[0-9a-f-]{36}$/i.test(body.userId || '')) throw new Error('Invalid neighborhood removal.');
+            const neighborhoods = await database('neighborhoods?id=eq.' + body.neighborhoodId + '&owner_id=eq.' + user.id + '&select=id,name');
+            if (!neighborhoods.length) throw new Error('Only the neighborhood administrator can remove residents.');
+            const profiles = await database('profiles?id=eq.' + body.userId + '&select=display_name,details');
+            const target = profiles[0] || {};
+            const email = String(target.details?.profile?.email || '').trim().toLowerCase();
+            const name = String(target.details?.profile?.name || target.display_name || email || 'there').trim();
+            if (!email || !env('SMTP_HOST') || !env('SMTP_USER') || !env('SMTP_PASSWORD') || !env('SMTP_FROM')) return reply({ notified: false });
+            const transport = mailTransport();
+            try {
+                await transport.sendMail({
+                    from: { name: 'Vedlikeholdt', address: env('SMTP_FROM') },
+                    to: email,
+                    subject: 'Your neighborhood access was removed',
+                    text: `Hi ${name},\n\nYour access to ${neighborhoods[0].name || 'this neighborhood'} was removed by its administrator.`,
+                    html: brandedEmail('Neighborhood access removed', `Hi ${name}, your access to ${neighborhoods[0].name || 'this neighborhood'} was removed by its administrator.`, 'Open Vedlikeholdt', site, 'If you believe this was a mistake, contact the neighborhood administrator.'),
+                    attachments: emailAttachments()
+                });
+            } finally { transport.close(); }
+            return reply({ notified: true });
+        }
         if (body.action === 'list') {
             // A family invitation belongs in both people's settings: the sender sees
             // the member they invited, while the recipient sees the invitation before
@@ -341,9 +364,9 @@ Deno.serve(async request => {
             for (const neighborhoodInvite of neighborhoodInvites) {
                 const joined = await database('rpc/accept_neighborhood_invitation', 'POST', { p_id: neighborhoodInvite.id, p_user: user.id, p_email: user.email });
                 await addAcceptedResident(Array.isArray(joined) ? joined[0] : joined, user);
-                await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + neighborhoodInvite.id, 'DELETE');
+                await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + neighborhoodInvite.id, 'PATCH', { read_at: new Date().toISOString() });
             }
-            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.family_invitation&reference_id=eq.' + body.id, 'DELETE');
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.family_invitation&reference_id=eq.' + body.id, 'PATCH', { read_at: new Date().toISOString() });
             return reply({ accepted: true });
         }
         if (body.action === 'reject') {
@@ -351,7 +374,7 @@ Deno.serve(async request => {
             const table = body.kind === 'neighborhood' ? 'neighborhood_invitations' : 'family_invitations';
             const rejected = await database(table + '?id=eq.' + body.id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending', 'PATCH', { status: 'rejected' });
             if (!rejected.length) throw new Error('Invitation not found for your email address.');
-            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (body.kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'DELETE');
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (body.kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'PATCH', { title: 'Invitation declined', body: 'This invitation was declined.', read_at: new Date().toISOString() });
             return reply({ rejected: true });
         }
         if (body.action === 'cancel') {
@@ -375,6 +398,12 @@ Deno.serve(async request => {
                 return reply({ cancelled: true });
             }
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
+            if (body.kind === 'neighborhood') {
+                const cancelled = await database('neighborhood_invitations?id=eq.' + body.id + '&inviter_id=eq.' + user.id + '&status=eq.pending', 'PATCH', { status: 'cancelled' });
+                if (!cancelled.length) throw new Error('Neighborhood invitation not found or already used.');
+                await database('notifications?kind=eq.neighborhood_invitation&reference_id=eq.' + body.id, 'PATCH', { title: 'Neighborhood invitation canceled', body: 'This neighborhood invitation is no longer active.', read_at: new Date().toISOString() });
+                return reply({ cancelled: true });
+            }
             await database('family_invitations?id=eq.' + body.id + '&inviter_id=eq.' + user.id + '&status=in.(pending,accepted)', 'PATCH', { status: 'cancelled' });
             return reply({ cancelled: true });
         }
