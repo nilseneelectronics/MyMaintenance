@@ -13,6 +13,11 @@ assert.match(source, /id: person\.invitationId \|\| ''/);
 assert.match(source, /kind: 'neighborhood'/);
 assert.match(source, /neighborhoodId: builderModel\.id/);
 assert.match(source, /email: person\.email/);
+assert.match(source, /person\.userId === ownerId/);
+assert.doesNotMatch(source, /person\.userId === me\.id/);
+assert.match(source, /!creator && !joined && !pending/);
+assert.match(source, /pending \? \(isAdmin \? 'Cancel invite' : 'Pending'\)/);
+assert.match(source, /invite\.disabled = joined \|\| \(pending && !isAdmin\)/);
 assert.match(styles, /\.nb-popup-wide\s*\{[^}]*max-width: 820px/s);
 assert.match(styles, /\.nb-invite-status\s*\{[^}]*text-overflow: ellipsis/s);
 

@@ -126,9 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ---- Address / people builder ---- */
     function isCreatorPerson(person) {
         if (!person) return false;
-        return Boolean((me.id && person.userId === me.id) ||
-            (me.email && String(person.email || '').toLowerCase() === String(me.email).toLowerCase()) ||
-            (me.name && String(person.name || '').trim().toLowerCase() === String(me.name).trim().toLowerCase()));
+        const ownerId = builderModel && (builderModel._ownerId || (!builderModel._dbId && isAdmin ? me.id : ''));
+        return Boolean(ownerId && person.userId === ownerId);
     }
 
     function ensureAddressPeople(addr, idx) {
@@ -275,12 +274,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addr.people.forEach((person, personIndex) => {
             const creator = isCreatorPerson(person);
             const joined = Boolean(person.userId && !creator);
+            const pending = person.invitationStatus === 'invited';
             const line = document.createElement('div');
             line.className = 'nb-house-invite-row nb-person-invite-line';
             const personLabel = document.createElement('span');
             personLabel.textContent = creator ? 'Creator' : ('Person ' + (personIndex + 1));
             let emailControl;
-            if (!isAdmin && !creator && !joined && person.invitationStatus !== 'cancelled') {
+            if (!isAdmin && !creator && !joined && !pending && person.invitationStatus !== 'cancelled') {
                 emailControl = document.createElement('select');
                 const empty = document.createElement('option');
                 empty.value = '';
@@ -295,32 +295,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.selected = option.value === (person.email || '');
                     if (option.value) emailControl.appendChild(option);
                 });
-                emailControl.disabled = person.invitationStatus === 'invited';
             } else {
                 emailControl = document.createElement('input');
                 emailControl.type = 'email';
                 emailControl.placeholder = 'resident@example.com';
                 emailControl.value = person.email || '';
-                emailControl.readOnly = creator || joined || person.invitationStatus === 'invited' || (!isAdmin && person.invitationStatus === 'cancelled');
+                emailControl.readOnly = creator || joined || pending || (!isAdmin && person.invitationStatus === 'cancelled');
             }
             emailControl.dataset.field = 'personEmail';
             emailControl.dataset.person = String(personIndex);
             const status = document.createElement('span');
             status.className = 'nb-invite-status';
             status.textContent = creator ? (person.name || me.name || 'Neighborhood creator') :
-                (joined ? (person.name || 'Joined') : (person.invitationStatus === 'invited' ? 'Invite pending' : ''));
+                (joined ? (person.name || 'Joined') : (pending ? 'Invite pending' : ''));
             line.appendChild(personLabel);
             line.appendChild(emailControl);
             line.appendChild(status);
             if (!creator) {
                 const invite = document.createElement('button');
                 invite.type = 'button';
-                invite.className = 'nb-send-invite-btn' + (person.invitationStatus === 'invited' ? ' pending' : '');
-                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Cancel invite' : 'Send invite');
-                invite.disabled = joined;
+                invite.className = 'nb-send-invite-btn' + (pending ? ' pending' : '');
+                invite.textContent = joined ? 'Joined' : (pending ? (isAdmin ? 'Cancel invite' : 'Pending') : 'Send invite');
+                invite.disabled = joined || (pending && !isAdmin);
                 invite.addEventListener('click', async () => {
                     readBuilderIntoModel(builderModel);
-                    if (person.invitationStatus === 'invited') {
+                    if (pending) {
                         invite.disabled = true;
                         invite.textContent = 'Cancelling...';
                         try {
@@ -593,10 +592,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (p && (p.email || p.name)) roles.push({ email: p.email || '', name: p.name || '', role: p.role || 'view' });
             });
         });
-        // Creator is automatically administrator (superuser).
-        const meAlreadyInRoles = roles.some(r => (me.email ? r.email === me.email : r.name === me.name));
-        if (!meAlreadyInRoles) {
-            roles.unshift({ email: me.email, name: me.name, role: 'admin' });
+        const ownerId = builderModel._ownerId || (!builderModel._dbId ? me.id : '');
+        const owner = (builderModel.addresses || []).flatMap(a => a.people || []).find(p => p.userId === ownerId);
+        if (owner) {
+            owner.role = 'admin';
+            const ownerRole = roles.find(r => String(r.email || '').toLowerCase() === String(owner.email || '').toLowerCase());
+            if (ownerRole) ownerRole.role = 'admin';
         }
         builderModel.roles = roles;
         builderModel.houses = parseInt(document.getElementById('nb-houses').value, 10) || (builderModel.addresses || []).length;
