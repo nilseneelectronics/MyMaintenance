@@ -355,17 +355,26 @@ Deno.serve(async request => {
             return reply({ rejected: true });
         }
         if (body.action === 'cancel') {
-            if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
             if (body.kind === 'neighborhood') {
-                const cancelled = await database('neighborhood_invitations?id=eq.' + body.id + '&inviter_id=eq.' + user.id + '&status=eq.pending', 'PATCH', { status: 'cancelled' });
+                const invitationId = String(body.id || '');
+                const neighborhoodId = String(body.neighborhoodId || '');
+                const email = String(body.email || '').trim().toLowerCase();
+                const byId = /^[0-9a-f-]{36}$/i.test(invitationId);
+                const byEmail = /^[0-9a-f-]{36}$/i.test(neighborhoodId) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                if (!byId && !byEmail) throw new Error('Invalid invitation.');
+                const target = byId ? 'id=eq.' + invitationId : 'neighborhood_id=eq.' + neighborhoodId + '&email=eq.' + encodeURIComponent(email);
+                const cancelled = await database('neighborhood_invitations?' + target + '&inviter_id=eq.' + user.id + '&status=eq.pending&select=id', 'PATCH', { status: 'cancelled' });
                 if (!cancelled.length) throw new Error('Neighborhood invitation not found or already used.');
-                await database('notifications?kind=eq.neighborhood_invitation&reference_id=eq.' + body.id, 'PATCH', {
-                    title: 'Neighborhood invitation canceled',
-                    body: 'This neighborhood invitation is no longer active.',
-                    read_at: new Date().toISOString()
-                });
+                for (const invitation of cancelled) {
+                    await database('notifications?kind=eq.neighborhood_invitation&reference_id=eq.' + invitation.id, 'PATCH', {
+                        title: 'Neighborhood invitation canceled',
+                        body: 'This neighborhood invitation is no longer active.',
+                        read_at: new Date().toISOString()
+                    });
+                }
                 return reply({ cancelled: true });
             }
+            if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
             await database('family_invitations?id=eq.' + body.id + '&inviter_id=eq.' + user.id + '&status=in.(pending,accepted)', 'PATCH', { status: 'cancelled' });
             return reply({ cancelled: true });
         }

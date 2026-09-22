@@ -325,8 +325,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         invite.textContent = 'Cancelling...';
                         try {
                             await window.MyMaintenanceAuth.familyRequest('cancel', {
-                                id: person.invitationId,
-                                kind: 'neighborhood'
+                                id: person.invitationId || '',
+                                kind: 'neighborhood',
+                                neighborhoodId: builderModel.id,
+                                email: person.email
                             });
                             person.invitationStatus = 'cancelled';
                             delete person.invitationId;
