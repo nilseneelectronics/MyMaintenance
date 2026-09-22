@@ -28,6 +28,7 @@ async function main() {
     assert.equal(saved[0].read, true);
     assert(saved[0].read_at);
     assert.equal(calls.some(call => call.options?.method === 'DELETE'), false);
+    assert.match(section, /bell\.addEventListener\('click', async function[\s\S]*await notifHydrateCloud\(\)/);
     console.log('PASS: accepted neighborhood notification moves to previous notifications.');
 }
 

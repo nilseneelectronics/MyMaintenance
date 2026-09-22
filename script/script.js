@@ -683,7 +683,7 @@ function initNotifications() {
     const closeBtn = document.getElementById('notif-close');
     const previousBtn = document.getElementById('notif-previous');
 
-    bell.addEventListener('click', function (e) {
+    bell.addEventListener('click', async function (e) {
         e.stopPropagation();
         notifShowingPrevious = false;
         notifSelectionMode = false;
@@ -691,6 +691,7 @@ function initNotifications() {
         notifRenderList();
         notifRenderControls();
         popup.style.display = 'flex';
+        await notifHydrateCloud();
     });
     if (selectBtn) selectBtn.addEventListener('click', function () {
         notifSelectionMode = true;
