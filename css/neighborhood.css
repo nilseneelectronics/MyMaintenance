@@ -253,7 +253,7 @@
 
 .nb-house-invite-row {
     display: grid;
-    grid-template-columns: auto minmax(180px, 1fr) auto auto;
+    grid-template-columns: minmax(70px, 90px) minmax(180px, 1fr) minmax(100px, 140px) 130px;
     align-items: center;
     gap: 10px;
     padding-top: 10px;
@@ -279,6 +279,7 @@
 }
 
 .nb-send-invite-btn {
+    width: 100%;
     padding: 9px 16px;
     border: 0;
     border-radius: 999px;
@@ -303,12 +304,6 @@
 .nb-send-invite-btn.pending:hover {
     background: #d97706;
     color: #fff;
-}
-
-.nb-creator-marker {
-    color: var(--text-secondary);
-    font-size: 0.78rem;
-    text-align: center;
 }
 
 .nb-stepper button:disabled {

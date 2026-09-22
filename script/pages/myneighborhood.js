@@ -346,9 +346,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 line.appendChild(invite);
             } else {
-                const marker = document.createElement('span');
-                marker.className = 'nb-creator-marker';
-                marker.textContent = 'Added automatically';
+                const marker = document.createElement('button');
+                marker.type = 'button';
+                marker.className = 'nb-send-invite-btn';
+                marker.textContent = 'Joined';
+                marker.disabled = true;
                 line.appendChild(marker);
             }
             peopleWrap.appendChild(line);
