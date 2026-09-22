@@ -126,16 +126,19 @@ async function reserveNeighborhoodInvite(inviter: Record<string, any>, email: st
 }
 async function sendNeighborhoodInviteEmail(inviter: Record<string, any>, invitation: Record<string, any>, email: string, neighborhoodName = 'MyNeighborhood') {
     if (!env('SMTP_HOST') || !env('SMTP_USER') || !env('SMTP_PASSWORD') || !env('SMTP_FROM')) throw new Error('Invitation email sending is not configured yet.');
+    const recipient = email.trim().toLowerCase();
+    const from = env('SMTP_FROM').trim().toLowerCase();
     const sender = await inviterName(inviter);
     const href = site + '/pages/email-action.html?neighborhood-invitation=' + invitation.id;
     const transport = mailTransport();
     try {
-        const delivery = await transport.sendMail({ from: { name: 'Vedlikeholdt', address: env('SMTP_FROM') }, to: email,
+        const delivery = await transport.sendMail({ from: { name: 'Vedlikeholdt', address: from }, to: recipient,
+            envelope: { from, to: [recipient] },
             subject: sender + ' invited you to ' + neighborhoodName + ' on Vedlikeholdt',
             text: `${sender} invited you to join ${neighborhoodName} on Vedlikeholdt. After accepting, you can add and view neighborhood photos, documents, and events, and invite your own family members.\n\nAccept here:\n${href}\n\nThis invitation expires in 7 days.`,
             html: brandedEmail('Join ' + neighborhoodName, `${sender} invited you to join this neighborhood. After accepting, you can add and view neighborhood photos, documents, and events, and invite your own family members.`, 'Accept invitation', href, 'This invitation expires in 7 days. Access starts only after you accept.'),
             attachments: emailAttachments() });
-        if (!delivery.accepted?.length) throw new Error('Rejected');
+        if (!delivery.accepted?.some((address: unknown) => String(address).trim().toLowerCase() === recipient)) throw new Error('Rejected');
     } catch (_) {
         await database('neighborhood_invitations?id=eq.' + invitation.id, 'PATCH', { status: 'failed' });
         throw new Error('The mail server did not confirm delivery. Neighborhood access was not added.');
