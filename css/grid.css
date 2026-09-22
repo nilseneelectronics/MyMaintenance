@@ -412,6 +412,94 @@
     box-sizing: border-box;
 }
 
+.support-box {
+    text-align: left;
+    position: fixed;
+    top: 150px;
+    right: 24px;
+    z-index: 50;
+    width: min(280px, calc(100vw - 32px));
+    max-height: calc(100vh - 174px);
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.support-box-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 12px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.support-box h3 {
+    margin: 0 0 8px;
+    color: var(--accent-primary);
+}
+
+.support-box > p {
+    margin: 0 0 18px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.support-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.support-request-form label {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.support-request-form textarea {
+    width: 100%;
+    min-height: 130px;
+    padding: 12px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+    font: inherit;
+    resize: vertical;
+}
+
+.support-request-form textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.support-request-form button {
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.support-request-form button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.support-request-status {
+    height: 2.6em;
+    min-height: 2.6em;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.3;
+    overflow: hidden;
+}
+
+.support-request-status.success { color: var(--accent-secondary); }
+.support-request-status.error { color: var(--delete-red); }
+
 @media (max-width: 747px) {
     .dashboard-grid {
         grid-template-columns: minmax(0, 1fr);
@@ -429,6 +517,16 @@
     .dashboard-grid .planning-box,
     .dashboard-grid .planned-maintenance-box {
         grid-column: 1 / -1;
+    }
+    .support-box {
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        width: min(320px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        min-height: 0;
+        max-height: 72vh;
+        overflow-y: auto;
     }
 }
 
@@ -469,6 +567,16 @@
     max-width: 100%;
     width: 100%;
     overflow: hidden;
+}
+
+.dashboard-grid .support-box {
+    top: 245px;
+    width: min(280px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    min-height: 600px;
+    max-height: calc(100vh - 190px);
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 /* My Homes / My Vehicles / Try MyTools / Edit MyProfile pair up in the

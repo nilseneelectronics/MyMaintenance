@@ -27,4 +27,14 @@
 }
 .mm-message-cancel { background: transparent; color: var(--text-secondary, #333); }
 .mm-message-confirm { background: var(--accent-primary, #26b6ad); color: #fff; }
+.mm-message-confirm:hover { filter: brightness(1.08); }
+.mm-message-dialog.destructive .mm-message-confirm {
+    background: transparent;
+    color: var(--delete-red, #ff4444);
+    border-color: var(--delete-red, #ff4444);
+}
+.mm-message-dialog.destructive .mm-message-confirm:hover {
+    background: var(--delete-red, #ff4444);
+    color: #fff;
+}
 .mm-message-actions button:focus-visible { outline: 3px solid var(--text-primary, #222); outline-offset: 3px; }

@@ -22,6 +22,20 @@ window.MyMaintenanceAuth = {
         return data;
     },
 
+    async supportRequest(message) {
+        const session = await this._getSupabaseSession();
+        if (!session) throw new Error('Please sign in first.');
+        const config = this._getConfig();
+        const response = await fetch(config.supabaseUrl + '/functions/v1/support-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: config.supabasePublishableKey, Authorization: 'Bearer ' + session.access_token },
+            body: JSON.stringify({ message })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Could not send your request. Please try again later.');
+        return data;
+    },
+
     safeNext() {
         const next = new URLSearchParams(location.search).get('next') || 'dashboard.html';
         const file = next.split('?')[0];
@@ -343,6 +357,7 @@ window.MyMaintenanceAuth = {
         const signinForm = document.getElementById('signin-form');
         const signupForm = document.getElementById('signup-form');
         const forgotPasswordButton = document.getElementById('forgot-password');
+        signinForm?.querySelector('input[type="email"]')?.focus();
         const resendButton = document.createElement('button');
         resendButton.type = 'button';
         resendButton.className = 'auth-forgot-password auth-resend-verification';

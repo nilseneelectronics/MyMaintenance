@@ -1704,6 +1704,11 @@ body:has(.event-modal-overlay.open) {
     box-sizing: border-box;
 }
 
+#project-context-header {
+    padding-left: 0;
+    padding-right: 0;
+}
+
 /* Sub-page headers (done tasks / all events / calendar): keep the back
    button on the left, above the centered title (z-index). On narrow
    screens the button becomes slimmer and the title shrinks so they fit

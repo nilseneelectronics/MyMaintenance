@@ -8,7 +8,7 @@
     margin: 25px auto 50px;
     width: 100%;
     position: relative;
-    padding: 0 24px;
+    padding: 0 16px;
     box-sizing: border-box;
 }
 
@@ -18,8 +18,10 @@ main h1 {
 
 .address-selector .dropdown-toggle {
     background: transparent;
-    border: none;
-    padding: 18px 0;
+    border: 2px solid var(--accent-primary);
+    border-radius: 30px;
+    padding: 14px 32px 14px 20px;
+    box-sizing: border-box;
     font-size: clamp(1.05rem, 2.4vw, 1.45rem);
     font-weight: 600;
     color: var(--text-primary);
@@ -43,11 +45,12 @@ main h1 {
     background-color: var(--bg-primary);
     border: none !important;
     border-radius: 12px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
     padding: 0;
     margin: 0;
-    top: calc(100% + 8px);
-    width: 100%;
+    top: 100%;
+    left: 16px;
+    width: calc(100% - 32px) !important;
     max-height: 0;
     overflow: hidden;
     opacity: 0;
@@ -56,6 +59,9 @@ main h1 {
 }
 
 .address-selector.open .dropdown-menu {
+    border: 2px solid var(--accent-primary) !important;
+    border-top: none !important;
+    border-radius: 0 0 30px 30px;
     max-height: 320px;
     opacity: 1;
     padding: 8px 0;
@@ -994,13 +1000,34 @@ main h1 {
     gap: 10px;
 }
 
+.address-selector.open .dropdown-toggle {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+}
+
+#nb-events-list .ev-row {
+    gap: 10px;
+}
+
 #asset-planned-list .ev-row-left {
     flex: 1 1 auto;
     min-width: 0;
     gap: 10px;
 }
 
+#nb-events-list .ev-row-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 10px;
+}
+
 #asset-planned-list .ev-cell-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#nb-events-list .ev-cell-name {
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -1013,7 +1040,21 @@ main h1 {
     text-align: left;
 }
 
+#nb-events-list .ev-cell-asset {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 38%;
+    text-align: left;
+}
+
 #asset-planned-list .ev-row-right {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 10px;
+}
+
+#nb-events-list .ev-row-right {
     flex-shrink: 1;
     min-width: 0;
     gap: 10px;
@@ -1028,8 +1069,18 @@ main h1 {
     white-space: nowrap;
 }
 
+#nb-events-list .ev-cell-date,
+#nb-events-list .ev-cell-time {
+    width: auto;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 @media (max-width: 745px) {
-    #asset-planned-list .ev-cell-asset {
+    #asset-planned-list .ev-cell-asset,
+    #nb-events-list .ev-cell-asset {
         display: none;
     }
 }

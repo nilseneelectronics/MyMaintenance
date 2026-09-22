@@ -139,6 +139,12 @@
     padding-right: 50px;
 }
 
+/* Keep Edge's native password controls from appearing beside our custom eye. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
 .password-toggle {
     position: absolute;
     right: 15px;

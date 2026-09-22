@@ -560,9 +560,10 @@ async function notifInvitationAction(notification, action) {
             id: notification.reference_id,
             kind: notification.invitationKind
         });
-        await notifDeleteCloud(notification);
-        notifItems = notifLoad().filter(function (item) { return item.id !== notification.id; });
-        notifSave(notifItems);
+        notification.read = true;
+        notification.read_at = new Date().toISOString();
+        await notifUpdateCloud(notification, true);
+        notifSave(notifLoad());
         notifRenderList();
         notifRenderIcon();
     } catch (error) {
@@ -591,7 +592,7 @@ function notifRenderList() {
         const index = items.indexOf(n);
         const when = n.at || n.created_at ? new Date(n.at || n.created_at) : null;
         const label = when ? when.toLocaleDateString() + ' ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-        const invitationActions = !notifSelectionMode && n.invitationKind
+        const invitationActions = !notifSelectionMode && n.invitationKind && !n.read
             ? '<div class="notif-item-actions"><button type="button" class="notif-action accept" data-notif-action="accept">Accept</button><button type="button" class="notif-action reject" data-notif-action="reject">Reject</button></div>'
             : '';
         return '<div class="notif-item' + (n.read ? ' read' : '') + (notifSelected.has(index) ? ' selected' : '') + '" data-i="' + index + '">'

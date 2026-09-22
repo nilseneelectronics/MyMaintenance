@@ -35,11 +35,155 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!addBtn || !popup) return;
 
+    function normalizePriceInput(value) {
+        const filtered = String(value || '').replace(/[^0-9.,]/g, '').replace(/\./g, ',');
+        const separator = filtered.indexOf(',');
+        if (separator < 0) return filtered;
+        return filtered.slice(0, separator + 1) + filtered.slice(separator + 1).replace(/,/g, '');
+    }
+
+    if (receiptTotalInput) {
+        receiptTotalInput.addEventListener('input', function () {
+            const normalized = normalizePriceInput(receiptTotalInput.value);
+            if (normalized !== receiptTotalInput.value) receiptTotalInput.value = normalized;
+        });
+    }
+
+    const filePreviewButton = document.createElement('button');
+    filePreviewButton.type = 'button';
+    filePreviewButton.className = 'photo-picker-btn doc-preview-file-btn';
+    filePreviewButton.textContent = 'Preview';
+    filePreviewButton.disabled = true;
+    filePreviewButton.classList.add('is-empty');
+    const filePicker = pickBtn && pickBtn.parentElement;
+    if (filePicker) filePicker.appendChild(filePreviewButton);
+
+    function syncFilePreviewButton() {
+        const hasFile = Boolean(selectedFile && selectedFile.size >= 0);
+        filePreviewButton.disabled = !hasFile;
+        filePreviewButton.classList.toggle('is-empty', !hasFile);
+        if (!hasFile) {
+            filePreviewButton.style.setProperty('border-color', 'var(--border-color)', 'important');
+            filePreviewButton.style.setProperty('background-color', 'var(--bg-secondary)', 'important');
+            filePreviewButton.style.setProperty('color', 'var(--text-secondary)', 'important');
+            filePreviewButton.style.setProperty('opacity', '1', 'important');
+            filePreviewButton.style.setProperty('pointer-events', 'none', 'important');
+        } else {
+            filePreviewButton.style.removeProperty('border-color');
+            filePreviewButton.style.removeProperty('background-color');
+            filePreviewButton.style.removeProperty('color');
+            filePreviewButton.style.removeProperty('opacity');
+            filePreviewButton.style.removeProperty('pointer-events');
+        }
+    }
+
+    let selectedFilePreviewUrl = '';
+    let selectedFilePreviewZoom = 1;
+    function closeSelectedFilePreview() {
+        const overlay = document.getElementById('doc-file-preview-overlay');
+        if (overlay) overlay.remove();
+        if (selectedFilePreviewUrl) URL.revokeObjectURL(selectedFilePreviewUrl);
+        selectedFilePreviewUrl = '';
+    }
+
+    function updateSelectedPreview(image, output) {
+        if (selectedFilePreviewZoom === 1) {
+            image.dataset.panX = '0';
+            image.dataset.panY = '0';
+        }
+        image.style.transform = 'translate(' + image.dataset.panX + 'px, ' + image.dataset.panY + 'px) scale(' + selectedFilePreviewZoom + ')';
+        output.textContent = Math.round(selectedFilePreviewZoom * 100) + '%';
+    }
+
+    function openSelectedFilePreview() {
+        if (!selectedFile) return;
+        closeSelectedFilePreview();
+        selectedFilePreviewUrl = URL.createObjectURL(selectedFile);
+        selectedFilePreviewZoom = 1;
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.id = 'doc-file-preview-overlay';
+        const isImage = isImageFile(selectedFile);
+        overlay.innerHTML = '<div class="popup-content doc-file-preview-content">'
+            + '<h3>Document preview</h3>'
+            + (isImage
+                ? '<div class="doc-file-preview-stage"><img class="doc-file-preview-media" src="' + selectedFilePreviewUrl + '" alt="Scanned document preview"></div>'
+                : '<iframe class="doc-file-preview-frame" src="' + selectedFilePreviewUrl + '" title="Scanned document preview"></iframe>')
+            + (isImage ? '<div class="doc-file-preview-controls"><button type="button" data-preview-zoom="-1" aria-label="Zoom out">−</button><output>100%</output><button type="button" data-preview-zoom="1" aria-label="Zoom in">+</button></div>' : '')
+            + '<div class="popup-buttons"><button type="button" class="popup-btn cancel">Close</button></div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        overlay.style.display = 'flex';
+        overlay.querySelector('.popup-btn').addEventListener('click', closeSelectedFilePreview);
+        if (isImage) {
+            const image = overlay.querySelector('.doc-file-preview-media');
+            const output = overlay.querySelector('output');
+            const stage = overlay.querySelector('.doc-file-preview-stage');
+            image.draggable = false;
+            stage.addEventListener('dragstart', function (event) { event.preventDefault(); });
+            image.dataset.panX = '0';
+            image.dataset.panY = '0';
+            let dragging = false;
+            let lastX = 0;
+            let lastY = 0;
+            overlay.querySelectorAll('[data-preview-zoom]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    selectedFilePreviewZoom = Math.max(1, Math.min(3, selectedFilePreviewZoom + Number(button.dataset.previewZoom) * 0.25));
+                    updateSelectedPreview(image, output);
+                });
+            });
+            stage.addEventListener('wheel', function (event) {
+                event.preventDefault();
+                const oldZoom = selectedFilePreviewZoom;
+                selectedFilePreviewZoom = Math.max(1, Math.min(3, selectedFilePreviewZoom - Math.sign(event.deltaY) * 0.05));
+                const rect = stage.getBoundingClientRect();
+                const x = event.clientX - rect.left - rect.width / 2;
+                const y = event.clientY - rect.top - rect.height / 2;
+                const panX = Number(image.dataset.panX) || 0;
+                const panY = Number(image.dataset.panY) || 0;
+                image.dataset.panX = String((panX + x) * selectedFilePreviewZoom / oldZoom - x);
+                image.dataset.panY = String((panY + y) * selectedFilePreviewZoom / oldZoom - y);
+                updateSelectedPreview(image, output);
+            }, { passive: false });
+            stage.addEventListener('pointerdown', function (event) {
+                if (selectedFilePreviewZoom <= 1) return;
+                dragging = true;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                stage.setPointerCapture(event.pointerId);
+                stage.classList.add('is-dragging');
+            });
+            stage.addEventListener('pointermove', function (event) {
+                if (!dragging) return;
+                image.dataset.panX = String((Number(image.dataset.panX) || 0) + event.clientX - lastX);
+                image.dataset.panY = String((Number(image.dataset.panY) || 0) + event.clientY - lastY);
+                lastX = event.clientX;
+                lastY = event.clientY;
+                updateSelectedPreview(image, output);
+            });
+            stage.addEventListener('pointerup', function () {
+                dragging = false;
+                stage.classList.remove('is-dragging');
+            });
+        }
+        overlay.addEventListener('click', function (event) {
+            if (event.target === overlay) closeSelectedFilePreview();
+        });
+    }
+    filePreviewButton.addEventListener('click', openSelectedFilePreview);
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' || !document.getElementById('doc-file-preview-overlay')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeSelectedFilePreview();
+    }, true);
+
     const KEY = 'floorplan_user_docs';
     let selectedAssetValue = '';
     let selectedAssetId = '';
     let selectedAssetKind = '';
     let selectedDocType = '';
+    let docTypeUserEdited = false;
     let selectedProject = '';
     let lockedAsset = '';
     let docSort = 'uploaded';
@@ -52,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentReceiptItems = [];
     const viewerLoadPromises = {};
     let selectedFile = null;
+    syncFilePreviewButton();
     let initialDocState = '';
     let ocrWorkerPromise = null;
     let tesseractLoadPromise = null;
@@ -110,8 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function store() {
-        items.forEach(persistDocument);
+    function store(changedItem) {
+        if (changedItem) persistDocument(changedItem);
+        else items.forEach(persistDocument);
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
     }
 
@@ -152,10 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function documentFromRow(row) {
         const extra = row.extracted_data || {};
+        const info = fileTypeInfo(Object.assign({}, extra, { fileName: extra.fileName || row.file_path || '' }));
         return Object.assign({}, extra, {
             id: row.id,
             name: row.title,
-            docType: row.document_type || extra.docType || '',
+            docType: row.document_type || extra.docType || (info.cls === 'file-image' ? 'Picture' : ''),
+            format: extra.format || info.label,
             project: extra.project || '',
             performed: row.document_date || '',
             filePath: row.file_path || '',
@@ -629,6 +777,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = popup.querySelector('.doc-delete-btn');
         if (d) d.style.display = 'none';
         fileInput.value = '';
+        selectedFile = null;
+        syncFilePreviewButton();
+        closeSelectedFilePreview();
         clearFileError();
         if (oldDatePopup) oldDatePopup.style.display = 'none';
         nameInput.value = '';
@@ -661,6 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cal) cal.classList.remove('open');
         setPrivacy('private');
         selectedDocType = '';
+        docTypeUserEdited = false;
         if (docTypeValueEl) docTypeValueEl.textContent = '-- Select type --';
         if (docTypeMenu) docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
         if (docTypeDropdown) docTypeDropdown.classList.remove('open');
@@ -760,6 +912,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openScanPopup() {
         resetPopupFields();
+        const context = window.MyMaintenanceDocumentContext;
+        window.MyMaintenanceDocumentContext = null;
+        if (context && context.asset) selectAsset(context.asset);
+        if (context && context.project) {
+            selectedProject = context.project;
+            if (projectValueEl) projectValueEl.textContent = context.project;
+            if (projectMenu) {
+                projectMenu.querySelectorAll('button').forEach(function (button) {
+                    button.classList.toggle('selected', button.dataset.value === context.project);
+                });
+            }
+        }
         scanMode = true;
         fileInput.accept = 'image/*,application/pdf';
         fileInput.removeAttribute('capture');
@@ -768,6 +932,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (h) h.textContent = 'Scan document';
         popup.style.display = 'flex';
         initialDocState = documentStateSnapshot();
+        // Start loading the OCR model while the user chooses a file.
+        getOcrWorker().catch(function () {});
     }
 
     function openEditPopup(it) {
@@ -860,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setPrivacy(it.privacy);
         const docTypeVal = it.docType || '';
         selectedDocType = docTypeVal;
+        docTypeUserEdited = Boolean(docTypeVal);
         if (docTypeMenu) {
             const typeBtns = Array.prototype.slice.call(docTypeMenu.querySelectorAll('button[data-value]'));
             typeBtns.forEach((b) => b.classList.remove('selected'));
@@ -1027,6 +1194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = e.target.closest('button[data-value]');
             if (!btn) return;
             selectedDocType = btn.dataset.value;
+            docTypeUserEdited = true;
             if (docTypeValueEl) docTypeValueEl.textContent = btn.textContent;
             docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
             btn.classList.add('selected');
@@ -1154,9 +1322,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const img = new Image();
             img.onload = function () {
                 try {
-                    const MAX = 3000;
+                    const MAX = 2000;
                     const maxDim = Math.max(img.width, img.height);
-                    let scale = 2;
+                    let scale = 1.5;
                     if (maxDim * scale > MAX) scale = MAX / maxDim;
                     scale = Math.max(scale, 0.5);
                     const canvas = document.createElement('canvas');
@@ -1187,11 +1355,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = function () {
             showScanStatus('Preparing image...');
-            preprocessImage(reader.result).then(function (processed) {
-                return getOcrWorker().then(function (worker) {
-                    showScanStatus('Scanning document...');
-                    return worker.recognize(processed);
-                });
+            const processedImage = preprocessImage(reader.result);
+            const worker = getOcrWorker();
+            Promise.all([processedImage, worker]).then(function (results) {
+                showScanStatus('Scanning document...');
+                return results[1].recognize(results[0]);
             }).then(function (result) {
                 const text = String((result && result.data && result.data.text) || '').trim();
                 currentOcrText = text;
@@ -1624,7 +1792,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (total != null) receiptTotalInput.value = total.toFixed(2).replace('.', ',');
             else if (itemTotal) receiptTotalInput.value = itemTotal;
         }
-        if (!selectedDocType && docType) setDocType(docType);
+        if (!docTypeUserEdited && docType) setDocType(docType);
     }
 
     function pad2(n) {
@@ -1904,14 +2072,17 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFileError();
         if (!file) {
             selectedFile = null;
+            syncFilePreviewButton();
             if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
             sizeInput.value = '';
             return;
         }
         selectedFile = file;
+        syncFilePreviewButton();
         sizeInput.value = formatSize(file.size);
         if (formatInput) formatInput.value = fileTypeInfo({ fileName: file.name, type: file.type }).label;
         if (fileNameLabel) fileNameLabel.textContent = file.name;
+        if (isImageFile(file) && !docTypeUserEdited) setDocType('Picture');
         if (!scanMode && !nameInput.value.trim()) {
             const base = file.name.replace(/\.[^.]+$/, '');
             nameInput.value = base;
@@ -2118,6 +2289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
+        rec.format = file ? fileTypeInfo(file).label : (rec.format || fileTypeInfo(rec).label);
         const receiptTotal = receiptTotalInput ? parseFloat(String(receiptTotalInput.value || '').replace(/\s/g, '').replace(',', '.')) : NaN;
         if (!isNaN(receiptTotal)) rec.receiptTotal = receiptTotal;
         else delete rec.receiptTotal;
@@ -2153,7 +2325,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        store();
+        store(rec);
         updateView();
         closePopup();
     }
@@ -2216,8 +2388,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const mime = String(it.type || '').toLowerCase();
         const map = {
             pdf: ['PDF', 'file-pdf'],
-            png: ['IMG', 'file-image'], jpg: ['IMG', 'file-image'], jpeg: ['IMG', 'file-image'],
-            gif: ['IMG', 'file-image'], webp: ['IMG', 'file-image'], bmp: ['IMG', 'file-image'],
+            png: ['PNG', 'file-image'], jpg: ['JPG', 'file-image'], jpeg: ['JPEG', 'file-image'],
+            gif: ['GIF', 'file-image'], webp: ['WEBP', 'file-image'], bmp: ['BMP', 'file-image'],
             svg: ['SVG', 'file-image'],
             doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-docx'], odt: ['DOC', 'file-doc'],
             xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-csv'],
@@ -2230,7 +2402,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '3mf': ['3MF', 'file-3d'], stl: ['STL', 'file-3d'], obj: ['OBJ', 'file-3d'], step: ['STEP', 'file-3d']
         };
         if (map[ext]) return { label: map[ext][0], cls: map[ext][1], ext: ext, mime: mime };
-        if (mime.indexOf('image') === 0) return { label: 'IMG', cls: 'file-image', ext: ext, mime: mime };
+         if (mime.indexOf('image') === 0) return { label: (ext || 'IMG').toUpperCase(), cls: 'file-image', ext: ext, mime: mime };
         if (mime.indexOf('pdf') !== -1) return { label: 'PDF', cls: 'file-pdf', ext: ext, mime: mime };
         const short = ((ext || 'FILE').toUpperCase().slice(0, 4) || 'FILE');
         return { label: short, cls: 'file-blank', ext: ext, mime: mime };
@@ -2275,9 +2447,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const right = document.createElement('div');
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
-            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
-            + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
-            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
+             + '<span class="doc-cell doc-cell-format doc-col-label">Format</span>'
+             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-price doc-col-label">Price</span>'
              + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
              + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
              + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
@@ -2301,9 +2475,11 @@ document.addEventListener('DOMContentLoaded', () => {
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
-            + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || info.label) + '</span>'
-            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
-            + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+             + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || '') + '</span>'
+             + '<span class="doc-cell doc-cell-format">' + escapeHtml(it.format || info.label) + '</span>'
+             + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-price">' + escapeHtml(formatCost(docCost(it))) + '</span>'
+             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>';
         row.appendChild(left);
@@ -2321,8 +2497,11 @@ document.addEventListener('DOMContentLoaded', () => {
             + '</div>'
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
-            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
-            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
+             + '<span class="doc-cell doc-cell-format doc-col-label">Format</span>'
+             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-price doc-col-label">Cost</span>'
              + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
              + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
              + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>'
@@ -2339,8 +2518,11 @@ document.addEventListener('DOMContentLoaded', () => {
             + '</div>'
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
-            + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
-            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
+             + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || '') + '</span>'
+             + '<span class="doc-cell doc-cell-format">' + escapeHtml(it.format || info.label) + '</span>'
+             + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-price">' + escapeHtml(formatCost(docCost(it))) + '</span>'
              + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
              + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
              + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document" aria-label="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c-.39-.39 0-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>'
@@ -2461,7 +2643,7 @@ function openAddDocPopup() {
             return '<div class="doc-project-folder" data-project="' + escapeHtml(name) + '">'
                 + '<div class="doc-project-folder-name">' + escapeHtml(name) + '</div>'
                 + '<div class="doc-project-folder-meta">' + count + ' document' + (count === 1 ? '' : 's') + '</div>'
-                + '<div class="doc-project-folder-cost"><span class="doc-project-folder-cost-label">Price</span>' + formatCost(cost) + '</div>'
+                 + '<div class="doc-project-folder-cost"><span class="doc-project-folder-cost-label">Cost</span>' + formatCost(cost) + '</div>'
                 + '</div>';
         }
 

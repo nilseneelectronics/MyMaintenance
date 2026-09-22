@@ -90,13 +90,13 @@
         } catch (error) { console.warn('Could not save project:', error); }
     }
 
-    async function rename(asset, oldName, newName) {
+    async function rename(asset, oldName, newName, newAsset) {
         if (!window.MyMaintenanceData) return;
         try {
             await window.MyMaintenanceData.request('projects', {
                 method: 'PATCH',
                 query: { asset: 'eq.' + asset, name: 'eq.' + oldName },
-                body: { name: newName, updated_at: new Date().toISOString() },
+                body: { asset: newAsset || asset, name: newName, updated_at: new Date().toISOString() },
                 prefer: 'return=minimal'
             });
         } catch (error) { console.warn('Could not rename project:', error); }
