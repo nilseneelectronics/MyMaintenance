@@ -295,12 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     option.selected = option.value === (person.email || '');
                     if (option.value) emailControl.appendChild(option);
                 });
+                emailControl.disabled = person.invitationStatus === 'invited';
             } else {
                 emailControl = document.createElement('input');
                 emailControl.type = 'email';
                 emailControl.placeholder = 'resident@example.com';
                 emailControl.value = person.email || '';
-                emailControl.readOnly = creator || joined;
+                emailControl.readOnly = creator || joined || person.invitationStatus === 'invited';
             }
             emailControl.dataset.field = 'personEmail';
             emailControl.dataset.person = String(personIndex);
@@ -315,10 +316,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const invite = document.createElement('button');
                 invite.type = 'button';
                 invite.className = 'nb-send-invite-btn' + (person.invitationStatus === 'invited' ? ' pending' : '');
-                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Invite sent' : 'Send invite');
-                invite.disabled = joined || person.invitationStatus === 'invited';
+                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Cancel invite' : 'Send invite');
+                invite.disabled = joined;
                 invite.addEventListener('click', async () => {
                     readBuilderIntoModel(builderModel);
+                    if (person.invitationStatus === 'invited') {
+                        invite.disabled = true;
+                        invite.textContent = 'Cancelling...';
+                        try {
+                            await window.MyMaintenanceAuth.familyRequest('cancel-neighborhood', {
+                                neighborhoodId: builderModel.id,
+                                email: person.email
+                            });
+                            person.invitationStatus = '';
+                            delete person.invitationId;
+                            await persistNeighborhood(builderModel);
+                            const saved = current();
+                            if (saved) Object.assign(saved, builderModel);
+                            renderBuilder();
+                            render();
+                        } catch (error) {
+                            invite.disabled = false;
+                            invite.textContent = 'Cancel invite';
+                            window.MyMaintenanceCommonUi.alert(error.message || 'Could not cancel invitation.');
+                        }
+                        return;
+                    }
                     await saveNeighborhoodForm({ addressIndex: idx, personIndex });
                 });
                 line.appendChild(invite);
@@ -590,12 +613,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         try {
             for (const target of inviteTargets) {
-                await window.MyMaintenanceAuth.familyRequest('invite-neighborhood-address', {
+                const result = await window.MyMaintenanceAuth.familyRequest('invite-neighborhood-address', {
                     neighborhoodId: builderModel.id,
                     address: target.address.address,
                     email: target.person.email
                 });
                 target.person.invitationStatus = 'invited';
+                target.person.invitationId = result.invitationId || '';
             }
             if (inviteTargets.length) await persistNeighborhood(builderModel);
         } catch (error) {

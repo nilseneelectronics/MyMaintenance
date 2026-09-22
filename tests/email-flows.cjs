@@ -65,7 +65,8 @@ async function main() {
       if(url.includes('reserve_family_invitation')){operations.push('reserve');return new Response(JSON.stringify(row));}
       if(url.includes('reserve_neighborhood_invitation')){operations.push('reserve-neighborhood');return new Response(JSON.stringify(neighborhoodRow));}
       if(url.includes('accept_family_invitation'))return new Response(JSON.stringify({code:'P0001',message:'Invitation not found for your email address.'}),{status:400});
-      const body=JSON.parse(options.body);operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
+      if(options.method==='DELETE'){operations.push('delete');return new Response(JSON.stringify([]));}
+      const body=JSON.parse(options.body);if(body.status==='cancelled'){assert(url.includes('neighborhood_id=eq.55555555-5555-4555-8555-555555555555'));assert(url.includes('inviter_id=eq.owner'));assert(url.includes('email=eq.resident%40example.test'));assert(url.includes('status=eq.pending'));}operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
     }
   };
   vm.runInNewContext(require('node:module').stripTypeScriptTypes(read('supabase/functions/family-invitations/index.ts').replace(/^import[^\r\n]*\r?\n/,'')),backend);
@@ -86,6 +87,7 @@ async function main() {
   incomingFamilyPending=true;const incomingList=await (await handler(request({action:'list'}))).json();assert.equal(incomingList.members.length,1);assert.equal(incomingList.members[0].incomingInvitation,true);incomingFamilyPending=false;
   smtpFails=false;neighborhoodScenario=true;operations.length=0;const neighborhoodInvite=await (await handler(request({action:'invite-neighborhood',recipientId}))).json();assert.equal(neighborhoodInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));
   operations.length=0;const houseInvite=await (await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'resident@example.test'}))).json();assert.equal(houseInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));assert.equal(sentMail.at(-1).to,'resident@example.test');assert.equal(sentMail.at(-1).envelope.from,'noreply@example.test');assert.equal(sentMail.at(-1).envelope.to[0],'resident@example.test');neighborhoodScenario=false;
+  operations.length=0;const cancelled=await (await handler(request({action:'cancel-neighborhood',neighborhoodId:'55555555-5555-4555-8555-555555555555',email:'resident@example.test'}))).json();assert.equal(cancelled.cancelled,true);assert(operations.includes('cancelled'));
   neighborhoodScenario=true;actingUserId='member';operations.length=0;assert.equal((await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'outsider@example.test'}))).status,400);assert(!operations.includes('smtp'));actingUserId='owner';neighborhoodScenario=false;
 
   // Test reset landing-page flow without a real session or password change.

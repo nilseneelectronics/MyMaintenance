@@ -354,6 +354,16 @@ Deno.serve(async request => {
             await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (body.kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'DELETE');
             return reply({ rejected: true });
         }
+        if (body.action === 'cancel-neighborhood') {
+            const neighborhoodId = String(body.neighborhoodId || '');
+            const email = String(body.email || '').trim().toLowerCase();
+            if (!/^[0-9a-f-]{36}$/i.test(neighborhoodId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid neighborhood invitation.');
+            const cancelled = await database('neighborhood_invitations?neighborhood_id=eq.' + neighborhoodId + '&inviter_id=eq.' + user.id + '&email=eq.' + encodeURIComponent(email) + '&status=eq.pending&select=id', 'PATCH', { status: 'cancelled' });
+            if (!cancelled.length) throw new Error('Pending neighborhood invitation not found.');
+            await Promise.all(cancelled.map((invitation: Record<string, any>) =>
+                database('notifications?kind=eq.neighborhood_invitation&reference_id=eq.' + invitation.id, 'DELETE')));
+            return reply({ cancelled: true });
+        }
         if (body.action === 'cancel') {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
             await database('family_invitations?id=eq.' + body.id + '&inviter_id=eq.' + user.id + '&status=in.(pending,accepted)', 'PATCH', { status: 'cancelled' });

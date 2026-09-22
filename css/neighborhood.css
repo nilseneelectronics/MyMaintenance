@@ -300,6 +300,11 @@
     border: 1px solid #d97706;
 }
 
+.nb-send-invite-btn.pending:hover {
+    background: #d97706;
+    color: #fff;
+}
+
 .nb-creator-marker {
     color: var(--text-secondary);
     font-size: 0.78rem;
