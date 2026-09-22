@@ -241,7 +241,7 @@ Deno.serve(async request => {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid neighborhood invitation.');
             const accepted = await database('rpc/accept_neighborhood_invitation', 'POST', { p_id: body.id, p_user: user.id, p_email: user.email });
             await addAcceptedResident(Array.isArray(accepted) ? accepted[0] : accepted, user);
-            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + body.id, 'DELETE');
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.neighborhood_invitation&reference_id=eq.' + body.id, 'PATCH', { read_at: new Date().toISOString() });
             return reply({ accepted: true });
         }
         if (body.action === 'invite-neighborhood-address') {
