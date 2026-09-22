@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const personLabel = document.createElement('span');
             personLabel.textContent = creator ? 'Creator' : ('Person ' + (personIndex + 1));
             let emailControl;
-            if (!isAdmin && !creator && !joined) {
+            if (!isAdmin && !creator && !joined && person.invitationStatus !== 'cancelled') {
                 emailControl = document.createElement('select');
                 const empty = document.createElement('option');
                 empty.value = '';
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 emailControl.type = 'email';
                 emailControl.placeholder = 'resident@example.com';
                 emailControl.value = person.email || '';
-                emailControl.readOnly = creator || joined || person.invitationStatus === 'invited';
+                emailControl.readOnly = creator || joined || person.invitationStatus === 'invited' || (!isAdmin && person.invitationStatus === 'cancelled');
             }
             emailControl.dataset.field = 'personEmail';
             emailControl.dataset.person = String(personIndex);
@@ -324,11 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         invite.disabled = true;
                         invite.textContent = 'Cancelling...';
                         try {
-                            await window.MyMaintenanceAuth.familyRequest('cancel-neighborhood', {
-                                neighborhoodId: builderModel.id,
-                                email: person.email
+                            await window.MyMaintenanceAuth.familyRequest('cancel', {
+                                id: person.invitationId,
+                                kind: 'neighborhood'
                             });
-                            person.invitationStatus = '';
+                            person.invitationStatus = 'cancelled';
                             delete person.invitationId;
                             await persistNeighborhood(builderModel);
                             const saved = current();
