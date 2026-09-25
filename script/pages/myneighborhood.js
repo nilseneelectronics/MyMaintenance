@@ -34,7 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
         delete copy._dbId;
         delete copy._ownerId;
         delete copy.name;
+        delete copy.events;
         delete copy._deletedAddresses;
+        delete copy._memberMoves;
+        delete copy._removedMemberIds;
         ['photos', 'docs'].forEach(function (key) {
             if (Array.isArray(copy[key])) copy[key].forEach(function (item) {
                 delete item.dataUrl;
@@ -87,11 +90,44 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             neighborhoods = (rows || []).map(rowToNeighborhood);
             if (!currentId || !current()) currentId = neighborhoods[0] ? neighborhoods[0].id : null;
+            await loadNeighborhoodEvents();
             render();
         } catch (error) {
             console.error(error);
             window.MyMaintenanceCommonUi.alert(error.message || 'Could not load neighborhoods.');
         }
+    }
+
+    async function loadNeighborhoodEvents() {
+        const ids = neighborhoods.map(function (nb) { return nb.id; }).filter(Boolean);
+        neighborhoods.forEach(function (nb) { nb.events = []; });
+        if (!ids.length || !window.MyMaintenanceData) return;
+        const rows = await window.MyMaintenanceData.request('neighborhood_events', {
+            query: {
+                select: 'id,neighborhood_id,creator_id,name,start_date,finish_date,start_time,finish_time,location,description,shared,created_at',
+                neighborhood_id: 'in.(' + ids.join(',') + ')',
+                order: 'start_date.asc,start_time.asc'
+            }
+        });
+        (rows || []).forEach(function (row) {
+            const nb = neighborhoods.find(function (item) { return item.id === row.neighborhood_id; });
+            if (!nb) return;
+            nb.events.push({
+                id: row.id,
+                creatorId: row.creator_id,
+                name: row.name,
+                startDate: row.start_date,
+                finishDate: row.finish_date,
+                startTime: row.start_time,
+                finishTime: row.finish_time,
+                location: row.location,
+                desc: row.description,
+                shared: row.shared,
+                neighborhoodId: row.neighborhood_id,
+                isNeighborhood: true,
+                _source: 'neighborhood'
+            });
+        });
     }
 
     /* ---- Neighborhood selector ---- */
@@ -126,9 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ---- Address / people builder ---- */
     function isCreatorPerson(person) {
         if (!person) return false;
-        return Boolean((me.id && person.userId === me.id) ||
-            (me.email && String(person.email || '').toLowerCase() === String(me.email).toLowerCase()) ||
-            (me.name && String(person.name || '').trim().toLowerCase() === String(me.name).trim().toLowerCase()));
+        const ownerId = builderModel && (builderModel._ownerId || (!builderModel._dbId && isAdmin ? me.id : ''));
+        return Boolean(ownerId && person.userId === ownerId);
     }
 
     function ensureAddressPeople(addr, idx) {
@@ -275,12 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
         addr.people.forEach((person, personIndex) => {
             const creator = isCreatorPerson(person);
             const joined = Boolean(person.userId && !creator);
+            const pending = person.invitationStatus === 'invited';
             const line = document.createElement('div');
             line.className = 'nb-house-invite-row nb-person-invite-line';
             const personLabel = document.createElement('span');
             personLabel.textContent = creator ? 'Creator' : ('Person ' + (personIndex + 1));
             let emailControl;
-            if (!isAdmin && !creator && !joined) {
+            if (!isAdmin && !creator && !joined && !pending && person.invitationStatus !== 'cancelled') {
                 emailControl = document.createElement('select');
                 const empty = document.createElement('option');
                 empty.value = '';
@@ -300,33 +336,132 @@ document.addEventListener('DOMContentLoaded', () => {
                 emailControl.type = 'email';
                 emailControl.placeholder = 'resident@example.com';
                 emailControl.value = person.email || '';
-                emailControl.readOnly = creator || joined;
+                emailControl.readOnly = creator || joined || pending || (!isAdmin && person.invitationStatus === 'cancelled');
             }
             emailControl.dataset.field = 'personEmail';
             emailControl.dataset.person = String(personIndex);
             const status = document.createElement('span');
             status.className = 'nb-invite-status';
             status.textContent = creator ? (person.name || me.name || 'Neighborhood creator') :
-                (joined ? (person.name || 'Joined') : (person.invitationStatus === 'invited' ? 'Invite pending' : ''));
+                (joined ? (person.name || 'Joined') : (pending ? 'Invite pending' : ''));
             line.appendChild(personLabel);
             line.appendChild(emailControl);
             line.appendChild(status);
             if (!creator) {
                 const invite = document.createElement('button');
                 invite.type = 'button';
-                invite.className = 'nb-send-invite-btn' + (person.invitationStatus === 'invited' ? ' pending' : '');
-                invite.textContent = joined ? 'Joined' : (person.invitationStatus === 'invited' ? 'Invite sent' : 'Send invite');
-                invite.disabled = joined || person.invitationStatus === 'invited';
+                invite.className = 'nb-send-invite-btn' + (pending ? ' pending' : '');
+                invite.textContent = joined ? 'Joined' : (pending ? (isAdmin ? 'Cancel invite' : 'Pending') : 'Send invite');
+                invite.disabled = joined || (pending && !isAdmin);
+                if (joined && isAdmin) invite.hidden = true;
                 invite.addEventListener('click', async () => {
                     readBuilderIntoModel(builderModel);
+                    if (pending) {
+                        invite.disabled = true;
+                        invite.textContent = 'Cancelling...';
+                        try {
+                            await window.MyMaintenanceAuth.familyRequest('cancel', {
+                                id: person.invitationId || '',
+                                kind: 'neighborhood',
+                                neighborhoodId: builderModel.id,
+                                email: person.email
+                            });
+                            person.invitationStatus = 'cancelled';
+                            delete person.invitationId;
+                            await persistNeighborhood(builderModel);
+                            const saved = current();
+                            if (saved) Object.assign(saved, builderModel);
+                            renderBuilder();
+                            render();
+                        } catch (error) {
+                            invite.disabled = false;
+                            invite.textContent = 'Cancel invite';
+                            window.MyMaintenanceCommonUi.alert(error.message || 'Could not cancel invitation.');
+                        }
+                        return;
+                    }
                     await saveNeighborhoodForm({ addressIndex: idx, personIndex });
                 });
                 line.appendChild(invite);
             } else {
-                const marker = document.createElement('span');
-                marker.className = 'nb-creator-marker';
-                marker.textContent = 'Added automatically';
+                const marker = document.createElement('button');
+                marker.type = 'button';
+                marker.className = 'nb-send-invite-btn';
+                marker.textContent = 'Joined';
+                marker.disabled = true;
                 line.appendChild(marker);
+            }
+            if (isAdmin && (joined || creator || person.invitationStatus === 'invited')) {
+                const moveTargets = (builderModel.addresses || []).filter((target, targetIndex) => targetIndex !== idx);
+                if (!moveTargets.length) {
+                    const notice = document.createElement('button');
+                    notice.type = 'button';
+                    notice.className = 'nb-no-move';
+                    notice.textContent = 'Add address and move';
+                    notice.addEventListener('click', () => {
+                        readBuilderIntoModel(builderModel);
+                        const personToMove = addr.people.splice(personIndex, 1)[0];
+                        const newAddress = { id: 'a' + Date.now(), address: '', people: [personToMove] };
+                        builderModel.addresses.push(newAddress);
+                        builderModel._memberMoves = builderModel._memberMoves || {};
+                        const moveKey = personToMove && personToMove.userId ? 'user:' + personToMove.userId : 'email:' + String(personToMove && personToMove.email || '').toLowerCase();
+                        if (moveKey !== 'email:') builderModel._memberMoves[moveKey] = { userId: personToMove.userId || '', email: personToMove.email || '', address: '' };
+                        renderBuilder();
+                    });
+                    line.appendChild(notice);
+                } else {
+                const move = document.createElement('div');
+                move.className = 'custom-dropdown nb-member-move-dropdown';
+                move.setAttribute('aria-label', 'Move resident');
+                const moveToggle = document.createElement('div');
+                moveToggle.className = 'dropdown-toggle';
+                moveToggle.innerHTML = '<span>Move to...</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                const moveMenu = document.createElement('ul');
+                moveMenu.className = 'dropdown-menu';
+                moveTargets.forEach((target) => {
+                    const targetIndex = builderModel.addresses.indexOf(target);
+                    const option = document.createElement('li');
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = target.address || ('Address ' + (targetIndex + 1));
+                    button.addEventListener('click', () => {
+                        readBuilderIntoModel(builderModel);
+                        const personToMove = addr.people.splice(personIndex, 1)[0];
+                        builderModel.addresses[targetIndex].people = builderModel.addresses[targetIndex].people || [];
+                        builderModel.addresses[targetIndex].people.push(personToMove);
+                        builderModel._memberMoves = builderModel._memberMoves || {};
+                        const moveKey = personToMove.userId ? 'user:' + personToMove.userId : 'email:' + String(personToMove.email || '').toLowerCase();
+                        if (moveKey !== 'email:') builderModel._memberMoves[moveKey] = { userId: personToMove.userId || '', email: personToMove.email || '', address: builderModel.addresses[targetIndex].address || '' };
+                        renderBuilder();
+                    });
+                    option.appendChild(button);
+                    moveMenu.appendChild(option);
+                });
+                move.appendChild(moveToggle);
+                move.appendChild(moveMenu);
+                moveToggle.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    move.classList.toggle('open');
+                });
+                line.appendChild(move);
+                }
+
+                if (joined && !creator) {
+                const kick = document.createElement('button');
+                kick.type = 'button';
+                kick.className = 'nb-kick-btn';
+                kick.textContent = 'Kick';
+                kick.addEventListener('click', async () => {
+                    const ok = await window.MyMaintenanceCommonUi.confirm('Remove this resident from the neighborhood?', { title: 'Remove resident?', confirmLabel: 'Remove', destructive: true });
+                    if (!ok) return;
+                    readBuilderIntoModel(builderModel);
+                    const removed = addr.people.splice(personIndex, 1)[0];
+                    builderModel._removedMemberIds = builderModel._removedMemberIds || [];
+                    if (removed && removed.userId) builderModel._removedMemberIds.push(removed.userId);
+                    renderBuilder();
+                });
+                line.appendChild(kick);
+                }
             }
             peopleWrap.appendChild(line);
         });
@@ -431,6 +566,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nb-info-popup-title').textContent = nb ? 'Edit Neighborhood' : 'Register a neighborhood';
         isAdmin = !nb || isMeAdmin(nb);
         builderModel = nb ? JSON.parse(JSON.stringify(nb)) : defaults;
+        builderModel._memberMoves = {};
+        builderModel._removedMemberIds = [];
         if (!builderModel.addresses) builderModel.addresses = [];
         const delBtn = document.getElementById('nb-info-delete');
         if (delBtn) delBtn.style.display = (nb && isAdmin) ? '' : 'none';
@@ -478,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close person-role dropdowns when clicking elsewhere.
     document.addEventListener('click', () => {
-        document.querySelectorAll('.nb-person-role.open').forEach(dd => dd.classList.remove('open'));
+        document.querySelectorAll('.nb-person-role.open, .nb-member-move-dropdown.open').forEach(dd => dd.classList.remove('open'));
     });
 
     /* ---- Save ---- */
@@ -554,6 +691,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         cleanupBuilderModel(builderModel);
+        builderModel._memberMoves = builderModel._memberMoves || {};
+        (builderModel.addresses || []).forEach(function (address) {
+            (address.people || []).forEach(function (person) {
+                if (person && (person.userId || person.email)) {
+                    const moveKey = person.userId ? 'user:' + person.userId : 'email:' + String(person.email).toLowerCase();
+                    builderModel._memberMoves[moveKey] = { userId: person.userId || '', email: person.email || '', address: address.address || '' };
+                }
+            });
+        });
         builderModel.name = name;
         builderModel.country = document.getElementById('nb-country').value.trim();
         builderModel.zip = document.getElementById('nb-zip').value.trim();
@@ -566,10 +712,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (p && (p.email || p.name)) roles.push({ email: p.email || '', name: p.name || '', role: p.role || 'view' });
             });
         });
-        // Creator is automatically administrator (superuser).
-        const meAlreadyInRoles = roles.some(r => (me.email ? r.email === me.email : r.name === me.name));
-        if (!meAlreadyInRoles) {
-            roles.unshift({ email: me.email, name: me.name, role: 'admin' });
+        const ownerId = builderModel._ownerId || (!builderModel._dbId ? me.id : '');
+        const owner = (builderModel.addresses || []).flatMap(a => a.people || []).find(p => p.userId === ownerId);
+        if (owner) {
+            owner.role = 'admin';
+            const ownerRole = roles.find(r => String(r.email || '').toLowerCase() === String(owner.email || '').toLowerCase());
+            if (ownerRole) ownerRole.role = 'admin';
         }
         builderModel.roles = roles;
         builderModel.houses = parseInt(document.getElementById('nb-houses').value, 10) || (builderModel.addresses || []).length;
@@ -590,12 +738,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         try {
             for (const target of inviteTargets) {
-                await window.MyMaintenanceAuth.familyRequest('invite-neighborhood-address', {
+                const result = await window.MyMaintenanceAuth.familyRequest('invite-neighborhood-address', {
                     neighborhoodId: builderModel.id,
                     address: target.address.address,
                     email: target.person.email
                 });
                 target.person.invitationStatus = 'invited';
+                target.person.invitationId = result.invitationId || '';
             }
             if (inviteTargets.length) await persistNeighborhood(builderModel);
         } catch (error) {
@@ -605,6 +754,36 @@ document.addEventListener('DOMContentLoaded', () => {
             currentId = builderModel.id;
             renderBuilder();
             window.MyMaintenanceCommonUi.alert(error.message || 'The neighborhood was saved, but the invitation could not be sent.');
+            return;
+        }
+        try {
+            const db = window.MyMaintenanceData;
+            for (const move of Object.values(builderModel._memberMoves || {})) {
+                if (move.userId) {
+                    await db.request('rpc/admin_move_neighborhood_member', {
+                        method: 'POST',
+                        body: { p_neighborhood_id: builderModel.id, p_user_id: move.userId, p_address: move.address }
+                    });
+                } else if (move.email) {
+                    await db.request('rpc/admin_move_neighborhood_invitee', {
+                        method: 'POST',
+                        body: { p_neighborhood_id: builderModel.id, p_email: move.email, p_address: move.address }
+                    });
+                }
+            }
+            for (const userId of builderModel._removedMemberIds || []) {
+                await db.request('rpc/admin_remove_neighborhood_member', {
+                    method: 'POST',
+                    body: { p_neighborhood_id: builderModel.id, p_user_id: userId }
+                });
+                await window.MyMaintenanceAuth.familyRequest('neighborhood-removed', {
+                    neighborhoodId: builderModel.id,
+                    userId: userId,
+                    neighborhoodName: builderModel.name
+                });
+            }
+        } catch (error) {
+            window.MyMaintenanceCommonUi.alert(error.message || 'The neighborhood was saved, but membership changes could not be completed.');
             return;
         }
         if (existing && existing.id === builderModel.id) Object.assign(existing, builderModel);
@@ -647,6 +826,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* Escape closes, Enter saves (both when editing and adding) */
     document.addEventListener('keydown', (e) => {
+        const rulePopup = document.getElementById('nb-rule-popup');
+        const alertPopup = document.getElementById('nb-alert-popup');
+        if (e.key === 'Escape' && rulePopup && rulePopup.style.display === 'flex') {
+            e.preventDefault();
+            rulePopup.style.display = 'none';
+            return;
+        }
+        if (e.key === 'Escape' && alertPopup && alertPopup.style.display === 'flex') {
+            e.preventDefault();
+            alertPopup.style.display = 'none';
+            return;
+        }
         const popup = document.getElementById('nb-info-popup');
         if (!popup || popup.style.display !== 'flex') return;
         if (e.key === 'Escape') {
@@ -750,37 +941,15 @@ document.addEventListener('DOMContentLoaded', () => {
             list.innerHTML = '<div class="nb-empty">No upcoming events.</div>';
             return;
         }
-        list.innerHTML = '';
-        sorted.forEach((ev, idx) => {
-            const item = document.createElement('div');
-            item.className = 'asset-planned-item';
-            const name = document.createElement('strong');
-            name.textContent = ev.name || 'Event';
-            const info = document.createElement('div');
-            info.className = 'planned-item-info';
-            const start = ev.startDate || ev.date || '';
-            const finish = ev.finishDate || ev.startDate || '';
-            const startT = ev.startTime || ev.time || '';
-            const finishT = ev.finishTime || '';
-            const dateLabel = (start && finish && start !== finish)
-                ? start + ' – ' + finish
-                : (start || '');
-            const timeLabel = (startT && finishT && startT !== finishT)
-                ? startT + ' – ' + finishT
-                : (startT || '');
-            info.textContent = [dateLabel, timeLabel, ev.location ? ev.location : ''].filter(Boolean).join(' · ');
-            const desc = document.createElement('div');
-            desc.className = 'planned-item-desc';
-            desc.textContent = ev.desc || '';
-            const del = document.createElement('button');
-            del.className = 'view-button';
-            del.textContent = 'Remove';
-            del.addEventListener('click', () => { nb.events.splice(idx, 1); saveNeighborhoods(); renderEvents(); });
-            item.appendChild(name);
-            item.appendChild(info);
-            item.appendChild(desc);
-            item.appendChild(del);
-            list.appendChild(item);
+        list.innerHTML = window.MyMaintenanceEvents.eventHeaderRowHtml({
+            name: 'Event',
+            asset: 'Location',
+            date: 'Date',
+            time: 'Time'
+        });
+        sorted.forEach((ev) => {
+            const key = ev.startDate || ev.date || '';
+            list.insertAdjacentHTML('beforeend', window.MyMaintenanceEvents.eventRowHtml(key, ev, 'calendar'));
         });
     }
 
@@ -809,17 +978,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function photoPlaceholder(label) {
         const failed = label === 'Picture could not be loaded';
+        const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const background = darkMode ? '#05141c' : '#ffffff';
+        const textColor = darkMode ? '#AFEEEE' : '#008080';
         const errorMark = failed
-            ? '<path d="M354 132l34 34m0-34-34 34" fill="none" stroke="#AFEEEE" stroke-width="7" stroke-linecap="round"/>'
+            ? '<path d="M378 136l24 24m0-24-24 24" fill="none" stroke="' + textColor + '" stroke-width="5" stroke-linecap="round"/>'
             : '';
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
-            <rect width="640" height="360" fill="#05141c"/>
+            <rect width="640" height="360" fill="${background}"/>
             <g transform="translate(0 2)">
-                <rect x="270" y="105" width="100" height="78" rx="10" fill="none" stroke="#20B2AA" stroke-width="7"/>
-                <circle cx="300" cy="132" r="9" fill="#20B2AA"/>
-                <path d="M280 169l27-25 19 18 13-12 21 19" fill="none" stroke="#20B2AA" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="290" y="112" width="60" height="48" rx="7" fill="none" stroke="#20B2AA" stroke-width="5"/>
+                <circle cx="308" cy="129" r="6" fill="#20B2AA"/>
+                <path d="M296 151l17-15 12 11 8-8 14 12" fill="none" stroke="#20B2AA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                 ${errorMark}
-                <text x="320" y="224" text-anchor="middle" fill="#AFEEEE" font-family="Arial" font-size="18">${label}</text>
+                <text x="320" y="214" text-anchor="middle" fill="${textColor}" font-family="Arial" font-size="14">${label}</text>
             </g>
         </svg>`;
         return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -853,7 +1025,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderNbThumbs();
     }
     function renderPhotoThumbs() {
-        const nb = current();
         const grid = document.getElementById('nbp-photo-grid');
         const noPhotos = document.getElementById('nbp-no-photos');
         const imgs = pendingPhotoUploads;
@@ -864,15 +1035,25 @@ document.addEventListener('DOMContentLoaded', () => {
             w.className = 'done-photo-thumb';
             const img = document.createElement('img');
             img.src = p.dataUrl;
+            img.alt = 'Picture ' + (i + 1);
             w.appendChild(img);
             const del = document.createElement('button');
-            del.className = 'done-photo-del';
-            del.textContent = '×';
+            del.type = 'button';
+            del.className = 'photo-remove';
+            del.setAttribute('aria-label', 'Remove picture');
+            del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M256-200q-23.53 0-40.26-16.74Q199-233.47 199-257v-483h-13v-60h188v-30h212v30h188v60h-13v483q0 23.53-16.74 40.26Q716.53-200 693-200H256Zm103-100h60v-336h-60v336Zm182 0h60v-336h-60v336Z"/></svg>';
             del.addEventListener('click', () => {
                 imgs.splice(i, 1);
                 renderPhotoThumbs();
             });
+            const txt = document.createElement('input');
+            txt.type = 'text';
+            txt.className = 'ap-photo-text';
+            txt.placeholder = 'Photo text...';
+            txt.value = p.text || '';
+            txt.addEventListener('input', () => { p.text = txt.value; });
             w.appendChild(del);
+            w.appendChild(txt);
             grid.appendChild(w);
         });
     }
@@ -886,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const img = document.createElement('img');
             img.src = photoSource(p);
             img.style.cursor = 'pointer';
-            img.addEventListener('click', () => setMainPhotoTo(i));
+             img.addEventListener('click', () => showNeighborhoodPhoto(i));
             w.appendChild(img);
             grid.appendChild(w);
         });
@@ -898,6 +1079,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nb-main-photo').src = photoSource(imgs[photoNavIndex]);
         document.getElementById('nb-gallery-modal').style.display = 'none';
         renderNbThumbs();
+    }
+    const nbPhotoZoomSteps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+    let nbPhotoZoomIndex = 3;
+    function showNeighborhoodPhoto(index) {
+        const imgs = displayPhotosFor(current());
+        if (!imgs.length) return;
+        photoNavIndex = (index + imgs.length) % imgs.length;
+        const modal = document.getElementById('nb-photo-modal');
+        const image = document.getElementById('nb-modal-photo');
+        const caption = document.getElementById('nb-modal-caption');
+        if (!modal || !image) return;
+        image.src = photoSource(imgs[photoNavIndex]);
+        image.style.setProperty('--photo-scale', '1');
+        nbPhotoZoomIndex = 3;
+        document.getElementById('nb-modal-zoom-level').textContent = '100%';
+        if (caption) caption.textContent = imgs[photoNavIndex].text || '';
+        document.getElementById('nb-gallery-modal').style.display = 'none';
+        modal.classList.add('active');
+    }
+    function setNeighborhoodPhotoZoom(direction) {
+        const image = document.getElementById('nb-modal-photo');
+        if (!image) return;
+        nbPhotoZoomIndex = Math.max(0, Math.min(nbPhotoZoomIndex + direction, nbPhotoZoomSteps.length - 1));
+        image.style.setProperty('--photo-scale', nbPhotoZoomSteps[nbPhotoZoomIndex] / 100);
+        document.getElementById('nb-modal-zoom-level').textContent = nbPhotoZoomSteps[nbPhotoZoomIndex] + '%';
+        document.getElementById('nb-modal-zoom-out').disabled = nbPhotoZoomIndex === 0;
+        document.getElementById('nb-modal-zoom-in').disabled = nbPhotoZoomIndex === nbPhotoZoomSteps.length - 1;
     }
     let photoNavIndex = 0;
     function nextPhoto(dir) {
@@ -945,9 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const imgs = displayPhotosFor(current());
             if (!imgs.length) return;
             const off = t === document.getElementById('nb-thumb-2') ? 2 : 1;
-            photoNavIndex = (photoNavIndex + off) % imgs.length;
-            document.getElementById('nb-main-photo').src = photoSource(imgs[photoNavIndex]);
-            renderNbThumbs();
+            showNeighborhoodPhoto(photoNavIndex + off);
         });
     }
 
@@ -970,6 +1176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delete extra.payloadInDB;
         delete extra.homeId;
         delete extra.vehicleId;
+        delete extra.neighborhoodId;
         return {
             id: item.id,
             title: item.name,
@@ -978,19 +1185,20 @@ document.addEventListener('DOMContentLoaded', () => {
             file_path: item.filePath || null,
             home_id: null,
             vehicle_id: null,
+            neighborhood_id: item.neighborhoodId || null,
             extracted_data: extra
         };
     }
 
     function persistNeighborhoodDocument(item) {
         const db = window.MyMaintenanceData;
-        if (!db || !item || !item.id) return;
-        db.request('documents', {
+        if (!db || !item || !item.id) return Promise.reject(new Error('Document is not ready to save.'));
+        return db.request('documents', {
             method: 'POST',
             query: { on_conflict: 'id' },
             body: neighborhoodDocumentRow(item),
             prefer: 'resolution=merge-duplicates,return=representation'
-        }).catch(function (error) { console.error('Could not save neighborhood document:', error); });
+        });
     }
 
     function renderDocs() {
@@ -1000,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const asset = 'Neighborhood: ' + (nb ? nb.name || 'Neighborhood' : 'Neighborhood');
         let docs = [];
         if (window.MyMaintenanceDocs) docs = window.MyMaintenanceDocs.getItems().filter(function (d) {
-            return String(d.asset || '').trim() === asset;
+            return d.neighborhoodId === (nb && nb.id) || (!d.neighborhoodId && String(d.asset || '').trim() === asset);
         });
         const recent = docs.slice().sort(function (a, b) {
             return String(b.uploaded || '').localeCompare(String(a.uploaded || ''));
@@ -1009,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', () => {
             list.innerHTML = '<div class="nb-empty">No documents registered.</div>';
             return;
         }
-        list.innerHTML = '<div class="doc-row doc-header-row"><div class="doc-row-left"><span class="doc-cell doc-cell-icon"></span><span class="doc-cell doc-cell-name doc-col-label">Document</span></div><div class="doc-row-right"><span class="doc-cell doc-cell-performed doc-col-label">Performed</span><span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span><span class="doc-cell doc-cell-size doc-col-label">Size</span><span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span></div></div>';
+        list.innerHTML = '<div class="doc-row doc-header-row"><div class="doc-row-left"><span class="doc-cell doc-cell-icon"></span><span class="doc-cell doc-cell-name doc-col-label">Document</span></div><div class="doc-row-right"><span class="doc-cell doc-cell-performed doc-col-label">Performed</span><span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span><span class="doc-cell doc-cell-type doc-col-label">Doc Type</span><span class="doc-cell doc-cell-format doc-col-label">Format</span><span class="doc-cell doc-cell-size doc-col-label">Size</span><span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span></div></div>';
         recent.forEach((d, idx) => {
             const row = document.createElement('div');
             row.className = 'doc-row doc-row-open';
@@ -1024,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             left.appendChild(name);
             const right = document.createElement('div');
             right.className = 'doc-row-right';
-            [['doc-cell-performed', documentDateLabel(d.performed)], ['doc-cell-uploaded', documentDateLabel(d.uploaded)], ['doc-cell-size', d.sizeLabel || formatBytes(d.size)]].forEach((item) => {
+            [['doc-cell-performed', documentDateLabel(d.performed)], ['doc-cell-uploaded', documentDateLabel(d.uploaded)], ['doc-cell-type', d.docType || 'Other'], ['doc-cell-format', d.format || fileFormat(d)], ['doc-cell-size', d.sizeLabel || formatBytes(d.size)]].forEach((item) => {
                 const cell = document.createElement('span');
                 cell.className = 'doc-cell ' + item[0];
                 cell.textContent = item[1];
@@ -1055,6 +1263,20 @@ document.addEventListener('DOMContentLoaded', () => {
             row.appendChild(right);
             row.addEventListener('click', () => previewDoc(d));
             list.appendChild(row);
+        });
+    }
+
+    function renderRules() {
+        const list = document.getElementById('nb-rules-list');
+        if (!list) return;
+        const nb = current();
+        const defaults = ['Use common sense', 'No noise after 23:00', 'No noise on Sundays'];
+        const rules = nb && Array.isArray(nb.rules) && nb.rules.length ? nb.rules : defaults;
+        list.innerHTML = '';
+        rules.forEach(function (rule) {
+            const item = document.createElement('li');
+            item.textContent = rule;
+            list.appendChild(item);
         });
     }
     async function previewDoc(d) {
@@ -1093,16 +1315,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSelector();
         if (!currentId && neighborhoods.length) currentId = neighborhoods[0].id;
         selectorLabel.textContent = current() ? (current().name || 'Neighborhood') : '-- Select neighborhood --';
+        isAdmin = !current() || isMeAdmin(current());
         const sharedReadOnly = false;
         ['nb-add-photo-btn', 'nb-add-event', 'nb-add-document', 'nb-add-neighbor'].forEach(function (id) {
             const control = document.getElementById(id);
             if (control) control.hidden = sharedReadOnly;
         });
+        const ruleAction = document.getElementById('nb-add-rule');
+        if (ruleAction) ruleAction.hidden = !isAdmin;
         const neighborAction = document.getElementById('nb-add-neighbor');
         if (neighborAction) neighborAction.textContent = 'Edit neighborhood';
         renderNeighbors();
         renderEvents();
         renderDocs();
+        renderRules();
         setMainPhoto();
         renderNbThumbs();
     }
@@ -1110,6 +1336,152 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('mydocs:changed', function () {
         if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.render) window.MyMaintenanceDocs.render();
         renderDocs();
+    });
+
+    document.getElementById('nb-add-rule').addEventListener('click', function () {
+        const nb = current();
+        if (!nb || !isAdmin) return;
+        const defaults = ['Use common sense', 'No noise after 23:00', 'No noise on Sundays'];
+        const rules = nb.rules && nb.rules.length ? nb.rules : defaults;
+        const fields = document.getElementById('nb-rule-fields');
+        fields.innerHTML = '';
+        rules.forEach(function (rule) {
+            const row = document.createElement('div');
+            row.className = 'nb-rule-edit-row';
+            const number = document.createElement('span');
+            number.className = 'nb-rule-edit-number';
+            number.textContent = '1.';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = rule;
+            input.className = 'nb-rule-edit-input';
+            row.append(number, input);
+            fields.appendChild(row);
+        });
+        renumberRules();
+        document.getElementById('nb-rule-popup').style.display = 'flex';
+    });
+    document.getElementById('nb-rule-add-line').addEventListener('click', function () {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'nb-rule-edit-input';
+        input.placeholder = 'New rule...';
+        const row = document.createElement('div');
+        row.className = 'nb-rule-edit-row';
+        row.innerHTML = '<span class="nb-rule-edit-number"></span>';
+        row.append(input);
+        document.getElementById('nb-rule-fields').appendChild(row);
+        renumberRules();
+        input.focus();
+    });
+    function renumberRules() {
+        document.querySelectorAll('#nb-rule-fields .nb-rule-edit-number').forEach(function (el, index) { el.textContent = (index + 1) + '.'; });
+    }
+    let draggedRule = null;
+    let dragStartY = 0;
+    let dragMinDelta = 0;
+    let dragMaxDelta = 0;
+    let dragScale = 1;
+    let dragSourceIndex = -1;
+    let dragTargetIndex = -1;
+    let dragInputs = [];
+    let dragCenters = [];
+    const ruleFields = document.getElementById('nb-rule-fields');
+    ruleFields.addEventListener('pointerdown', function (event) {
+        const input = event.target.closest('.nb-rule-edit-input');
+        if (!input || event.button !== 0) return;
+        draggedRule = input;
+        dragStartY = event.clientY;
+        const startRect = input.getBoundingClientRect();
+        dragInputs = Array.from(ruleFields.querySelectorAll('.nb-rule-edit-input'));
+        const rects = dragInputs.map(function (item) { return item.getBoundingClientRect(); });
+        dragScale = startRect.height && input.offsetHeight ? startRect.height / input.offsetHeight : 1;
+        if (!Number.isFinite(dragScale) || dragScale <= 0) dragScale = 1;
+        dragCenters = rects.map(function (rect) { return rect.top + rect.height / 2; });
+        dragSourceIndex = dragInputs.indexOf(input);
+        dragTargetIndex = dragSourceIndex;
+        dragMinDelta = (rects[0].top - startRect.top) / dragScale;
+        dragMaxDelta = (rects[rects.length - 1].bottom - startRect.bottom) / dragScale;
+        input.setPointerCapture(event.pointerId);
+        input.classList.add('dragging');
+    });
+    ruleFields.addEventListener('pointermove', function (event) {
+        if (!draggedRule) return;
+        event.preventDefault();
+        const requested = (event.clientY - dragStartY) / dragScale;
+        const delta = Math.max(dragMinDelta, Math.min(dragMaxDelta, requested));
+        draggedRule.style.transform = 'translateY(' + delta + 'px)';
+        const draggedCenter = Math.max(dragCenters[0], Math.min(dragCenters[dragCenters.length - 1], dragCenters[dragSourceIndex] + delta * dragScale));
+        dragTargetIndex = dragCenters.reduce(function (best, center, index) {
+            return Math.abs(center - draggedCenter) < Math.abs(dragCenters[best] - draggedCenter) ? index : best;
+        }, 0);
+        const distance = dragCenters.length > 1 ? (dragCenters[1] - dragCenters[0]) / dragScale : 0;
+        dragInputs.forEach(function (input, index) {
+            if (input === draggedRule) return;
+            if (dragSourceIndex < dragTargetIndex && index > dragSourceIndex && index <= dragTargetIndex) { input.classList.add('gliding'); input.style.transform = 'translateY(-' + distance + 'px)'; }
+            else if (dragSourceIndex > dragTargetIndex && index >= dragTargetIndex && index < dragSourceIndex) { input.classList.add('gliding'); input.style.transform = 'translateY(' + distance + 'px)'; }
+            else { input.classList.remove('gliding'); input.style.transform = ''; }
+        });
+    });
+    function finishRuleDrag() {
+        if (!draggedRule) return;
+        const reordered = dragInputs.slice();
+        const moved = reordered.splice(dragSourceIndex, 1)[0];
+        reordered.splice(dragTargetIndex, 0, moved);
+        const rows = Array.from(ruleFields.querySelectorAll('.nb-rule-edit-row'));
+        rows.forEach(function (row, index) { row.appendChild(reordered[index]); });
+        draggedRule.classList.remove('dragging');
+        reordered.forEach(function (input) { input.classList.remove('gliding'); input.style.transform = ''; input.classList.remove('drop-target'); });
+        draggedRule = null;
+        dragInputs = [];
+        dragCenters = [];
+        dragSourceIndex = -1;
+        dragTargetIndex = -1;
+        renumberRules();
+    }
+    ruleFields.addEventListener('pointerup', finishRuleDrag);
+    ruleFields.addEventListener('pointercancel', finishRuleDrag);
+    document.addEventListener('pointerup', finishRuleDrag);
+    document.addEventListener('pointercancel', finishRuleDrag);
+    document.getElementById('nb-rule-cancel').addEventListener('click', function () {
+        document.getElementById('nb-rule-popup').style.display = 'none';
+    });
+    document.getElementById('nb-rule-save').addEventListener('click', async function () {
+        const nb = current();
+        const rules = Array.from(document.querySelectorAll('#nb-rule-fields .nb-rule-edit-input')).map(function (input) { return input.value.trim(); }).filter(Boolean);
+        if (!nb || !isAdmin || !rules.length) return;
+        nb.rules = rules;
+        await saveNeighborhoods();
+        renderRules();
+        document.getElementById('nb-rule-popup').style.display = 'none';
+    });
+
+    document.getElementById('nb-send-alert').addEventListener('click', function () {
+        if (!current()) return;
+        document.getElementById('nb-alert-input').value = '';
+        document.getElementById('nb-alert-popup').style.display = 'flex';
+    });
+    document.getElementById('nb-alert-cancel').addEventListener('click', function () {
+        document.getElementById('nb-alert-popup').style.display = 'none';
+    });
+    ['nb-rule-popup', 'nb-alert-popup'].forEach(function (id) {
+        document.getElementById(id).addEventListener('click', function (event) {
+            if (event.target === event.currentTarget) event.currentTarget.style.display = 'none';
+        });
+    });
+    document.getElementById('nb-alert-send').addEventListener('click', async function () {
+        const message = document.getElementById('nb-alert-input').value.trim();
+        const nb = current();
+        if (!nb || !message) return;
+        const button = document.getElementById('nb-alert-send');
+        button.disabled = true;
+        try {
+            await window.MyMaintenanceAuth.familyRequest('neighborhood-alert', { neighborhoodId: nb.id, message: message });
+            document.getElementById('nb-alert-popup').style.display = 'none';
+            window.MyMaintenanceCommonUi.alert('Neighborhood alert sent.');
+        } catch (error) {
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not send neighborhood alert.');
+        } finally { button.disabled = false; }
     });
 
     /* ---- Wire events ---- */
@@ -1140,29 +1512,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.getElementById('nbe-name')) document.getElementById('nbe-name').focus();
     });
     document.getElementById('nbe-cancel').addEventListener('click', () => { document.getElementById('nb-event-modal').style.display = 'none'; });
-    document.getElementById('nbe-save').addEventListener('click', () => {
+    document.getElementById('nbe-save').addEventListener('click', async () => {
         const nb = current();
         const name = document.getElementById('nbe-name').value.trim();
         if (!name) return;
-        if (!nb.events) nb.events = [];
         const pickers = window.MyMaintenanceEventPickers;
         const startDate = pickers ? pickers.dateValue(document.getElementById('nbe-start-date')) : '';
         const finishDate = pickers ? pickers.dateValue(document.getElementById('nbe-finish-date')) : '';
-        nb.events.push({
-            name,
-            startDate: startDate,
-            finishDate: finishDate || startDate,
-            startTime: document.getElementById('nbe-start-time').value,
-            finishTime: document.getElementById('nbe-finish-time').value,
-            location: document.getElementById('nbe-location').value,
-            desc: document.getElementById('nbe-desc').value,
-            inviteNeighborhood: document.getElementById('nbe-invite').checked
-        });
-        saveNeighborhoods();
-        document.getElementById('nb-event-modal').style.display = 'none';
-        renderEvents();
+        const saveButton = document.getElementById('nbe-save');
+        saveButton.disabled = true;
+        try {
+            const db = window.MyMaintenanceData;
+            if (!db || !nb) throw new Error('Please sign in again.');
+            await db.request('rpc/create_neighborhood_event', {
+                method: 'POST',
+                body: {
+                    p_neighborhood_id: nb.id,
+                    p_name: name,
+                    p_start_date: startDate,
+                    p_finish_date: finishDate || startDate,
+                    p_start_time: document.getElementById('nbe-start-time').value,
+                    p_finish_time: document.getElementById('nbe-finish-time').value,
+                    p_location: document.getElementById('nbe-location').value,
+                    p_description: document.getElementById('nbe-desc').value,
+                    p_shared: document.getElementById('nbe-invite').checked
+                },
+                prefer: 'return=representation'
+            });
+            await loadNeighborhoodEvents();
+            document.getElementById('nb-event-modal').style.display = 'none';
+            renderEvents();
+        } catch (error) {
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not save event.');
+        } finally {
+            saveButton.disabled = false;
+        }
     });
     document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const photoModal = document.getElementById('nb-photo-modal');
+            if (photoModal && photoModal.classList.contains('active')) {
+                photoModal.classList.remove('active');
+                return;
+            }
+        }
         if (e.key !== 'Escape') return;
         const modal = document.getElementById('nb-event-modal');
         if (modal && modal.style.display === 'flex') {
@@ -1237,10 +1630,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('nbp-save').addEventListener('click', async () => {
         const nb = current();
-        if (!nb || !pendingPhotoUploads.length) {
-            document.getElementById('nb-add-photos-popup').style.display = 'none';
+        if (!pendingPhotoUploads.length) {
+            window.MyMaintenanceCommonUi.alert('Please add at least one picture.');
             return;
         }
+        if (!nb) return window.MyMaintenanceCommonUi.alert('This neighborhood is not ready for photo uploads yet.');
         const db = window.MyMaintenanceData;
         const userId = db && await db.userId();
         if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
@@ -1252,7 +1646,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     filePath: `${userId}/neighborhoods/${nb.id}/photos/${crypto.randomUUID()}-${safeName}`,
                     fileName: pending.file.name,
                     type: db.fileMime ? db.fileMime(pending.file) : pending.file.type,
-                    dataUrl: pending.dataUrl
+                    dataUrl: pending.dataUrl,
+                    text: pending.text || ''
                 };
                 await db.upload(photo.filePath, pending.file);
                 photos.push(photo);
@@ -1265,13 +1660,17 @@ document.addEventListener('DOMContentLoaded', () => {
             window.MyMaintenanceCommonUi.alert(error.message || 'Could not upload picture.');
         }
     });
-    nbPhotoPopup.addEventListener('keyup', (event) => {
-        if (event.key !== 'Enter' || event.target.id === 'nbp-save') return;
-        event.preventDefault();
-        document.getElementById('nbp-save').click();
-    });
     document.getElementById('nb-view-all-photos').addEventListener('click', () => { renderGallery(); document.getElementById('nb-gallery-modal').style.display = 'flex'; });
     document.getElementById('nb-gallery-close').addEventListener('click', () => { document.getElementById('nb-gallery-modal').style.display = 'none'; });
+    document.getElementById('nb-main-photo').addEventListener('click', () => showNeighborhoodPhoto(photoNavIndex));
+    document.getElementById('nb-photo-close').addEventListener('click', () => document.getElementById('nb-photo-modal').classList.remove('active'));
+    document.getElementById('nb-modal-prev').addEventListener('click', () => showNeighborhoodPhoto(photoNavIndex - 1));
+    document.getElementById('nb-modal-next').addEventListener('click', () => showNeighborhoodPhoto(photoNavIndex + 1));
+    document.getElementById('nb-modal-zoom-out').addEventListener('click', () => setNeighborhoodPhotoZoom(-1));
+    document.getElementById('nb-modal-zoom-in').addEventListener('click', () => setNeighborhoodPhotoZoom(1));
+    document.getElementById('nb-photo-modal').addEventListener('click', (event) => {
+        if (event.target.id === 'nb-photo-modal') event.currentTarget.classList.remove('active');
+    });
     document.getElementById('nb-prev-arrow').addEventListener('click', () => nextPhoto(-1));
     document.getElementById('nb-next-arrow').addEventListener('click', () => nextPhoto(1));
 
@@ -1299,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 });
-                pendingPhotoUploads.push({ file: file, dataUrl: dataUrl });
+                pendingPhotoUploads.push({ file: file, dataUrl: dataUrl, text: '' });
             }));
             renderPhotoThumbs();
         } catch (error) {
@@ -1365,19 +1764,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!db || !userId) return window.MyMaintenanceCommonUi.alert('Please sign in again.');
         try {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const docType = fileFormat(file);
+            const format = fileFormat(file);
+            const docType = /^image\//i.test(file.type || '') ? 'Picture' : 'Other';
             const doc = {
                 id: crypto.randomUUID(),
                 name: name, fileName: file.name, size: file.size, sizeLabel: formatBytes(file.size), performed: performed,
-                asset: 'Neighborhood: ' + (nb.name || 'Neighborhood'), privacy: privacy, docType: docType,
+                asset: 'Neighborhood: ' + (nb.name || 'Neighborhood'), privacy: privacy, docType: docType, format: format,
+                neighborhoodId: nb.id,
                 type: db.fileMime ? db.fileMime(file) : file.type, uploaded: new Date().toISOString(),
                 filePath: `${userId}/neighborhoods/${nb.id}/documents/${crypto.randomUUID()}-${safeName}`
             };
             await db.upload(doc.filePath, file);
+            try {
+                await persistNeighborhoodDocument(doc);
+            } catch (error) {
+                await db.removeFile(doc.filePath).catch(function () {});
+                throw error;
+            }
             if (!nb.docs) nb.docs = [];
             nb.docs.push(doc);
-            await saveNeighborhoods();
-            persistNeighborhoodDocument(doc);
+            try {
+                await persistNeighborhood(nb);
+            } catch (error) {
+                console.error('Could not update neighborhood document cache:', error);
+            }
             document.getElementById('nb-doc-add-popup').style.display = 'none';
             if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.refresh) {
                 await window.MyMaintenanceDocs.refresh();
@@ -1422,6 +1832,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensurePreview();
 
     /* "Add people" via roles - a small add-role button is useful */
+    window.addEventListener('mydocs:changed', renderDocs);
     render();
     loadNeighborhoods();
 });

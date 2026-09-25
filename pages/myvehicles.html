@@ -153,6 +153,12 @@
                 <div class="photo-modal-view">
                     <img id="modal-photo" src="" alt="Full screen photo">
 
+                    <div class="photo-zoom-controls" aria-label="Photo zoom">
+                        <button type="button" id="modal-zoom-out" aria-label="Zoom out">−</button>
+                        <output id="modal-zoom-level">100%</output>
+                        <button type="button" id="modal-zoom-in" aria-label="Zoom in">+</button>
+                    </div>
+
                     <div class="modal-arrows">
                         <button class="modal-arrow" id="modal-prev">
                             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -263,6 +269,10 @@
                         </button>
                         <ul class="asset-menu" id="rv-type-menu">
                             <li><button type="button" data-value="Car">Car</button></li>
+                            <li><button type="button" data-value="Truck">Truck</button></li>
+                            <li><button type="button" data-value="Trailer">Trailer</button></li>
+                            <li><button type="button" data-value="Scooter">Scooter</button></li>
+                            <li><button type="button" data-value="Bike">Bike</button></li>
                             <li><button type="button" data-value="Boat">Boat</button></li>
                             <li><button type="button" data-value="Other">Other</button></li>
                         </ul>
@@ -270,7 +280,14 @@
                     <input type="text" id="rv-type-other" placeholder="Specify type..." style="display:none">
 
                     <label id="rv-registration-label">Registration *</label>
-                    <input type="text" id="rv-registration" placeholder="e.g. AB12345">
+                    <div class="vehicle-registration-group">
+                        <div class="asset-dropdown registration-country-dropdown" id="rv-registration-country">
+                            <button type="button" class="asset-toggle" id="rv-registration-country-toggle" aria-label="Registration country"><span class="asset-value" id="rv-registration-country-value"></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <ul class="asset-menu" id="rv-registration-country-menu"></ul>
+                        </div>
+                        <input type="text" id="rv-registration" placeholder="e.g. AB 12345" autocomplete="off">
+                    </div>
+                    <small class="vehicle-registration-format" id="rv-registration-format"></small>
 
                     <label id="rv-vin-label" style="display:none">VIN</label>
                     <input type="text" id="rv-vin" placeholder="e.g. W0L0..." style="display:none">

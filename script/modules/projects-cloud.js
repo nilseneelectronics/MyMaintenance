@@ -90,16 +90,29 @@
         } catch (error) { console.warn('Could not save project:', error); }
     }
 
-    async function rename(asset, oldName, newName) {
+    async function rename(asset, oldName, newName, newAsset) {
         if (!window.MyMaintenanceData) return;
         try {
             await window.MyMaintenanceData.request('projects', {
                 method: 'PATCH',
                 query: { asset: 'eq.' + asset, name: 'eq.' + oldName },
-                body: { name: newName, updated_at: new Date().toISOString() },
+                body: { asset: newAsset || asset, name: newName, updated_at: new Date().toISOString() },
                 prefer: 'return=minimal'
             });
         } catch (error) { console.warn('Could not rename project:', error); }
+    }
+
+    async function find(asset, name) {
+        if (!asset || !name || !window.MyMaintenanceData) return null;
+        try {
+            const rows = await window.MyMaintenanceData.request('projects', {
+                query: { select: 'id,asset,name', asset: 'eq.' + asset, name: 'eq.' + name, limit: '1' }
+            });
+            return rows && rows[0] ? rows[0] : null;
+        } catch (error) {
+            console.warn('Could not load project:', error);
+            return null;
+        }
     }
 
     async function remove(asset, name) {
@@ -112,5 +125,5 @@
         } catch (error) { console.warn('Could not delete project:', error); }
     }
 
-    window.MyMaintenanceProjects = { hydrate: hydrate, add: add, rename: rename, remove: remove };
+    window.MyMaintenanceProjects = { hydrate: hydrate, add: add, find: find, rename: rename, remove: remove };
 })();

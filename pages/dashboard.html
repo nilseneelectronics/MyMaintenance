@@ -23,6 +23,17 @@
     <main class="main">
         <h1>Welcome to MyDashboard</h1>
         <div class="dashboard-grid">
+            <section class="dash-box support-box no-scale" aria-labelledby="support-title">
+                <div class="support-box-icon" aria-hidden="true">?</div>
+                <h3 id="support-title">Vedlikeholdt is under development</h3>
+                <p>Help us improve. Send a request, suggestion, or report a problem and we will look into it.</p>
+                <form id="support-request-form" class="support-request-form">
+                    <label for="support-request-message">Your message</label>
+                    <textarea id="support-request-message" rows="6" maxlength="5000" placeholder="Tell us what you need help with..."></textarea>
+                    <p id="support-request-status" class="support-request-status" role="status" aria-live="polite"></p>
+                    <button type="submit" class="add-button">Send request</button>
+                </form>
+            </section>
             <div class="dash-box homes-box no-scale">
                 <h3>My Homes</h3>
                 <p id="dash-homes-empty">No home registered</p>
@@ -499,15 +510,26 @@
                         </svg>
                     </button>
                     <ul class="asset-menu" id="rv-type-menu">
-                        <li><button type="button" data-value="Car">Car</button></li>
-                        <li><button type="button" data-value="Boat">Boat</button></li>
+                            <li><button type="button" data-value="Car">Car</button></li>
+                            <li><button type="button" data-value="Truck">Truck</button></li>
+                            <li><button type="button" data-value="Trailer">Trailer</button></li>
+                            <li><button type="button" data-value="Scooter">Scooter</button></li>
+                            <li><button type="button" data-value="Bike">Bike</button></li>
+                            <li><button type="button" data-value="Boat">Boat</button></li>
                         <li><button type="button" data-value="Other">Other</button></li>
                     </ul>
                 </div>
                 <input type="text" id="rv-type-other" placeholder="Specify type..." style="display:none">
 
                 <label id="rv-registration-label">Registration *</label>
-                <input type="text" id="rv-registration" placeholder="e.g. AB12345">
+                <div class="vehicle-registration-group">
+                    <div class="asset-dropdown registration-country-dropdown" id="rv-registration-country">
+                        <button type="button" class="asset-toggle" id="rv-registration-country-toggle" aria-label="Registration country"><span class="asset-value" id="rv-registration-country-value"></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        <ul class="asset-menu" id="rv-registration-country-menu"></ul>
+                    </div>
+                    <input type="text" id="rv-registration" placeholder="e.g. AB 12345" autocomplete="off">
+                </div>
+                <small class="vehicle-registration-format" id="rv-registration-format"></small>
 
                 <label id="rv-vin-label" style="display:none">VIN</label>
                 <input type="text" id="rv-vin" placeholder="e.g. W0L0..." style="display:none">
@@ -547,6 +569,9 @@
                 </div>
                 <input type="file" id="doc-file" style="display:none">
 
+                <label>File format</label>
+                <input type="text" id="doc-format" readonly>
+
                 <label>Name</label>
                 <input type="text" id="doc-name" placeholder="Document name...">
 
@@ -572,6 +597,22 @@
                 </div>
                 <input type="text" id="doc-asset-other" placeholder="Specify asset..." style="display:none">
 
+                <label>Project</label>
+                <div class="asset-dropdown" id="doc-project-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-project-toggle"><span class="asset-value">Other</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <ul class="asset-menu" id="doc-project-menu"><li><button type="button" data-value="__other__">Other</button></li></ul>
+                </div>
+                <input type="text" id="doc-project-other" placeholder="Project name..." style="display:none">
+
+                <label>Doc type</label>
+                <div class="asset-dropdown" id="doc-type-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-type-toggle"><span class="asset-value">-- Select type --</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <ul class="asset-menu" id="doc-type-menu"><li><button type="button" data-value="Receipt">Receipt</button></li><li><button type="button" data-value="Documentation">Documentation</button></li><li><button type="button" data-value="Warranty">Warranty</button></li><li><button type="button" data-value="Contract">Contract</button></li><li><button type="button" data-value="Invoice">Invoice</button></li><li><button type="button" data-value="Manual">Manual</button></li><li><button type="button" data-value="Picture">Picture</button></li><li><button type="button" data-value="Other">Other</button></li></ul>
+                </div>
+
+                <label>Receipt total (kr)</label>
+                <input type="text" id="doc-receipt-total" placeholder="Total amount..." inputmode="decimal" pattern="[0-9,.]*">
+
                 <label>Date performed</label>
                 <div class="doc-datepicker">
                     <input type="text" class="doc-date-field" id="doc-performed" placeholder="dd.mm.yyyy" autocomplete="off" inputmode="numeric" pattern="[0-9/]*" enterkeyhint="done">
@@ -583,6 +624,9 @@
 
                 <label>Size</label>
                 <input type="text" id="doc-size" readonly>
+
+                <label>Visibility</label>
+                <div class="doc-privacy-row"><div class="doc-privacy-options"><label class="doc-check"><input type="checkbox" name="doc-privacy" value="private" checked><span>Private</span></label><label class="doc-check"><input type="checkbox" name="doc-privacy" value="house"><span>House relevant</span></label></div></div>
             </div>
             <div class="popup-buttons">
                 <button type="button" class="popup-btn cancel" id="doc-cancel">Cancel</button>
@@ -615,6 +659,7 @@
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
     <script src="../script/script.js"></script>
+    <script src="../script/pages/dashboard-support.js"></script>
 </body>
 </html>
 

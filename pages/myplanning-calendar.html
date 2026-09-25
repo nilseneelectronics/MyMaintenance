@@ -373,6 +373,11 @@
     const confirmNo = document.getElementById('confirm-no');
 
     function openModal(key, idx) {
+        const selectedEvent = idx >= 0 && EVENTS[key] ? EVENTS[key][idx] : null;
+        if (selectedEvent && selectedEvent.isNeighborhood) {
+            window.location.href = 'myneighborhood.html' + (selectedEvent.neighborhoodId ? '?id=' + encodeURIComponent(selectedEvent.neighborhoodId) : '');
+            return;
+        }
         modal.classList.add('open');
         editingKey = key;
         editingIdx = idx !== undefined ? idx : -1;

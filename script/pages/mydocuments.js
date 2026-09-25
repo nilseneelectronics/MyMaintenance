@@ -32,15 +32,166 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectMenu = document.getElementById('doc-project-menu');
     const projectValueEl = document.querySelector('#doc-project-toggle .asset-value');
     const projectOther = document.getElementById('doc-project-other');
+    const subprojectDropdown = document.getElementById('doc-subproject-dropdown');
+    const subprojectToggle = document.getElementById('doc-subproject-toggle');
+    const subprojectMenu = document.getElementById('doc-subproject-menu');
+    const subprojectValueEl = document.querySelector('#doc-subproject-toggle .asset-value');
+    const subprojectOther = document.getElementById('doc-subproject-other');
 
     if (!addBtn || !popup) return;
+
+    function normalizePriceInput(value) {
+        const filtered = String(value || '').replace(/[^0-9.,]/g, '').replace(/\./g, ',');
+        const separator = filtered.indexOf(',');
+        if (separator < 0) return filtered;
+        return filtered.slice(0, separator + 1) + filtered.slice(separator + 1).replace(/,/g, '');
+    }
+
+    if (receiptTotalInput) {
+        receiptTotalInput.addEventListener('input', function () {
+            const normalized = normalizePriceInput(receiptTotalInput.value);
+            if (normalized !== receiptTotalInput.value) receiptTotalInput.value = normalized;
+        });
+    }
+
+    const filePreviewButton = document.createElement('button');
+    filePreviewButton.type = 'button';
+    filePreviewButton.className = 'photo-picker-btn doc-preview-file-btn';
+    filePreviewButton.textContent = 'Preview';
+    filePreviewButton.disabled = true;
+    filePreviewButton.classList.add('is-empty');
+    const filePicker = pickBtn && pickBtn.parentElement;
+    if (filePicker) filePicker.appendChild(filePreviewButton);
+
+    function syncFilePreviewButton() {
+        const hasFile = Boolean(selectedFile && selectedFile.size >= 0);
+        filePreviewButton.disabled = !hasFile;
+        filePreviewButton.classList.toggle('is-empty', !hasFile);
+        if (!hasFile) {
+            filePreviewButton.style.setProperty('border-color', 'var(--border-color)', 'important');
+            filePreviewButton.style.setProperty('background-color', 'var(--bg-secondary)', 'important');
+            filePreviewButton.style.setProperty('color', 'var(--text-secondary)', 'important');
+            filePreviewButton.style.setProperty('opacity', '1', 'important');
+            filePreviewButton.style.setProperty('pointer-events', 'none', 'important');
+        } else {
+            filePreviewButton.style.removeProperty('border-color');
+            filePreviewButton.style.removeProperty('background-color');
+            filePreviewButton.style.removeProperty('color');
+            filePreviewButton.style.removeProperty('opacity');
+            filePreviewButton.style.removeProperty('pointer-events');
+        }
+    }
+
+    let selectedFilePreviewUrl = '';
+    let selectedFilePreviewZoom = 1;
+    function closeSelectedFilePreview() {
+        const overlay = document.getElementById('doc-file-preview-overlay');
+        if (overlay) overlay.remove();
+        if (selectedFilePreviewUrl) URL.revokeObjectURL(selectedFilePreviewUrl);
+        selectedFilePreviewUrl = '';
+    }
+
+    function updateSelectedPreview(image, output) {
+        if (selectedFilePreviewZoom === 1) {
+            image.dataset.panX = '0';
+            image.dataset.panY = '0';
+        }
+        image.style.transform = 'translate(' + image.dataset.panX + 'px, ' + image.dataset.panY + 'px) scale(' + selectedFilePreviewZoom + ')';
+        output.textContent = Math.round(selectedFilePreviewZoom * 100) + '%';
+    }
+
+    function openSelectedFilePreview() {
+        if (!selectedFile) return;
+        closeSelectedFilePreview();
+        selectedFilePreviewUrl = URL.createObjectURL(selectedFile);
+        selectedFilePreviewZoom = 1;
+        const overlay = document.createElement('div');
+        overlay.className = 'popup-overlay';
+        overlay.id = 'doc-file-preview-overlay';
+        const isImage = isImageFile(selectedFile);
+        overlay.innerHTML = '<div class="popup-content doc-file-preview-content">'
+            + '<h3>Document preview</h3>'
+            + (isImage
+                ? '<div class="doc-file-preview-stage"><img class="doc-file-preview-media" src="' + selectedFilePreviewUrl + '" alt="Scanned document preview"></div>'
+                : '<iframe class="doc-file-preview-frame" src="' + selectedFilePreviewUrl + '" title="Scanned document preview"></iframe>')
+            + (isImage ? '<div class="doc-file-preview-controls"><button type="button" data-preview-zoom="-1" aria-label="Zoom out">−</button><output>100%</output><button type="button" data-preview-zoom="1" aria-label="Zoom in">+</button></div>' : '')
+            + '<div class="popup-buttons"><button type="button" class="popup-btn cancel">Close</button></div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        overlay.style.display = 'flex';
+        overlay.querySelector('.popup-btn').addEventListener('click', closeSelectedFilePreview);
+        if (isImage) {
+            const image = overlay.querySelector('.doc-file-preview-media');
+            const output = overlay.querySelector('output');
+            const stage = overlay.querySelector('.doc-file-preview-stage');
+            image.draggable = false;
+            stage.addEventListener('dragstart', function (event) { event.preventDefault(); });
+            image.dataset.panX = '0';
+            image.dataset.panY = '0';
+            let dragging = false;
+            let lastX = 0;
+            let lastY = 0;
+            overlay.querySelectorAll('[data-preview-zoom]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    selectedFilePreviewZoom = Math.max(1, Math.min(3, selectedFilePreviewZoom + Number(button.dataset.previewZoom) * 0.25));
+                    updateSelectedPreview(image, output);
+                });
+            });
+            stage.addEventListener('wheel', function (event) {
+                event.preventDefault();
+                const oldZoom = selectedFilePreviewZoom;
+                selectedFilePreviewZoom = Math.max(1, Math.min(3, selectedFilePreviewZoom - Math.sign(event.deltaY) * 0.05));
+                const rect = stage.getBoundingClientRect();
+                const x = event.clientX - rect.left - rect.width / 2;
+                const y = event.clientY - rect.top - rect.height / 2;
+                const panX = Number(image.dataset.panX) || 0;
+                const panY = Number(image.dataset.panY) || 0;
+                image.dataset.panX = String((panX + x) * selectedFilePreviewZoom / oldZoom - x);
+                image.dataset.panY = String((panY + y) * selectedFilePreviewZoom / oldZoom - y);
+                updateSelectedPreview(image, output);
+            }, { passive: false });
+            stage.addEventListener('pointerdown', function (event) {
+                if (selectedFilePreviewZoom <= 1) return;
+                dragging = true;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                stage.setPointerCapture(event.pointerId);
+                stage.classList.add('is-dragging');
+            });
+            stage.addEventListener('pointermove', function (event) {
+                if (!dragging) return;
+                image.dataset.panX = String((Number(image.dataset.panX) || 0) + event.clientX - lastX);
+                image.dataset.panY = String((Number(image.dataset.panY) || 0) + event.clientY - lastY);
+                lastX = event.clientX;
+                lastY = event.clientY;
+                updateSelectedPreview(image, output);
+            });
+            stage.addEventListener('pointerup', function () {
+                dragging = false;
+                stage.classList.remove('is-dragging');
+            });
+        }
+        overlay.addEventListener('click', function (event) {
+            if (event.target === overlay) closeSelectedFilePreview();
+        });
+    }
+    filePreviewButton.addEventListener('click', openSelectedFilePreview);
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape' || !document.getElementById('doc-file-preview-overlay')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeSelectedFilePreview();
+    }, true);
 
     const KEY = 'floorplan_user_docs';
     let selectedAssetValue = '';
     let selectedAssetId = '';
     let selectedAssetKind = '';
     let selectedDocType = '';
+    let docTypeUserEdited = false;
     let selectedProject = '';
+    let selectedSubproject = 'General';
+    let neighborhoodAssets = [];
     let lockedAsset = '';
     let docSort = 'uploaded';
     let docReverse = false;
@@ -52,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentReceiptItems = [];
     const viewerLoadPromises = {};
     let selectedFile = null;
+    syncFilePreviewButton();
     let initialDocState = '';
     let ocrWorkerPromise = null;
     let tesseractLoadPromise = null;
@@ -110,8 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function store() {
-        items.forEach(persistDocument);
+    function store(changedItem) {
+        if (changedItem) persistDocument(changedItem);
+        else items.forEach(persistDocument);
         window.dispatchEvent(new CustomEvent('mydocs:changed'));
     }
 
@@ -125,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         delete extra.payloadInDB;
         delete extra.homeId;
         delete extra.vehicleId;
+        delete extra.neighborhoodId;
         return {
             id: item.id,
             title: item.name,
@@ -133,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             file_path: item.filePath || null,
             home_id: item.homeId || null,
             vehicle_id: item.vehicleId || null,
+            neighborhood_id: item.neighborhoodId || null,
             extracted_data: extra
         };
     }
@@ -150,15 +305,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function documentFromRow(row) {
         const extra = row.extracted_data || {};
+        const info = fileTypeInfo(Object.assign({}, extra, { fileName: extra.fileName || row.file_path || '' }));
         return Object.assign({}, extra, {
             id: row.id,
             name: row.title,
-            docType: row.document_type || extra.docType || '',
+            docType: row.document_type || extra.docType || (info.cls === 'file-image' ? 'Picture' : ''),
+            format: extra.format || info.label,
             project: extra.project || '',
             performed: row.document_date || '',
             filePath: row.file_path || '',
             homeId: row.home_id || '',
             vehicleId: row.vehicle_id || '',
+            neighborhoodId: row.neighborhood_id || '',
             uploaded: String(extra.uploaded || row.created_at || '').slice(0, 10),
             created: extra.created || new Date(row.created_at || Date.now()).getTime()
         });
@@ -171,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rows = await db.request('documents', { query: { select: '*', order: 'created_at.desc' } });
             items = (rows || []).map(documentFromRow);
             updateView();
+            window.dispatchEvent(new CustomEvent('mydocs:changed'));
         } catch (error) {
             console.error('Could not load documents:', error);
         }
@@ -274,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'name', text: normalizeForSearch(it.name), weight: 100 },
             { key: 'asset', text: normalizeForSearch(it.asset || 'Other'), weight: 90 },
             { key: 'fileName', text: normalizeForSearch(it.fileName), weight: 40 },
+            { key: 'format', text: normalizeForSearch(it.format || info.label), weight: 20 },
             { key: 'type', text: normalizeForSearch(info.label), weight: 20 },
             { key: 'performed', text: normalizeForSearch(formatDateLabel(it.performed)), weight: 15 },
             { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
@@ -281,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'size', text: normalizeSizeForSearch(formatSize(it.size)), weight: 10, norm: normalizeSizeForSearch },
             { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 },
             { key: 'docType', text: normalizeForSearch(it.docType), weight: 40 },
+            { key: 'subproject', text: normalizeForSearch(it.subproject || 'General'), weight: 50 },
             { key: 'ocr', text: normalizeOcrForSearch(it.ocrText), weight: 60, norm: normalizeOcrForSearch },
             { key: 'ocrItems', text: ocrItemsSearchText(it), weight: 70, norm: normalizeOcrForSearch },
             { key: 'receiptItems', text: receiptItemsSearchText(it.receiptItems), weight: 80, norm: normalizeOcrForSearch }
@@ -336,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function searchResults(query) {
-        const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean);
         if (!terms.length) return [];
         const scored = [];
         for (let i = 0; i < items.length; i++) {
@@ -348,6 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return sortBefore(a.it, b.it) ? -1 : (sortBefore(b.it, a.it) ? 1 : 0);
         });
         return scored;
+    }
+
+    function searchScore(it, query) {
+        const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean);
+        return terms.length ? docScore(it, terms) : 0;
     }
 
     function highlight(text, terms) {
@@ -625,6 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const d = popup.querySelector('.doc-delete-btn');
         if (d) d.style.display = 'none';
         fileInput.value = '';
+        selectedFile = null;
+        syncFilePreviewButton();
+        closeSelectedFilePreview();
         clearFileError();
         if (oldDatePopup) oldDatePopup.style.display = 'none';
         nameInput.value = '';
@@ -657,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cal) cal.classList.remove('open');
         setPrivacy('private');
         selectedDocType = '';
+        docTypeUserEdited = false;
         if (docTypeValueEl) docTypeValueEl.textContent = '-- Select type --';
         if (docTypeMenu) docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
         if (docTypeDropdown) docTypeDropdown.classList.remove('open');
@@ -669,6 +839,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (projectOther) { projectOther.value = ''; projectOther.style.display = 'none'; }
         if (projectDropdown) projectDropdown.classList.remove('open');
+        selectedSubproject = 'General';
+        if (subprojectValueEl) subprojectValueEl.textContent = 'General';
+        if (subprojectMenu) subprojectMenu.querySelectorAll('button[data-value]').forEach(function (button) {
+            button.classList.toggle('selected', button.dataset.value === 'General');
+        });
+        if (subprojectOther) { subprojectOther.value = ''; subprojectOther.style.display = 'none'; }
+        if (subprojectDropdown) subprojectDropdown.classList.remove('open');
         currentOcrText = '';
         currentOcrItems = [];
         currentOcrExpanded = '';
@@ -711,10 +888,82 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!asset || !name) return;
         const map = loadProjects();
         const list = map[asset] || [];
-        if (list.indexOf(name) === -1) list.unshift(name);
+        if (list.indexOf(name) === -1) list.push(name);
         map[asset] = list;
         saveProjects(map);
         if (window.MyMaintenanceProjects) window.MyMaintenanceProjects.add(asset, name);
+    }
+
+    function registeredAssets() {
+        if (!window.MyMaintenanceAssets) return [];
+        const homes = (window.MyMaintenanceAssets.getHomes() || []).map(function (record) {
+            return { id: record.id || '', kind: 'home', label: window.MyMaintenanceAssets.homeLabel(record) };
+        });
+        const vehicles = (window.MyMaintenanceAssets.getVehicles() || []).map(function (record) {
+            return { id: record.id || '', kind: 'vehicle', label: window.MyMaintenanceAssets.vehicleLabel(record) };
+        });
+        return homes.concat(vehicles).filter(function (entry) { return entry.label; });
+    }
+
+    function neighborhoodAssetEntries() {
+        const entries = neighborhoodAssets.slice();
+        items.forEach(function (item) {
+            const label = String(item.asset || '').trim();
+            if (!/^Neighborhood:/i.test(label) || entries.some(function (entry) { return entry.label === label; })) return;
+            entries.push({ id: item.neighborhoodId || '', kind: 'neighborhood', label: label, displayLabel: label.replace(/^Neighborhood:\s*/i, '') });
+        });
+        return entries.sort(function (a, b) { return a.displayLabel.localeCompare(b.displayLabel); });
+    }
+
+    async function hydrateNeighborhoodAssets() {
+        if (!window.MyMaintenanceData) return;
+        try {
+            const rows = await window.MyMaintenanceData.request('neighborhoods', { query: { select: 'id,name', order: 'name.asc' } });
+            neighborhoodAssets = (rows || []).filter(function (row) { return row.id && row.name; }).map(function (row) {
+                return { id: row.id, kind: 'neighborhood', label: 'Neighborhood: ' + row.name, displayLabel: row.name };
+            });
+            refreshDocumentAssetMenu();
+            updateView();
+        } catch (error) {
+            console.warn('Could not load neighborhood assets:', error);
+        }
+    }
+
+    function documentOnlyAssets() {
+        const registered = new Set(registeredAssets().map(function (entry) { return entry.label; }));
+        const names = items.map(function (item) { return String(item.asset || '').trim(); })
+            .concat(Object.keys(loadProjects()));
+        return names.filter(function (name, index) {
+            return name && name !== '__other__' && !/^Neighborhood:/i.test(name)
+                && !registered.has(name) && names.indexOf(name) === index;
+        }).sort(function (a, b) { return a.localeCompare(b); });
+    }
+
+    function refreshDocumentAssetMenu() {
+        if (!assetMenu) return;
+        const registered = registeredAssets();
+        const homes = registered.filter(function (entry) { return entry.kind === 'home'; });
+        const vehicles = registered.filter(function (entry) { return entry.kind === 'vehicle'; });
+        const neighborhoods = neighborhoodAssetEntries();
+        const custom = documentOnlyAssets();
+        let html = '';
+        function addGroup(label, entries) {
+            if (!entries.length) return;
+            html += '<li class="asset-optgroup">' + escapeHtml(label) + '</li>';
+            html += entries.map(function (entry) {
+                const value = typeof entry === 'string' ? entry : entry.label;
+                const attrs = typeof entry === 'string' ? '' : ' data-asset-id="' + escapeHtml(entry.id) + '" data-asset-kind="' + entry.kind + '"';
+                const text = typeof entry === 'string' ? entry : (entry.displayLabel || entry.label);
+                return '<li><button type="button" data-value="' + escapeHtml(value) + '"' + attrs + '>' + escapeHtml(text) + '</button></li>';
+            }).join('');
+        }
+        addGroup('Addresses', homes);
+        addGroup('Vehicles', vehicles);
+        addGroup('Neighborhood', neighborhoods);
+        html += '<li class="asset-optgroup">Other</li>';
+        html += custom.map(function (name) { return '<li><button type="button" data-value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button></li>'; }).join('');
+        html += '<li><button type="button" data-value="__other__">Other</button></li>';
+        assetMenu.innerHTML = html;
     }
 
     function populateProjectMenu(asset) {
@@ -731,6 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openPopup() {
+        refreshDocumentAssetMenu();
         resetPopupFields();
         const context = window.MyMaintenanceDocumentContext;
         window.MyMaintenanceDocumentContext = null;
@@ -755,7 +1005,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openScanPopup() {
+        refreshDocumentAssetMenu();
         resetPopupFields();
+        const context = window.MyMaintenanceDocumentContext;
+        window.MyMaintenanceDocumentContext = null;
+        if (context && context.asset) selectAsset(context.asset);
+        if (context && context.project) {
+            selectedProject = context.project;
+            if (projectValueEl) projectValueEl.textContent = context.project;
+            if (projectMenu) {
+                projectMenu.querySelectorAll('button').forEach(function (button) {
+                    button.classList.toggle('selected', button.dataset.value === context.project);
+                });
+            }
+        }
         scanMode = true;
         fileInput.accept = 'image/*,application/pdf';
         fileInput.removeAttribute('capture');
@@ -764,9 +1027,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (h) h.textContent = 'Scan document';
         popup.style.display = 'flex';
         initialDocState = documentStateSnapshot();
+        // Start loading the OCR model while the user chooses a file.
+        getOcrWorker().catch(function () {});
     }
 
     function openEditPopup(it) {
+        refreshDocumentAssetMenu();
         editingId = it.id;
         selectedFile = null;
         scanMode = false;
@@ -788,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadedInput.value = formatDateLabel(it.uploaded) || '';
         sizeInput.value = formatSize(it.size);
         if (receiptTotalInput) receiptTotalInput.value = it.receiptTotal != null ? String(it.receiptTotal).replace('.', ',') : receiptItemsTotal(it.receiptItems);
-        if (formatInput) formatInput.value = fileTypeInfo(it).label;
+        if (formatInput) formatInput.value = it.format || fileTypeInfo(it).label;
         if (fileNameLabel) fileNameLabel.textContent = it.fileName || 'No file selected';
         if (assetMenu) {
             const known = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
@@ -856,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setPrivacy(it.privacy);
         const docTypeVal = it.docType || '';
         selectedDocType = docTypeVal;
+        docTypeUserEdited = Boolean(docTypeVal);
         if (docTypeMenu) {
             const typeBtns = Array.prototype.slice.call(docTypeMenu.querySelectorAll('button[data-value]'));
             typeBtns.forEach((b) => b.classList.remove('selected'));
@@ -891,6 +1158,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (projectDropdown) projectDropdown.classList.remove('open');
+        const subprojectVal = it.subproject || 'General';
+        const subprojectButtons = subprojectMenu ? Array.prototype.slice.call(subprojectMenu.querySelectorAll('button[data-value]')) : [];
+        const subprojectMatch = subprojectButtons.find(function (button) { return button.dataset.value === subprojectVal; });
+        selectedSubproject = subprojectMatch ? subprojectVal : '__other__';
+        subprojectButtons.forEach(function (button) { button.classList.toggle('selected', button === (subprojectMatch || subprojectButtons.find(function (entry) { return entry.dataset.value === '__other__'; }))); });
+        if (subprojectValueEl) subprojectValueEl.textContent = subprojectVal;
+        if (subprojectOther) {
+            subprojectOther.value = subprojectMatch ? '' : subprojectVal;
+            subprojectOther.style.display = subprojectMatch ? 'none' : '';
+        }
+        if (subprojectDropdown) subprojectDropdown.classList.remove('open');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
@@ -904,12 +1182,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function documentStateSnapshot() {
         return JSON.stringify({
             name: nameInput.value, performed: performedInput.value,
-            otherAsset: docAssetOther ? docAssetOther.value : ''
+            otherAsset: docAssetOther ? docAssetOther.value : '',
+            subproject: selectedSubproject,
+            otherSubproject: subprojectOther ? subprojectOther.value : ''
         });
     }
 
     function hasDocumentText() {
-        return [nameInput, performedInput, docAssetOther].some(function (el) {
+        return [nameInput, performedInput, docAssetOther, subprojectOther].some(function (el) {
             return el && String(el.value || '').trim() !== '';
         });
     }
@@ -1023,6 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = e.target.closest('button[data-value]');
             if (!btn) return;
             selectedDocType = btn.dataset.value;
+            docTypeUserEdited = true;
             if (docTypeValueEl) docTypeValueEl.textContent = btn.textContent;
             docTypeMenu.querySelectorAll('button').forEach((b) => b.classList.remove('selected'));
             btn.classList.add('selected');
@@ -1051,6 +1332,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    if (subprojectToggle) {
+        subprojectToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (subprojectDropdown) subprojectDropdown.classList.toggle('open');
+        });
+    }
+    if (subprojectMenu) {
+        subprojectMenu.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-value]');
+            if (!btn) return;
+            selectedSubproject = btn.dataset.value;
+            if (subprojectValueEl) subprojectValueEl.textContent = btn.textContent;
+            subprojectMenu.querySelectorAll('button[data-value]').forEach(function (button) { button.classList.remove('selected'); });
+            btn.classList.add('selected');
+            if (subprojectDropdown) subprojectDropdown.classList.remove('open');
+            if (subprojectOther) {
+                const custom = selectedSubproject === '__other__';
+                subprojectOther.style.display = custom ? '' : 'none';
+                if (custom) subprojectOther.focus();
+            }
+        });
+    }
     document.addEventListener('click', (e) => {
         if (assetDropdown && !assetDropdown.contains(e.target)) {
             assetDropdown.classList.remove('open');
@@ -1060,6 +1363,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (projectDropdown && !projectDropdown.contains(e.target)) {
             projectDropdown.classList.remove('open');
+        }
+        if (subprojectDropdown && !subprojectDropdown.contains(e.target)) {
+            subprojectDropdown.classList.remove('open');
         }
         if (cal && !cal.contains(e.target) && e.target !== performedInput) {
             cal.classList.remove('open');
@@ -1150,9 +1456,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const img = new Image();
             img.onload = function () {
                 try {
-                    const MAX = 3000;
+                    const MAX = 2000;
                     const maxDim = Math.max(img.width, img.height);
-                    let scale = 2;
+                    let scale = 1.5;
                     if (maxDim * scale > MAX) scale = MAX / maxDim;
                     scale = Math.max(scale, 0.5);
                     const canvas = document.createElement('canvas');
@@ -1183,11 +1489,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = function () {
             showScanStatus('Preparing image...');
-            preprocessImage(reader.result).then(function (processed) {
-                return getOcrWorker().then(function (worker) {
-                    showScanStatus('Scanning document...');
-                    return worker.recognize(processed);
-                });
+            const processedImage = preprocessImage(reader.result);
+            const worker = getOcrWorker();
+            Promise.all([processedImage, worker]).then(function (results) {
+                showScanStatus('Scanning document...');
+                return results[1].recognize(results[0]);
             }).then(function (result) {
                 const text = String((result && result.data && result.data.text) || '').trim();
                 currentOcrText = text;
@@ -1620,7 +1926,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (total != null) receiptTotalInput.value = total.toFixed(2).replace('.', ',');
             else if (itemTotal) receiptTotalInput.value = itemTotal;
         }
-        if (!selectedDocType && docType) setDocType(docType);
+        if (!docTypeUserEdited && docType) setDocType(docType);
     }
 
     function pad2(n) {
@@ -1900,14 +2206,17 @@ document.addEventListener('DOMContentLoaded', () => {
         clearFileError();
         if (!file) {
             selectedFile = null;
+            syncFilePreviewButton();
             if (fileNameLabel) fileNameLabel.textContent = 'No file selected';
             sizeInput.value = '';
             return;
         }
         selectedFile = file;
+        syncFilePreviewButton();
         sizeInput.value = formatSize(file.size);
         if (formatInput) formatInput.value = fileTypeInfo({ fileName: file.name, type: file.type }).label;
         if (fileNameLabel) fileNameLabel.textContent = file.name;
+        if (isImageFile(file) && !docTypeUserEdited) setDocType('Picture');
         if (!scanMode && !nameInput.value.trim()) {
             const base = file.name.replace(/\.[^.]+$/, '');
             nameInput.value = base;
@@ -2112,14 +2421,19 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.asset = asset;
         rec.homeId = selectedAssetKind === 'home' ? selectedAssetId : '';
         rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
+        rec.neighborhoodId = selectedAssetKind === 'neighborhood' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
+        rec.format = file ? fileTypeInfo(file).label : (rec.format || fileTypeInfo(rec).label);
         const receiptTotal = receiptTotalInput ? parseFloat(String(receiptTotalInput.value || '').replace(/\s/g, '').replace(',', '.')) : NaN;
         if (!isNaN(receiptTotal)) rec.receiptTotal = receiptTotal;
         else delete rec.receiptTotal;
         rec.project = selectedProject
             ? selectedProject
             : (projectOther ? projectOther.value.trim() : '');
+        rec.subproject = selectedSubproject === '__other__'
+            ? ((subprojectOther && subprojectOther.value.trim()) || 'Other')
+            : (selectedSubproject || 'General');
         if (rec.project && asset && asset !== '__other__') addProjectForAsset(asset, rec.project);
         rec.performed = performedDt ? toISO(performedDt) : '';
 
@@ -2149,7 +2463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        store();
+        store(rec);
         updateView();
         closePopup();
     }
@@ -2212,8 +2526,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const mime = String(it.type || '').toLowerCase();
         const map = {
             pdf: ['PDF', 'file-pdf'],
-            png: ['IMG', 'file-image'], jpg: ['IMG', 'file-image'], jpeg: ['IMG', 'file-image'],
-            gif: ['IMG', 'file-image'], webp: ['IMG', 'file-image'], bmp: ['IMG', 'file-image'],
+            png: ['PNG', 'file-image'], jpg: ['JPG', 'file-image'], jpeg: ['JPEG', 'file-image'],
+            gif: ['GIF', 'file-image'], webp: ['WEBP', 'file-image'], bmp: ['BMP', 'file-image'],
             svg: ['SVG', 'file-image'],
             doc: ['DOC', 'file-doc'], docx: ['DOC', 'file-docx'], odt: ['DOC', 'file-doc'],
             xls: ['XLS', 'file-xls'], xlsx: ['XLS', 'file-xls'], csv: ['CSV', 'file-csv'],
@@ -2226,7 +2540,7 @@ document.addEventListener('DOMContentLoaded', () => {
             '3mf': ['3MF', 'file-3d'], stl: ['STL', 'file-3d'], obj: ['OBJ', 'file-3d'], step: ['STEP', 'file-3d']
         };
         if (map[ext]) return { label: map[ext][0], cls: map[ext][1], ext: ext, mime: mime };
-        if (mime.indexOf('image') === 0) return { label: 'IMG', cls: 'file-image', ext: ext, mime: mime };
+         if (mime.indexOf('image') === 0) return { label: (ext || 'IMG').toUpperCase(), cls: 'file-image', ext: ext, mime: mime };
         if (mime.indexOf('pdf') !== -1) return { label: 'PDF', cls: 'file-pdf', ext: ext, mime: mime };
         const short = ((ext || 'FILE').toUpperCase().slice(0, 4) || 'FILE');
         return { label: short, cls: 'file-blank', ext: ext, mime: mime };
@@ -2271,9 +2585,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const right = document.createElement('div');
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
-            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
-            + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
-            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
+             + '<span class="doc-cell doc-cell-format doc-col-label">Format</span>'
+             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-price doc-col-label">Price</span>'
              + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
              + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
              + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>';
@@ -2297,9 +2613,11 @@ document.addEventListener('DOMContentLoaded', () => {
         right.className = 'doc-row-right';
         right.innerHTML = '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
-            + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || info.label) + '</span>'
-            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
-            + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
+             + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || '') + '</span>'
+             + '<span class="doc-cell doc-cell-format">' + escapeHtml(it.format || info.label) + '</span>'
+             + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-price">' + escapeHtml(formatCost(docCost(it))) + '</span>'
+             + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
             + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
             + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>';
         row.appendChild(left);
@@ -2317,8 +2635,11 @@ document.addEventListener('DOMContentLoaded', () => {
             + '</div>'
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed doc-col-label">Performed</span>'
-            + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
-            + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-uploaded doc-col-label">Uploaded</span>'
+             + '<span class="doc-cell doc-cell-type doc-col-label">Doc Type</span>'
+             + '<span class="doc-cell doc-cell-format doc-col-label">Format</span>'
+             + '<span class="doc-cell doc-cell-project doc-col-label">Project</span>'
+             + '<span class="doc-cell doc-cell-price doc-col-label">Cost</span>'
              + '<span class="doc-cell doc-cell-size doc-col-label">Size</span>'
              + '<span class="doc-cell doc-cell-privacy doc-col-label">Privacy</span>'
              + '<span class="doc-cell doc-cell-edit doc-col-label">Edit</span>'
@@ -2335,8 +2656,11 @@ document.addEventListener('DOMContentLoaded', () => {
             + '</div>'
             + '<div class="doc-row-right">'
             + '<span class="doc-cell doc-cell-performed">' + escapeHtml(formatDateLabel(it.performed)) + '</span>'
-            + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
-            + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-uploaded">' + escapeHtml(formatDateLabel(it.uploaded)) + '</span>'
+             + '<span class="doc-cell doc-cell-type">' + escapeHtml(it.docType || '') + '</span>'
+             + '<span class="doc-cell doc-cell-format">' + escapeHtml(it.format || info.label) + '</span>'
+             + '<span class="doc-cell doc-cell-project">' + escapeHtml(it.project || '') + '</span>'
+             + '<span class="doc-cell doc-cell-price">' + escapeHtml(formatCost(docCost(it))) + '</span>'
              + '<span class="doc-cell doc-cell-size">' + escapeHtml(formatSize(it.size)) + '</span>'
              + '<span class="doc-cell doc-cell-privacy">' + privacyTagHtml(it) + '</span>'
              + '<span class="doc-cell doc-cell-edit"><button type="button" class="doc-edit-btn" title="Edit document" aria-label="Edit document"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c-.39-.39 0-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button></span>'
@@ -2441,13 +2765,15 @@ function openAddDocPopup() {
         openPopup();
     }
 
-    function renderProjectFolders(assetKey, assetDocs) {
+    function renderProjectFolders(assetKey, assetDocs, onChange) {
         const wrap = document.createElement('div');
         wrap.className = 'doc-projects';
         const projects = projectsForAsset(assetKey);
         // Only show folders that still have documents, or keep all saved projects.
-        const projectSet = new Set((assetDocs || []).map(function (d) { return d.project || ''; }).filter(Boolean));
-        projects.forEach(function (name) { projectSet.add(name); });
+        const projectSet = new Set(projects);
+        (assetDocs || []).forEach(function (d) {
+            if (d.project) projectSet.add(d.project);
+        });
         const projectNames = Array.from(projectSet);
 
         function folderHtml(name) {
@@ -2457,7 +2783,7 @@ function openAddDocPopup() {
             return '<div class="doc-project-folder" data-project="' + escapeHtml(name) + '">'
                 + '<div class="doc-project-folder-name">' + escapeHtml(name) + '</div>'
                 + '<div class="doc-project-folder-meta">' + count + ' document' + (count === 1 ? '' : 's') + '</div>'
-                + '<div class="doc-project-folder-cost"><span class="doc-project-folder-cost-label">Price</span>' + formatCost(cost) + '</div>'
+                 + '<div class="doc-project-folder-cost"><span class="doc-project-folder-cost-label">Cost</span>' + formatCost(cost) + '</div>'
                 + '</div>';
         }
 
@@ -2501,7 +2827,7 @@ function openAddDocPopup() {
             input.value = '';
             if (name && assetKey && assetKey !== '__other__') {
                 addProjectForAsset(assetKey, name);
-                render();
+                (onChange || render)();
             }
         };
         add.addEventListener('click', function (e) {
@@ -2526,22 +2852,15 @@ function openAddDocPopup() {
         input.addEventListener('blur', commit);
         wrap.appendChild(add);
 
-        // Fill columns first, capped at six per row. The columns adapt to the
-        // number of boxes so every row fills the full width (e.g. 3 boxes use
-        // 3 columns; 8 boxes use 6 columns and wrap to a second row).
         const vw = window.innerWidth;
-        let maxCols = 6;
-        if (vw <= 460) maxCols = 2;
-        else if (vw <= 640) maxCols = 3;
-        else if (vw <= 900) maxCols = 4;
-        const cols = Math.max(1, Math.min(maxCols, wrap.children.length));
-        wrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-
-        // When the Add-project box is the only box on its row (e.g. exactly six
-        // projects already fill the previous row), it spans the whole row.
-        const boxCount = wrap.children.length;
-        if (boxCount % cols === 1) {
-            add.style.gridColumn = '1 / -1';
+        const cols = vw <= 760 ? 3 : (vw <= 1000 ? 4 : (vw <= 1200 ? 5 : 6));
+        const boxes = Array.from(wrap.children);
+        const remainder = boxes.length % cols;
+        if (remainder) {
+            boxes.slice(boxes.length - remainder).forEach(function (box) {
+                box.style.flexGrow = '1';
+                box.style.flexBasis = '0';
+            });
         }
 
         // Clicking a project folder opens that project's own page.
@@ -2555,30 +2874,44 @@ function openAddDocPopup() {
     }
 
     function render() {
-        if (!items.length) {
-            const groupsEl = document.getElementById('doc-groups');
-            if (groupsEl) groupsEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
-            const recentEl = document.getElementById('doc-recent');
-            if (recentEl) recentEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
-            return;
-        }
-
         const groupsEl = document.getElementById('doc-groups');
         if (groupsEl) {
             groupsEl.innerHTML = '';
             const byAsset = new Map();
+            if (!neighborhoodOnly) {
+                registeredAssets().forEach(function (asset) { byAsset.set(asset.label, []); });
+                neighborhoodAssetEntries().forEach(function (asset) { byAsset.set(asset.label, []); });
+                documentOnlyAssets().forEach(function (asset) { byAsset.set(asset, []); });
+            }
             items.forEach(function (it) {
                 const key = it.asset && String(it.asset).trim() ? String(it.asset).trim() : '__other__';
                 if (!byAsset.has(key)) byAsset.set(key, []);
                 byAsset.get(key).push(it);
             });
+            if (!byAsset.size) {
+                groupsEl.innerHTML = '<p class="doc-empty">No assets registered yet.</p>';
+            }
             const groupKeys = Array.from(byAsset.keys()).sort(function (a, b) {
+                const registered = registeredAssets().map(function (entry) { return entry.label; });
+                const neighborhoods = neighborhoodAssetEntries().map(function (entry) { return entry.label; });
+                const aRegistered = registered.indexOf(a);
+                const bRegistered = registered.indexOf(b);
+                if (aRegistered !== -1 || bRegistered !== -1) {
+                    if (aRegistered === -1) return 1;
+                    if (bRegistered === -1) return -1;
+                    return aRegistered - bRegistered;
+                }
+                const aNeighborhood = neighborhoods.indexOf(a);
+                const bNeighborhood = neighborhoods.indexOf(b);
+                if (aNeighborhood !== -1 || bNeighborhood !== -1) {
+                    if (aNeighborhood === -1) return 1;
+                    if (bNeighborhood === -1) return -1;
+                    return aNeighborhood - bNeighborhood;
+                }
                 const aOther = a === '__other__';
                 const bOther = b === '__other__';
-                const aNb = /^Neighborhood:/i.test(a);
-                const bNb = /^Neighborhood:/i.test(b);
-                const aRank = aOther ? 1 : (aNb ? 2 : 0);
-                const bRank = bOther ? 1 : (bNb ? 2 : 0);
+                const aRank = aOther ? 1 : 0;
+                const bRank = bOther ? 1 : 0;
                 if (aRank !== bRank) return aRank - bRank;
                 return a < b ? -1 : 1;
             });
@@ -2594,7 +2927,7 @@ function openAddDocPopup() {
                 const content = document.createElement('div');
                 content.className = 'subgroup-content';
                 content.appendChild(renderProjectFolders(key, byAsset.get(key)));
-                content.appendChild(renderHeaderRow());
+                if (sortedArr.length) content.appendChild(renderHeaderRow());
                 sortedArr.forEach(function (it) { content.appendChild(renderRow(it)); });
                 grp.appendChild(head);
                 grp.appendChild(content);
@@ -2605,10 +2938,14 @@ function openAddDocPopup() {
         const recentEl = document.getElementById('doc-recent');
         if (recentEl) {
             recentEl.innerHTML = '';
-            recentEl.appendChild(renderHeaderRow());
-            items.slice().sort(function (x, y) {
-                return recTime(y) - recTime(x);
-            }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
+            if (!items.length) {
+                recentEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
+            } else {
+                recentEl.appendChild(renderHeaderRow());
+                items.slice().sort(function (x, y) {
+                    return recTime(y) - recTime(x);
+                }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
+            }
         }
     }
 
@@ -2632,7 +2969,13 @@ function openAddDocPopup() {
         if (window.My3dViewer) window.My3dViewer.close();
         if (window.MyOfficeViewer) window.MyOfficeViewer.close();
         const ov = document.getElementById('doc-preview-overlay');
-        if (ov) ov.style.display = 'none';
+        if (ov) {
+            const body = ov.querySelector('.preview-body');
+            if (body && typeof body._imageZoomCleanup === 'function') body._imageZoomCleanup();
+            if (body) body._imageZoomCleanup = null;
+            if (body) body._imageZoomRefresh = null;
+            ov.style.display = 'none';
+        }
         document.body.style.overflow = '';
     }
 
@@ -2644,6 +2987,9 @@ function openAddDocPopup() {
         const body = ov.querySelector('.preview-body');
         const actions = ov.querySelector('.preview-actions');
         const title = ov.querySelector('.preview-title');
+        if (typeof body._imageZoomCleanup === 'function') body._imageZoomCleanup();
+        body._imageZoomCleanup = null;
+        body._imageZoomRefresh = null;
         title.textContent = it.name + (it.asset ? ' - ' + it.asset : '');
         ov.classList.remove('preview-max');
         try { await ensureViewer(info); } catch (_) {}
@@ -2654,7 +3000,24 @@ function openAddDocPopup() {
             data = '';
         }
         if (info.cls === 'file-image' && data) {
-            body.innerHTML = '<div class="preview-img-wrap"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div>';
+            body.innerHTML = '<div class="preview-image-viewer">'
+                + '<div class="pdfv-toolbar doc-image-toolbar" aria-label="Image zoom">'
+                + '<button type="button" class="pdfv-btn" title="Previous image" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>'
+                + '<input type="number" class="pdfv-page-input" min="1" max="1" value="1" aria-label="Image" readonly>'
+                + '<span class="pdfv-page-total">/ 1</span>'
+                + '<button type="button" class="pdfv-btn" title="Next image" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8.59 16.59 10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg></button>'
+                + '<span class="pdfv-divider"></span>'
+                + '<button type="button" class="pdfv-btn" data-image-zoom="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13H5v-2h14v2z"/></svg></button>'
+                + '<output class="pdfv-zoom-label" title="Reset zoom">100%</output>'
+                + '<button type="button" class="pdfv-btn" data-image-zoom="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>'
+                + '<button type="button" class="pdfv-btn" data-image-action="fit" title="Fit image"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 4h16v2H4V4zm0 14h16v2H4v-2zm2-8h12v4H6v-4z"/></svg></button>'
+                + '<span class="pdfv-divider"></span>'
+                + '<button type="button" class="pdfv-btn" data-image-action="print" title="Print"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg></button>'
+                + '<button type="button" class="pdfv-btn" data-image-action="share" title="Open / share"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H5v12h12v-6h2v8H3V5h2z"/></svg></button>'
+                + '</div>'
+                + '<div class="preview-img-wrap"><div class="preview-image-stage"><img class="preview-media" src="' + data + '" alt="' + escapeHtml(it.name) + '"></div></div>'
+                + '</div>';
+            initImageZoom(body, data, it.fileName || it.name || 'image');
         } else if (info.cls === 'file-pdf' && data) {
             body.innerHTML = '';
             if (window.MyPdfViewer) {
@@ -2705,16 +3068,131 @@ function openAddDocPopup() {
         }
         ov.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (typeof body._imageZoomRefresh === 'function') requestAnimationFrame(body._imageZoomRefresh);
+    }
+
+    function initImageZoom(body, data, name) {
+        const ZOOM_STEP = 15;
+        const WHEEL_STEP = 8;
+        const MIN_ZOOM = 50;
+        const MAX_ZOOM = 325;
+        const NOTCH = 15;
+        const STAGE_PADDING = 40;
+        const image = body.querySelector('.preview-media');
+        const wrap = body.querySelector('.preview-img-wrap');
+        const stage = body.querySelector('.preview-image-stage');
+        const output = body.querySelector('.doc-image-toolbar output');
+        const zoomOut = body.querySelector('[data-image-zoom="out"]');
+        const zoomIn = body.querySelector('[data-image-zoom="in"]');
+        const fit = body.querySelector('[data-image-action="fit"]');
+        const print = body.querySelector('[data-image-action="print"]');
+        const share = body.querySelector('[data-image-action="share"]');
+        let zoom = 100;
+        let wheelAccum = 0;
+
+        function sizeImage() {
+            if (!image.naturalWidth || !image.naturalHeight || !wrap.clientWidth || !wrap.clientHeight) return;
+            const viewportWidth = wrap.clientWidth;
+            const viewportHeight = wrap.clientHeight;
+            const availableWidth = Math.max(1, viewportWidth - STAGE_PADDING);
+            const availableHeight = Math.max(1, viewportHeight - STAGE_PADDING);
+            const fitScale = Math.min(1, availableWidth / image.naturalWidth, availableHeight / image.naturalHeight);
+            const scale = fitScale * zoom / 100;
+            const imageWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+            const imageHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+            const stageWidth = Math.max(viewportWidth, imageWidth + STAGE_PADDING);
+            const stageHeight = Math.max(viewportHeight, imageHeight + STAGE_PADDING);
+            const centerX = wrap.scrollWidth > viewportWidth ? (wrap.scrollLeft + viewportWidth / 2) / wrap.scrollWidth : 0.5;
+            const centerY = wrap.scrollHeight > viewportHeight ? (wrap.scrollTop + viewportHeight / 2) / wrap.scrollHeight : 0.5;
+            image.style.maxWidth = 'none';
+            image.style.maxHeight = 'none';
+            image.style.width = imageWidth + 'px';
+            image.style.height = imageHeight + 'px';
+            stage.style.width = stageWidth + 'px';
+            stage.style.height = stageHeight + 'px';
+            wrap.classList.toggle('is-zoomed', stageWidth > viewportWidth || stageHeight > viewportHeight);
+            wrap.scrollLeft = Math.max(0, centerX * stageWidth - viewportWidth / 2);
+            wrap.scrollTop = Math.max(0, centerY * stageHeight - viewportHeight / 2);
+        }
+
+        function setZoom(next) {
+            zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next)));
+            sizeImage();
+            output.textContent = zoom + '%';
+            zoomOut.disabled = zoom === MIN_ZOOM;
+            zoomIn.disabled = zoom === MAX_ZOOM;
+        }
+
+        function changeZoom(delta) {
+            const next = zoom + delta;
+            setZoom((zoom < 100 && next > 100) || (zoom > 100 && next < 100) ? 100 : next);
+        }
+
+        zoomOut.addEventListener('click', function () { changeZoom(-ZOOM_STEP); });
+        zoomIn.addEventListener('click', function () { changeZoom(ZOOM_STEP); });
+        output.addEventListener('click', function () { setZoom(100); });
+        fit.addEventListener('click', function () { setZoom(100); });
+        print.addEventListener('click', function () { printImage(data, name); });
+        share.addEventListener('click', function () { shareImage(data, name); });
+        wrap.addEventListener('wheel', function (event) {
+            if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
+            event.preventDefault();
+            wheelAccum += event.deltaY;
+            while (Math.abs(wheelAccum) >= NOTCH) {
+                changeZoom(wheelAccum > 0 ? -WHEEL_STEP : WHEEL_STEP);
+                wheelAccum -= wheelAccum > 0 ? NOTCH : -NOTCH;
+            }
+        }, { passive: false });
+        image.addEventListener('load', sizeImage);
+        const resizeObserver = new ResizeObserver(sizeImage);
+        resizeObserver.observe(wrap);
+        body._imageZoomRefresh = sizeImage;
+        body._imageZoomCleanup = function () {
+            resizeObserver.disconnect();
+            image.removeEventListener('load', sizeImage);
+        };
+        setZoom(100);
+    }
+
+    function printImage(data, name) {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'position:fixed;left:-9999px;width:0;height:0;border:0';
+        document.body.appendChild(frame);
+        const doc = frame.contentDocument;
+        doc.open();
+        doc.write('<!doctype html><html><head><title>' + escapeHtml(name) + '</title><style>html,body{margin:0}img{display:block;max-width:100%;max-height:100vh;margin:auto;object-fit:contain}</style></head><body><img src="' + data + '"></body></html>');
+        doc.close();
+        frame.onload = function () {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+            setTimeout(function () { frame.remove(); }, 100);
+        };
+    }
+
+    function shareImage(data, name) {
+        const blob = dataUrlToBlob(data);
+        const file = new File([blob], name, { type: blob.type });
+        if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+            navigator.share({ files: [file], title: name }).catch(function () {
+                window.open(dataUrlToBlobUrl(data), '_blank');
+            });
+            return;
+        }
+        window.open(dataUrlToBlobUrl(data), '_blank');
+    }
+
+    function dataUrlToBlob(dataUrl) {
+        const parts = dataUrl.split(',');
+        const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+        const bin = atob(parts[1]);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return new Blob([out], { type: mime });
     }
 
     function dataUrlToBlobUrl(dataUrl) {
         try {
-            const parts = dataUrl.split(',');
-            const mime = (parts[0].match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
-            const bin = atob(parts[1]);
-            const out = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-            return URL.createObjectURL(new Blob([out], { type: mime }));
+            return URL.createObjectURL(dataUrlToBlob(dataUrl));
         } catch (err) {
             return dataUrl;
         }
@@ -2797,11 +3275,21 @@ function openAddDocPopup() {
 
     initDocSort();
     updateView();
+    let projectGridResizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(projectGridResizeTimer);
+        projectGridResizeTimer = setTimeout(updateView, 20);
+    });
     if (window.MyMaintenanceProjects) {
         window.MyMaintenanceProjects.hydrate().then(function () { updateView(); });
         window.addEventListener('projects:changed', updateView);
     }
     if (!neighborhoodOnly) hydrateDocuments();
+    if (!neighborhoodOnly) hydrateNeighborhoodAssets();
+    window.addEventListener('assets:changed', function () {
+        refreshDocumentAssetMenu();
+        updateView();
+    });
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },
@@ -2816,6 +3304,9 @@ function openAddDocPopup() {
             persistDocument(it);
             window.dispatchEvent(new CustomEvent('mydocs:changed'));
         },
+        renderProjectFolders: renderProjectFolders,
+        refreshAssetMenu: refreshDocumentAssetMenu,
+        searchScore: searchScore,
         headerRowHtml: headerRowHtml,
         rowHtml: rowHtml
     };

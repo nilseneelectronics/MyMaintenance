@@ -9,8 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const OVERRIDES_KEY = STORAGE_KEY + '_overrides';
 
     const pageParams = new URLSearchParams(window.location.search);
-    const assetId = pageParams.get('id') || '';
-    const assetType = window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home';
+    let assetId = window.GALLERY_ASSET_ID || pageParams.get('id') || '';
+    const assetType = window.GALLERY_ASSET_TYPE || (window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home');
+    let photoLoadToken = 0;
 
     function loadStoredPhotos() {
         return [];
@@ -40,6 +41,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     let photos = buildPhotos();
 
+    async function loadAssetPhotos(nextId) {
+        assetId = nextId || '';
+        const token = ++photoLoadToken;
+        storedPhotos = [];
+        photos = buildPhotos();
+        currentIndex = 0;
+        syncPhotoPresentation();
+        renderGallery();
+        if (!assetId || !window.MyMaintenancePhotos) return;
+        try {
+            const remotePhotos = await window.MyMaintenancePhotos.list(assetId, assetType);
+            if (token !== photoLoadToken) return;
+            storedPhotos = remotePhotos;
+            photos = buildPhotos();
+            currentIndex = 0;
+            syncPhotoPresentation();
+            renderGallery();
+        } catch (error) {
+            if (token === photoLoadToken) console.error('Could not load photos:', error);
+        }
+    }
+
     let currentIndex = 0;
     let galleryEditMode = false;
     let fullscreenFromGallery = false;
@@ -58,6 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalNext = document.getElementById('modal-next');
     const modalEditButton = document.getElementById('modal-edit');
     const modalDeleteButton = document.getElementById('modal-delete');
+    const modalZoomOut = document.getElementById('modal-zoom-out');
+    const modalZoomIn = document.getElementById('modal-zoom-in');
+    const modalZoomLevel = document.getElementById('modal-zoom-level');
+    const zoomSteps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+    let zoomIndex = zoomSteps.indexOf(100);
 
     const deletePopup = document.getElementById('delete-photo-popup');
     const dpCancel = document.getElementById('dp-cancel');
@@ -108,6 +136,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCaption.textContent = photos.length ? (getPhoto(currentIndex).text || '') : '';
     }
 
+    function setPhotoZoom(index) {
+        zoomIndex = Math.max(0, Math.min(index, zoomSteps.length - 1));
+        const value = zoomSteps[zoomIndex];
+        modalImg.style.setProperty('--photo-scale', value / 100);
+        modalZoomLevel.textContent = `${value}%`;
+        modalZoomOut.disabled = zoomIndex === 0;
+        modalZoomIn.disabled = zoomIndex === zoomSteps.length - 1;
+    }
+
     function enterFullscreenEdit() {
         fullscreenEditMode = true;
         if (photoTextInput) {
@@ -137,6 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showModalPhoto(index) {
         currentIndex = (index + photos.length) % photos.length;
         if (modalImg) modalImg.src = photos[currentIndex].src;
+        setPhotoZoom(zoomSteps.indexOf(100));
         updateCaption();
         if (fullscreenEditMode && photoTextInput && photos.length) photoTextInput.value = photos[currentIndex].text || '';
     }
@@ -201,6 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fullscreenEditMode = false;
         currentIndex = (index + photos.length) % photos.length;
         if (modalImg) modalImg.src = photos[currentIndex].src;
+        setPhotoZoom(zoomSteps.indexOf(100));
         updateCaption();
         if (modal) modal.classList.add('active');
     }
@@ -389,6 +428,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (closeModalButton) closeModalButton.addEventListener('click', closeFullscreen);
+    if (modalZoomOut) modalZoomOut.addEventListener('click', () => setPhotoZoom(zoomIndex - 1));
+    if (modalZoomIn) modalZoomIn.addEventListener('click', () => setPhotoZoom(zoomIndex + 1));
 
     if (modalPrev) modalPrev.addEventListener('click', () => {
         showModalPhoto(currentIndex - 1);
@@ -498,12 +539,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
+            const targetAssetId = assetId;
             const uploaded = await Promise.all(pendingPhotos.map(async (photo) => {
                 const response = await fetch(photo.src);
                 const blob = await response.blob();
                 const file = new File([blob], 'photo.' + ((blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')), { type: blob.type || 'image/jpeg' });
-                return window.MyMaintenancePhotos.upload(assetId, assetType, file, photo.text || '');
+                return window.MyMaintenancePhotos.upload(targetAssetId, assetType, file, photo.text || '');
             }));
+            if (targetAssetId !== assetId) return;
             storedPhotos = storedPhotos.concat(uploaded);
         } catch (error) {
             console.error('Could not upload photos:', error);
@@ -517,16 +560,11 @@ document.addEventListener('DOMContentLoaded', () => {
         openGallery();
     });
 
-    if (window.MyMaintenancePhotos && assetId) {
-        window.MyMaintenancePhotos.list(assetId, assetType).then(function (remotePhotos) {
-            storedPhotos = remotePhotos;
-            photos = buildPhotos();
-            syncPhotoPresentation();
-            renderGallery();
-        }).catch(function (error) {
-            console.error('Could not load photos:', error);
-        });
-    }
+    window.addEventListener('asset:selected', function (event) {
+        if (!event.detail || event.detail.type !== assetType) return;
+        loadAssetPhotos(event.detail.id || '');
+    });
+    if (assetId) loadAssetPhotos(assetId);
 
     document.addEventListener('keydown', (event) => {
         if (deletePopup && deletePopup.style.display === 'flex') {

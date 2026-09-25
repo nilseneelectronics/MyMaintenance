@@ -6,7 +6,9 @@ let showGrid = true, snapEnabled = true;
 let currentZoom = 1;
 let isPanning = false, panStartX, panStartY, panStartVpt;
 let planFileName = '', isDirty = false;
+let canvasResizeObserver;
 const GRID_INTERVALS = [0.5, 1, 2, 5, 10, 25, 50, 100, 200, 500, 1000, 2000, 5000];
+const GRID_TARGET_PX = 48;
 
 // ====================== INIT ======================
 function initCanvas() {
@@ -28,6 +30,7 @@ function initCanvas() {
 
   // Center world origin at canvas center
   canvas.viewportTransform = [1, 0, 0, 1, canvas.width / 2, canvas.height / 2];
+  canvas.calcOffset();
 
   setupPan();
 
@@ -38,20 +41,32 @@ function initCanvas() {
   syncSaveButton();
 
   window.addEventListener('resize', resizeCanvas);
+  if (window.ResizeObserver) {
+    canvasResizeObserver = new ResizeObserver(resizeCanvas);
+    canvasResizeObserver.observe(wrapper);
+  }
+  canvas.upperCanvasEl.addEventListener('pointerenter', () => canvas.calcOffset());
+  requestAnimationFrame(resizeCanvas);
 
   canvas.renderAll();
 }
 
 function resizeCanvas() {
   const wrapper = document.getElementById('canvasWrapper');
-  canvas.setWidth(wrapper.clientWidth);
-  canvas.setHeight(wrapper.clientHeight - 4);
+  if (!canvas || !wrapper) return;
+  const width = Math.max(1, Math.floor(wrapper.clientWidth));
+  const height = Math.max(1, Math.floor(wrapper.clientHeight - 4));
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.setDimensions({ width, height });
+  }
+  canvas.calcOffset();
   canvas.renderAll();
 }
 
 // ====================== TOOL MANAGEMENT ======================
 function setTool(tool) {
   currentTool = tool;
+  canvas.calcOffset();
   canvas.selection = (tool === 'select');
   canvas.defaultCursor = (tool === 'select') ? 'default' : 'crosshair';
   canvas.hoverCursor = (tool === 'select') ? 'move' : 'crosshair';
@@ -62,8 +77,7 @@ function setTool(tool) {
 
 // ====================== GRID ======================
 function getGridInterval() {
-  const targetPx = 80;
-  const ideal = targetPx / (canvas?.viewportTransform?.[0] ?? 1);
+  const ideal = GRID_TARGET_PX / (canvas?.viewportTransform?.[0] ?? 1);
   let best = GRID_INTERVALS[0];
   for (const v of GRID_INTERVALS) {
     if (Math.abs(v - ideal) < Math.abs(best - ideal)) best = v;
@@ -88,7 +102,7 @@ function setupGridRenderer() {
     const step = getGridInterval();
 
     // Line widths that look the same at any zoom
-    const thinW = 0.5 / zoom;
+    const thinW = 0.75 / zoom;
     const midW  = 1 / zoom;
     const thickW = 2 / zoom;
 
@@ -117,16 +131,16 @@ function setupGridRenderer() {
     for (let x = startX; x <= bx2; x += step) {
       const isCenter = Math.abs(x) < step * 0.01;
       const isMajor = isCenter || (majorStep > 0 && Math.abs(x % majorStep) < step * 0.01);
-      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#ddd';
+      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#c8c8c8';
       ctx.lineWidth = isCenter ? thickW : isMajor ? midW : thinW;
       ctx.beginPath(); ctx.moveTo(x, by1); ctx.lineTo(x, by2); ctx.stroke();
 
-      // Label at y=0 crossing (horizontal center line)
-      if (isMajor && by1 < 0 && by2 > 0) {
+      if (isMajor) {
+        const labelY = Math.max(by1 + 18 / zoom, Math.min(-4 / zoom, by2 - 6 / zoom));
         ctx.fillStyle = isCenter ? '#444' : '#777';
         ctx.font = isCenter ? `${16 / zoom}px Poppins, sans-serif` : fontSize;
         ctx.textBaseline = 'bottom';
-        ctx.fillText(isCenter ? '0' : fmt(x), x + 4 / zoom, -4 / zoom);
+        ctx.fillText(isCenter ? '0' : fmt(x), x + 4 / zoom, labelY);
       }
     }
 
@@ -134,17 +148,19 @@ function setupGridRenderer() {
     for (let y = startY; y <= by2; y += step) {
       const isCenter = Math.abs(y) < step * 0.01;
       const isMajor = isCenter || (majorStep > 0 && Math.abs(y % majorStep) < step * 0.01);
-      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#ddd';
+      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#c8c8c8';
       ctx.lineWidth = isCenter ? thickW : isMajor ? midW : thinW;
       ctx.beginPath(); ctx.moveTo(bx1, y); ctx.lineTo(bx2, y); ctx.stroke();
 
-      // Label at x=0 crossing (vertical center line)
-      if (isMajor && bx1 < 0 && bx2 > 0) {
+      if (isMajor) {
+        const axisVisible = bx1 < 0 && bx2 > 0;
+        const axisIsLeft = bx1 >= 0;
+        const labelX = axisVisible ? -4 / zoom : axisIsLeft ? bx1 + 8 / zoom : bx2 - 8 / zoom;
         ctx.fillStyle = isCenter ? '#444' : '#777';
         ctx.font = isCenter ? `${16 / zoom}px Poppins, sans-serif` : fontSize;
-        ctx.textAlign = 'right';
+        ctx.textAlign = axisVisible || !axisIsLeft ? 'right' : 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(isCenter ? '0' : fmt(y), -4 / zoom, y - 4 / zoom);
+        ctx.fillText(isCenter ? '0' : fmt(y), labelX, y - 4 / zoom);
         ctx.textAlign = 'left';
       }
     }
@@ -187,18 +203,13 @@ document.addEventListener('keydown', e => {
 // ====================== MOUSE WHEEL ZOOM ======================
 function onMouseWheel(opt) {
   opt.e.preventDefault();
-  const vpt = canvas.viewportTransform;
-  const rect = canvas.upperCanvasEl.getBoundingClientRect();
-  const screenX = opt.e.clientX - rect.left;
-  const screenY = opt.e.clientY - rect.top;
-  const worldX = (screenX - vpt[4]) / vpt[0];
-  const worldY = (screenY - vpt[5]) / vpt[3];
-  const step = 0.04;
-  const newZ = Math.max(0.2, Math.min(currentZoom + (opt.e.deltaY > 0 ? -step : step), 8.0));
-  vpt[0] = newZ; vpt[3] = newZ;
-  vpt[4] = screenX - worldX * newZ;
-  vpt[5] = screenY - worldY * newZ;
-  canvas.renderAll();
+  opt.e.stopPropagation();
+  canvas.calcOffset();
+  const pointer = canvas.getPointer(opt.e, true);
+  const zoom = canvas.getZoom();
+  const factor = Math.pow(0.9975, opt.e.deltaY);
+  const newZ = Math.max(0.2, Math.min(zoom * factor, 8.0));
+  canvas.zoomToPoint(new fabric.Point(pointer.x, pointer.y), newZ);
   currentZoom = newZ;
   updateZoomDisplay();
   createGrid();
@@ -232,9 +243,11 @@ function setupPan() {
   el.addEventListener('mousedown', e => {
     if (e.button !== 1) return;
     e.preventDefault();
+    canvas.calcOffset();
+    const pointer = canvas.getPointer(e, true);
     isPanning = true;
-    panStartX = e.clientX;
-    panStartY = e.clientY;
+    panStartX = pointer.x;
+    panStartY = pointer.y;
     panStartVpt = canvas.viewportTransform.slice();
     canvas.selection = false;
     el.style.cursor = 'grabbing';
@@ -242,9 +255,10 @@ function setupPan() {
 
   document.addEventListener('mousemove', e => {
     if (!isPanning) return;
+    const pointer = canvas.getPointer(e, true);
     canvas.viewportTransform = panStartVpt.slice();
-    canvas.viewportTransform[4] += e.clientX - panStartX;
-    canvas.viewportTransform[5] += e.clientY - panStartY;
+    canvas.viewportTransform[4] += pointer.x - panStartX;
+    canvas.viewportTransform[5] += pointer.y - panStartY;
     canvas.renderAll();
   });
 
@@ -273,16 +287,19 @@ function loadPlanData(id) {
   try { return JSON.parse(localStorage.getItem(DATA_PREFIX + id)); } catch { return null; }
 }
 
-function savePlanData(id, data, preview, asset) {
-  localStorage.setItem(DATA_PREFIX + id, JSON.stringify(data));
+function savePlanData(id, data, preview, asset, floor) {
   const list = getFileList();
   const idx = list.findIndex(f => f.id === id);
+  const savedFloor = floor != null ? floor : (idx >= 0 ? list[idx].floor || '' : data._floorplanFloor || '');
+  if (savedFloor) data._floorplanFloor = savedFloor;
+  localStorage.setItem(DATA_PREFIX + id, JSON.stringify(data));
   if (idx >= 0) {
     list[idx].updatedAt = Date.now();
     if (preview) list[idx].preview = preview;
     if (asset != null) list[idx].asset = asset;
+    if (floor != null) list[idx].floor = floor;
   } else {
-    list.unshift({ id, name: id, preview: preview || '', updatedAt: Date.now(), asset: asset || '' });
+    list.unshift({ id, name: id, preview: preview || '', updatedAt: Date.now(), asset: asset || '', floor: savedFloor });
   }
   saveFileList(list);
   if (window.MyMaintenanceFloorplans) {
@@ -293,6 +310,7 @@ function savePlanData(id, data, preview, asset) {
       preview: saved ? saved.preview : (preview || ''),
       updatedAt: saved ? saved.updatedAt : Date.now(),
       asset: saved ? saved.asset : (asset || ''),
+      floor: saved ? saved.floor || '' : savedFloor,
       data: data
     });
   }
@@ -340,8 +358,10 @@ function openPlanFromList(id) {
   document.getElementById('planTitle').textContent = id;
   canvas.loadFromJSON(data, () => { canvas.renderAll(); isDirty = false; syncSaveButton(); });
   const rec = getFileList().find(f => f.id === id);
-  if (rec && rec.asset) planAsset = rec.asset;
+  planAsset = rec && rec.asset ? rec.asset : 'Other';
+  planFloor = rec && rec.floor ? rec.floor : data._floorplanFloor || '';
   syncPanelAsset();
+  syncPanelFloor();
 }
 
 function renderFileList() {
@@ -519,9 +539,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 50);
 
-  // Show file manager on load (after layout is ready)
+  const pageParams = new URLSearchParams(window.location.search);
   window.addEventListener('floorplans:changed', renderFileList);
-  requestAnimationFrame(() => showFileManager());
+  requestAnimationFrame(() => pageParams.get('new') === '1' ? openNewPlanModal() : showFileManager());
 
 // If the page was opened to edit a specific saved plan (?open=<id>),
 // load that plan once the canvas is ready.
@@ -547,10 +567,47 @@ else openRequestedPlan();
   // Asset connector: picking an asset in the right panel links this plan to it.
   wireAssetDropdown('planAssetDropdown', 'planAssetToggle', 'planAssetMenu', 'planAssetValue', (label) => {
     planAsset = label;
+    planFloor = '';
+    setFloorInputVisible('panel', false);
+    syncPanelFloor();
+    populateFloorMenus();
+    isDirty = true;
+    syncSaveButton();
   });
-  wireAssetDropdown('newPlanAssetDropdown', 'newPlanAssetToggle', 'newPlanAssetMenu', 'newPlanAssetValue', () => {});
+  wireAssetDropdown('newPlanAssetDropdown', 'newPlanAssetToggle', 'newPlanAssetMenu', 'newPlanAssetValue', () => {
+    const value = document.getElementById('newPlanFloorValue');
+    if (value) value.textContent = 'Select floor';
+    setFloorInputVisible('modal', false);
+    populateFloorMenus();
+  });
+  wireAssetDropdown('planFloorDropdown', 'planFloorToggle', 'planFloorMenu', 'planFloorValue', (label) => {
+    if (label === '__other__') {
+      planFloor = '';
+      const value = document.getElementById('planFloorValue');
+      if (value) value.textContent = 'Other';
+      setFloorInputVisible('panel', true);
+      isDirty = true;
+      syncSaveButton();
+      return;
+    }
+    planFloor = label;
+    setFloorInputVisible('panel', false);
+    isDirty = true;
+    syncSaveButton();
+  });
+  wireAssetDropdown('newPlanFloorDropdown', 'newPlanFloorToggle', 'newPlanFloorMenu', 'newPlanFloorValue', (label) => {
+    if (label === '__other__') {
+      const value = document.getElementById('newPlanFloorValue');
+      if (value) value.textContent = 'Other';
+      setFloorInputVisible('modal', true);
+      return;
+    }
+    setFloorInputVisible('modal', false);
+  });
   populateAssetMenus();
+  populateFloorMenus();
   syncPanelAsset();
+  syncPanelFloor();
   // Assets are loaded asynchronously from the database; re-populate the
   // asset dropdowns when they arrive so registered homes/vehicles appear.
   window.addEventListener('assets:changed', () => {
@@ -560,6 +617,7 @@ else openRequestedPlan();
       planAsset = current;
       syncPanelAsset();
     }
+    populateFloorMenus();
   });
 
   // New-plan modal: Enter creates, Escape cancels.
@@ -570,6 +628,12 @@ else openRequestedPlan();
       if (e.key === 'Enter') { e.preventDefault(); newPlanConfirm(); }
     });
   }
+  [['planFloorInput', 'panel'], ['newPlanFloorInput', 'modal']].forEach(([id, target]) => {
+    const input = document.getElementById(id);
+    if (input) input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addPlanFloor(target); }
+    });
+  });
   if (newPlanModal) {
     newPlanModal.addEventListener('click', (e) => {
       if (e.target === newPlanModal) newPlanCancel();
@@ -611,11 +675,11 @@ function confirmCancel() {
 }
 
 function goBack() {
-  if (!isDirty) { location.href = 'mytools 2.html'; return; }
+  if (!isDirty) { location.href = 'myfloorplans.html'; return; }
   showConfirmModal(
     'You have unsaved changes. Would you like to save before leaving?',
-    { label: 'Save', cb: () => { doSave(planFileName || 'floorplan'); isDirty = false; location.href = 'mytools 2.html'; } },
-    { label: "Don't Save", cb: () => { isDirty = false; location.href = 'mytools 2.html'; } },
+    { label: 'Save', cb: () => { doSave(planFileName || 'floorplan'); isDirty = false; location.href = 'myfloorplans.html'; } },
+    { label: "Don't Save", cb: () => { isDirty = false; location.href = 'myfloorplans.html'; } },
     { label: 'Cancel', cb: null }
   );
 }
@@ -645,6 +709,8 @@ function inputCancel() {
 
 // ====================== FILE OPERATIONS ======================
 let planAsset = '';
+let planFloor = '';
+const addedFloors = {};
 
 function currentPlanAsset() {
   if (planAsset) return planAsset;
@@ -662,10 +728,8 @@ function escAttr(s) {
 
 function assetMenuHtml(selected) {
   const assets = window.MyMaintenanceAssets;
-  if (!assets) return '<li class="fp-asset-none">No assets yet</li>';
-  // Floor plans are only linked to homes/addresses, never vehicles.
-  const homes = assets.getHomes();
   let html = '';
+  const homes = assets ? assets.getHomes() : [];
   if (homes.length) {
     html += '<li class="fp-asset-optgroup">Addresses</li>';
     homes.forEach(h => {
@@ -674,7 +738,9 @@ function assetMenuHtml(selected) {
       html += `<li><button type="button" data-value="${escAttr(label)}"${cls}>${escAttr(label)}</button></li>`;
     });
   }
-  if (!html) html = '<li class="fp-asset-none">No assets yet</li>';
+  const otherCls = selected === 'Other' ? ' class="selected"' : '';
+  html += '<li class="fp-asset-optgroup">Other</li>';
+  html += `<li><button type="button" data-value="Other"${otherCls}>Other</button></li>`;
   return html;
 }
 
@@ -687,6 +753,70 @@ function populateAssetMenus() {
   if (modal) modal.innerHTML = html;
 }
 
+function floorNamesForAsset(assetLabel) {
+  const custom = [];
+  const numbered = new Set();
+  let hasBasement = false;
+  const add = value => {
+    const raw = String(value || '').trim();
+    const legacy = raw.match(/^Floor\s+(\d+)$/i);
+    const name = legacy ? ordinalFloor(Number(legacy[1])) : raw;
+    if (!name) return;
+    if (/^Basement$/i.test(name)) {
+      hasBasement = true;
+      return;
+    }
+    const ordinal = name.match(/^(\d+)(?:st|nd|rd|th) floor$/i);
+    if (ordinal) {
+      numbered.add(Number(ordinal[1]));
+      return;
+    }
+    if (!custom.includes(name)) custom.push(name);
+  };
+  const assets = window.MyMaintenanceAssets;
+  const home = assets ? assets.getHomes().find(h => assets.homeLabel(h) === assetLabel) : null;
+  if (home) {
+    hasBasement = true;
+    (Array.isArray(home.floorNames) ? home.floorNames : []).forEach(add);
+    const count = Math.max(0, parseInt(home.floors, 10) || 0);
+    for (let i = 1; i <= count; i += 1) numbered.add(i);
+  }
+  getFileList().filter(item => (item.asset || 'Other') === assetLabel).forEach(item => add(item.floor));
+  (addedFloors[assetLabel] || []).forEach(add);
+  return (hasBasement ? ['Basement'] : [])
+    .concat(Array.from(numbered).sort((a, b) => a - b).map(ordinalFloor))
+    .concat(custom);
+}
+
+function ordinalFloor(number) {
+  const mod100 = number % 100;
+  const suffix = mod100 >= 11 && mod100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[number % 10] || 'th');
+  return number + suffix + ' floor';
+}
+
+function floorMenuHtml(assetLabel, selected) {
+  const names = floorNamesForAsset(assetLabel);
+  let html = names.length ? names.map(name => {
+    const cls = name === selected ? ' class="selected"' : '';
+    return `<li><button type="button" data-value="${escAttr(name)}"${cls}>${escAttr(name)}</button></li>`;
+  }).join('') : '<li class="fp-asset-none">No floors added</li>';
+  html += '<li class="fp-asset-optgroup">Other</li>';
+  html += '<li><button type="button" data-value="__other__">Other</button></li>';
+  return html;
+}
+
+function currentModalFloor() {
+  const value = document.getElementById('newPlanFloorValue');
+  return value && value.textContent !== 'Select floor' && value.textContent !== 'Other' ? value.textContent : '';
+}
+
+function populateFloorMenus() {
+  const panel = document.getElementById('planFloorMenu');
+  const modal = document.getElementById('newPlanFloorMenu');
+  if (panel) panel.innerHTML = floorMenuHtml(currentPlanAsset() || 'Other', planFloor);
+  if (modal) modal.innerHTML = floorMenuHtml(currentModalAsset() || 'Other', currentModalFloor());
+}
+
 function assetDisplayName() {
   const v = currentPlanAsset();
   return v || '-- Not connected --';
@@ -697,6 +827,19 @@ function syncPanelAsset() {
   if (value) value.textContent = assetDisplayName();
 }
 
+function syncPanelFloor() {
+  const value = document.getElementById('planFloorValue');
+  if (value) value.textContent = planFloor || '-- Not selected --';
+}
+
+function setFloorInputVisible(target, visible) {
+  const modal = target === 'modal';
+  const row = document.getElementById(modal ? 'newPlanFloorOtherRow' : 'planFloorOtherRow');
+  const input = document.getElementById(modal ? 'newPlanFloorInput' : 'planFloorInput');
+  if (row) row.hidden = !visible;
+  if (visible && input) setTimeout(() => input.focus(), 0);
+}
+
 function currentPanelAsset() {
   const value = document.getElementById('planAssetValue');
   return value && value.textContent !== '-- Not connected --' ? value.textContent : '';
@@ -704,7 +847,35 @@ function currentPanelAsset() {
 
 function currentModalAsset() {
   const value = document.getElementById('newPlanAssetValue');
-  return value && value.textContent !== '-- Not connected --' ? value.textContent : '';
+  return value && value.textContent !== 'Select asset' ? value.textContent : '';
+}
+
+function addPlanFloor(target) {
+  const modal = target === 'modal';
+  const input = document.getElementById(modal ? 'newPlanFloorInput' : 'planFloorInput');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+  const assetLabel = (modal ? currentModalAsset() : currentPlanAsset()) || 'Other';
+  if (!addedFloors[assetLabel]) addedFloors[assetLabel] = [];
+  if (!addedFloors[assetLabel].includes(name)) addedFloors[assetLabel].push(name);
+  const assets = window.MyMaintenanceAssets;
+  const home = assets ? assets.getHomes().find(h => assets.homeLabel(h) === assetLabel) : null;
+  if (home && assets.updateHome) {
+    const floorNames = floorNamesForAsset(assetLabel);
+    assets.updateHome(home.id, { floorNames });
+  }
+  if (modal) {
+    const value = document.getElementById('newPlanFloorValue');
+    if (value) value.textContent = name;
+  } else {
+    planFloor = name;
+    syncPanelFloor();
+    isDirty = true;
+    syncSaveButton();
+  }
+  if (input) input.value = '';
+  setFloorInputVisible(target, false);
+  populateFloorMenus();
 }
 
 function wireAssetDropdown(ddId, toggleId, menuId, valueId, onSelect) {
@@ -741,7 +912,10 @@ function doSave(name) {
   document.getElementById('planTitle').textContent = name.replace(/\.json$/i, '');
   const data = canvas.toJSON();
   const preview = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
-  savePlanData(name, data, preview, currentPlanAsset());
+  planAsset = currentPlanAsset() || 'Other';
+  savePlanData(name, data, preview, planAsset, planFloor);
+  syncPanelAsset();
+  syncPanelFloor();
   isDirty = false;
   syncSaveButton();
 }
@@ -930,26 +1104,38 @@ function openNewPlanModal() {
   populateAssetMenus();
   const nameEl = document.getElementById('newPlanName');
   const valueEl = document.getElementById('newPlanAssetValue');
+  const floorEl = document.getElementById('newPlanFloorValue');
   if (nameEl) nameEl.value = '';
-  if (valueEl) valueEl.textContent = currentPlanAsset() || '-- Not connected --';
+  if (valueEl) valueEl.textContent = currentPlanAsset() || 'Select asset';
+  if (floorEl) floorEl.textContent = 'Select floor';
+  setFloorInputVisible('modal', false);
+  populateFloorMenus();
   document.getElementById('newPlanModal').style.display = 'flex';
   setTimeout(() => nameEl && nameEl.focus(), 50);
 }
 
 function newPlanConfirm() {
-  document.getElementById('newPlanModal').style.display = 'none';
   const nameEl = document.getElementById('newPlanName');
   const name = nameEl ? nameEl.value.trim() : '';
   if (!name) {
     if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Please enter a name for the floor plan.');
     return;
   }
+  const asset = currentModalAsset() || 'Other';
+  const floor = currentModalFloor();
+  if (!floor) {
+    if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Please select or add a floor.');
+    return;
+  }
+  document.getElementById('newPlanModal').style.display = 'none';
   planFileName = name;
-  planAsset = currentModalAsset();
+  planAsset = asset;
+  planFloor = floor;
   doClear();
   planFileName = name;
   document.getElementById('planTitle').textContent = name;
   syncPanelAsset();
+  syncPanelFloor();
   doSave(name);
 }
 
@@ -1046,6 +1232,6 @@ Object.assign(window, {
   goBack, confirmSave, confirmDiscard, confirmCancel,
   inputConfirm, inputCancel,
   showFileManager, closeFileManager, newFromFileManager,
-  newPlanConfirm, newPlanCancel,
+  newPlanConfirm, newPlanCancel, addPlanFloor,
   addRoomFromWalls, autoClassifyWalls, showNewZoneDialog
 });

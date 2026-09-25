@@ -92,7 +92,9 @@
         if (!db) return;
         const rows = [];
         Object.keys(events || {}).forEach(function (key) {
-            (events[key] || []).forEach(function (event) { rows.push(eventRow(key, event)); });
+            (events[key] || []).forEach(function (event) {
+                if (event._source !== 'neighborhood') rows.push(eventRow(key, event));
+            });
         });
         const currentIds = new Set(rows.map(function (row) { return row.id; }));
         try {
@@ -116,16 +118,44 @@
         const db = window.MyMaintenanceData;
         if (!db) return;
         try {
-            const rows = await db.request('planning_events', { query: { select: '*', order: 'starts_at.asc' } });
+            const rows = await db.request('planning_events', { query: { select: '*', order: 'starts_at.asc' } }) || [];
+            const neighborhoodResponses = await Promise.all([
+                db.request('neighborhood_events', { query: { select: 'id,neighborhood_id,name,start_date,finish_date,start_time,finish_time,location,description,shared', order: 'start_date.asc,start_time.asc' } }).catch(function () { return []; }),
+                db.request('neighborhoods', { query: { select: 'id,name' } }).catch(function () { return []; })
+            ]);
+            const neighborhoodRows = neighborhoodResponses[0];
+            const neighborhoodNames = new Map(neighborhoodResponses[1].map(function (row) { return [row.id, row.name]; }));
             const result = {};
-            (rows || []).forEach(function (row) {
+            rows.forEach(function (row) {
                 const event = eventFromRow(row);
                 const key = event.startDate || String(row.starts_at).slice(0, 10);
                 if (!result[key]) result[key] = [];
                 result[key].push(event);
             });
+            neighborhoodRows.forEach(function (row) {
+                const key = row.start_date;
+                if (!result[key]) result[key] = [];
+                result[key].push({
+                    id: row.id,
+                    name: row.name,
+                    startDate: row.start_date,
+                    finishDate: row.finish_date || row.start_date,
+                    startTime: row.start_time || '',
+                    finishTime: row.finish_time || '',
+                    location: row.location || '',
+                    description: row.description || '',
+                    shared: !!row.shared,
+                    neighborhoodId: row.neighborhood_id,
+                    neighborhoodName: neighborhoodNames.get(row.neighborhood_id) || 'Neighborhood',
+                    isNeighborhood: true,
+                    _source: 'neighborhood'
+                });
+            });
+            Object.keys(result).forEach(function (key) {
+                result[key].sort(function (a, b) { return String(a.startTime || '').localeCompare(String(b.startTime || '')); });
+            });
             eventsCache = result;
-            knownEventIds = new Set((rows || []).map(function (row) { return row.id; }));
+            knownEventIds = new Set(rows.map(function (row) { return row.id; }));
             window.dispatchEvent(new CustomEvent('myevents:changed'));
         } catch (error) {
             console.error('Could not load events:', error);
@@ -198,7 +228,8 @@
         const nameLabel = cols.name || 'Name';
         const assetLabel = cols.asset || 'Asset';
         const dateLabel = cols.date || 'Date';
-        const timeLabel = cols.time || 'Time';
+        const startTimeLabel = cols.startTime || 'Start';
+        const endTimeLabel = cols.endTime || 'End';
         return '<div class="ev-row ev-header-row">'
             + '<div class="ev-row-left">'
             + '<span class="ev-cell ev-cell-icon"></span>'
@@ -207,7 +238,8 @@
             + '</div>'
             + '<div class="ev-row-right">'
             + '<span class="ev-cell ev-cell-date ev-col-label">' + escapeHtml(dateLabel) + '</span>'
-            + '<span class="ev-cell ev-cell-time ev-col-label">' + escapeHtml(timeLabel) + '</span>'
+            + '<span class="ev-cell ev-cell-time ev-cell-time-start ev-col-label">' + escapeHtml(startTimeLabel) + '</span>'
+            + '<span class="ev-cell ev-cell-time ev-cell-time-end ev-col-label">' + escapeHtml(endTimeLabel) + '</span>'
             + '</div>'
             + '</div>';
     }
@@ -215,16 +247,24 @@
     function eventRowHtml(key, ev, symbol) {
         const asset = String(ev.asset || ev.location || '').trim();
         const label = formatDateLabel(key);
-        const time = ev.startTime ? escapeHtml(ev.startTime) : '';
+        const startTime = ev.startTime ? escapeHtml(ev.startTime) : '';
+        const endTime = ev.finishTime ? escapeHtml(ev.finishTime) : '';
+        let tags = '';
+        if (ev.isNeighborhood || ev.neighborhoodId || ev._source === 'neighborhood') {
+            tags += '<span class="ev-tag neighborhood">Neighborhood</span>';
+        }
+        if (ev.isPlannedMaintenance) tags += '<span class="ev-tag maintenance">Maintenance</span>';
         return '<div class="ev-row ev-row-open" data-key="' + escapeHtml(key) + '">'
             + '<div class="ev-row-left">'
             + assetIcon(symbol)
-            + '<span class="ev-cell ev-cell-name">' + escapeHtml(ev.name) + '</span>'
+            + '<span class="ev-cell ev-cell-name"><span class="ev-name-text">' + escapeHtml(ev.name) + '</span>'
+            + (tags ? '<span class="ev-tags">' + tags + '</span>' : '') + '</span>'
             + '<span class="ev-cell ev-cell-asset">' + escapeHtml(asset) + '</span>'
             + '</div>'
             + '<div class="ev-row-right">'
             + '<span class="ev-cell ev-cell-date">' + escapeHtml(label) + '</span>'
-            + '<span class="ev-cell ev-cell-time">' + time + '</span>'
+            + '<span class="ev-cell ev-cell-time ev-cell-time-start">' + startTime + '</span>'
+            + '<span class="ev-cell ev-cell-time ev-cell-time-end">' + endTime + '</span>'
             + '</div>'
             + '</div>';
     }

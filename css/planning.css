@@ -378,10 +378,50 @@
     width: 100%;
     display: block;
     border-radius: 20px;
+    transform: scale(var(--photo-scale, 1));
+    transition: transform 0.15s ease;
 }
 
 .photo-modal-view {
     position: relative;
+}
+
+.photo-zoom-controls {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    color: #fff;
+    background: rgba(0,0,0,0.72);
+    border-radius: 999px;
+    transform: translateX(-50%);
+}
+
+.photo-zoom-controls button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.55);
+    border-radius: 50%;
+    font: 600 24px/1 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+.photo-zoom-controls button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.photo-zoom-controls output {
+    min-width: 58px;
+    text-align: center;
+    font-weight: 600;
 }
 
 .modal-arrows {
@@ -619,6 +659,81 @@
     min-width: 0;
     border-radius: 0 25px 25px 0 !important;
     border-left: none !important;
+}
+
+.done-fields .vehicle-registration-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.done-fields .vehicle-registration-group .registration-country-dropdown {
+    flex: 0 0 105px;
+    width: 105px;
+    min-width: 0;
+}
+
+.done-fields .vehicle-registration-group .registration-country-dropdown .asset-toggle {
+    height: 100%;
+    min-height: 43px;
+    padding: 8px 10px;
+    border-radius: 25px 0 0 25px;
+    justify-content: center;
+    gap: 7px;
+}
+
+.registration-country-dropdown .asset-value,
+.registration-country-dropdown .asset-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.registration-country-dropdown > .asset-toggle > svg,
+.registration-country-dropdown .asset-toggle .vehicle-country-flag svg {
+    margin-left: 0;
+}
+
+.registration-country-dropdown .asset-menu button {
+    padding-left: 10px;
+}
+
+.registration-country-dropdown .asset-menu {
+    min-width: 150px;
+}
+
+.vehicle-country-flag {
+    display: inline-flex;
+    width: 24px;
+    height: 16px;
+    flex: 0 0 24px;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.vehicle-country-flag svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.done-fields .vehicle-registration-group #rv-registration {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0 25px 25px 0;
+    border-left: 0;
+    text-transform: uppercase;
+}
+
+.vehicle-registration-format {
+    margin: -7px 8px 2px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.vehicle-registration-format.invalid {
+    color: var(--delete-red);
 }
 
 .done-fields textarea {
@@ -1662,6 +1777,11 @@ body:has(.event-modal-overlay.open) {
 .planning-content {
     padding: 0 16px;
     box-sizing: border-box;
+}
+
+#project-context-header {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* Sub-page headers (done tasks / all events / calendar): keep the back

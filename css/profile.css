@@ -113,6 +113,22 @@
     touch-action: pan-y pinch-zoom;
 }
 
+#invite-popup .popup-content {
+    width: min(600px, calc(100vw - 40px));
+    max-width: 600px;
+    max-height: none;
+    overflow: visible;
+}
+
+#invite-popup .popup-content .done-fields {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+    scrollbar-gutter: auto;
+    margin-right: 0;
+    padding-right: 0;
+}
+
 /* Change Password popup: lower, smaller buttons */
 #password-popup .popup-btn {
     padding: 9px 14px;
@@ -395,6 +411,8 @@
     font-size: 0.95em;
     color: var(--text-primary);
     transition: border-color 0.3s;
+    min-height: 54px;
+    box-sizing: border-box;
 }
 
 .profile-toggle:hover {
@@ -457,8 +475,10 @@
 }
 
 .profile-access-invite {
-    min-width: 92px;
-    padding: 8px 18px;
+    width: 92px;
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 12px;
     border: 1px solid var(--accent-primary);
     border-radius: 999px;
     background: var(--accent-primary);
@@ -473,6 +493,89 @@
     color: var(--text-secondary);
     border-color: var(--border-color);
     cursor: default;
+}
+
+.profile-role-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 26px;
+    margin-top: 6px;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.profile-role-info-wrap {
+    position: relative;
+    margin-left: auto;
+}
+
+.profile-role-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-primary);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.profile-role-info-btn svg {
+    display: block;
+    width: 24px;
+    height: 24px;
+}
+
+.profile-role-tooltip {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 2000;
+    width: 320px;
+    max-width: 76vw;
+    padding: 14px 16px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 14px;
+    background: var(--bg-primary);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 400;
+    text-align: left;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.profile-role-tooltip p {
+    margin: 0 0 8px;
+}
+
+.profile-role-tooltip p:last-child {
+    margin-bottom: 0;
+}
+
+#invite-popup .profile-role-tooltip {
+    width: 320px;
+    max-width: 76vw;
+    padding: 14px 16px;
+    font-size: 0.9rem;
+}
+
+#invite-popup .profile-role-tooltip p {
+    margin-bottom: 8px;
+}
+
+.profile-role-info-wrap.show .profile-role-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .profile-invite-option {
@@ -717,5 +820,8 @@
     .profile-row-actions {
         width: 100%;
         justify-content: flex-start;
+    }
+    #invite-popup .popup-content {
+        width: calc(100% - 24px);
     }
 }

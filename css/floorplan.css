@@ -89,7 +89,7 @@ main.floorplan-main {
 }
 
 .fp-tool-label {
-  font-size: 0.65em;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -491,7 +491,48 @@ main.floorplan-main {
 }
 
 #newPlanModal .fp-asset-dropdown {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+}
+
+.fp-panel-field-label {
+  display: block;
+  margin: 12px 0 6px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.fp-add-floor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.fp-add-floor-row[hidden] {
+  display: none;
+}
+
+.fp-add-floor-row input {
+  min-width: 0;
+  height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Poppins', sans-serif;
+  box-sizing: border-box;
+}
+
+.fp-add-floor-row input:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.fp-add-floor-row .btn-sm {
+  height: 38px;
+  padding-inline: 12px;
 }
 
 .fp-modal-export-grid {
@@ -1063,14 +1104,6 @@ footer {
   padding-top: 26px;
 }
 
-.fp-group-create {
-  flex: none;
-  width: auto;
-  margin-left: auto;
-  padding: 8px 18px;
-  font-size: 0.85rem;
-}
-
 /* The whole header row (arrow + asset name) toggles show/hide like the
    document groups on mydocuments. */
 #fp-groups .doc-group-header {
@@ -1099,6 +1132,15 @@ footer {
   gap: 18px;
 }
 
+#fp-groups .fp-grid-add {
+  min-height: 86px;
+  width: 100%;
+}
+
+#fp-groups .fp-grid-empty-assets .fp-grid-add {
+  grid-column: 1 / -1;
+}
+
 .fp-grid-card {
   display: flex;
   flex-direction: column;
@@ -1115,10 +1157,10 @@ footer {
 }
 
 .fp-grid-card:hover {
-  border-color: var(--accent-primary);
-  transform: none;
-  z-index: 2;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    border-color: var(--accent-primary);
+    transform: none;
+    z-index: 2;
+    box-shadow: none;
 }
 
 .fp-grid-preview {
@@ -1170,6 +1212,14 @@ footer {
   color: var(--text-secondary);
   text-align: left;
   margin-top: 4px;
+}
+
+.fp-grid-floor {
+  color: var(--accent-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  margin-top: 3px;
 }
 
 .fp-grid-actions {

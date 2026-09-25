@@ -27,7 +27,7 @@ async function main() {
   assert(auth._readSupabaseSession().expires_at > Date.now()/1000);
 
   // Exercise the actual Edge Function handler with mock Auth, DB, and SMTP.
-  let handler, verified = true, smtpFails = false, neighborhoodScenario = false, existingNeighborhoodPending = false, outgoingFamilyPending = false, incomingFamilyPending = false, actingUserId = 'owner'; const operations = [];
+  let handler, verified = true, smtpFails = false, neighborhoodScenario = false, existingNeighborhoodPending = false, outgoingFamilyPending = false, incomingFamilyPending = false, actingUserId = 'owner'; const operations = [], sentMail = [];
   const id='11111111-1111-4111-8111-111111111111';
   const recipientId='66666666-6666-4666-8666-666666666666';
   const row={id,inviter_id:'owner',name:'Recipient',email:'recipient@example.test',role:'Member',status:'sending',member_profile:{}};
@@ -35,7 +35,7 @@ async function main() {
   const env={SUPABASE_URL:'https://test.invalid',SUPABASE_SERVICE_ROLE_KEY:'server-test',SMTP_HOST:'mail.test.invalid',SMTP_USER:'noreply@example.test',SMTP_PASSWORD:'test-only',SMTP_FROM:'noreply@example.test'};
   const backend = { Request, Response, URL, Uint8Array, Set, Date, Number, String, Error, atob:data=>Buffer.from(data,'base64').toString('binary'),
     Deno:{env:{get:key=>env[key]},serve:fn=>{handler=fn}},
-    nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?'));assert(mail.html.includes('Vedlikeholdt'));assert(mail.html.includes('Accept invitation'));assert(mail.html.includes('src="cid:vedlikeholdt-logo"'));assert(!mail.html.includes('\n+<tr'));assert.equal(mail.attachments?.[0]?.cid,'vedlikeholdt-logo');assert.equal(mail.attachments?.[0]?.encoding,'base64');assert.equal(mail.attachments?.[0]?.content,fs.readFileSync(path.join(root,'supabase/functions/family-invitations/assets/vedlikeholdt-email-logo.png')).toString('base64'));if(neighborhoodScenario)assert(mail.text.includes('?neighborhood-invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
+    nodemailer:{createTransport:()=>({close(){},sendMail:async mail=>{operations.push('smtp');sentMail.push(mail);assert(mail.text.includes('https://vedlikeholdt.no/pages/email-action.html?'));assert(mail.html.includes('Vedlikeholdt'));assert(mail.html.includes('Accept invitation'));assert(mail.html.includes('src="cid:vedlikeholdt-logo"'));assert(!mail.html.includes('\n+<tr'));assert.equal(mail.attachments?.[0]?.cid,'vedlikeholdt-logo');assert.equal(mail.attachments?.[0]?.encoding,'base64');assert.equal(mail.attachments?.[0]?.content,fs.readFileSync(path.join(root,'supabase/functions/family-invitations/assets/vedlikeholdt-email-logo.png')).toString('base64'));if(neighborhoodScenario)assert(mail.text.includes('?neighborhood-invitation='));if(smtpFails)throw Error('mock failure');return {accepted:[mail.to]}}})},
     fetch:async(url,options)=>{
       if(url.endsWith('/auth/v1/user'))return new Response(JSON.stringify({id:actingUserId,email:actingUserId+'@example.test',email_confirmed_at:verified?'2026-01-01':null}));
       if(url.includes('family_members?')) {
@@ -65,7 +65,8 @@ async function main() {
       if(url.includes('reserve_family_invitation')){operations.push('reserve');return new Response(JSON.stringify(row));}
       if(url.includes('reserve_neighborhood_invitation')){operations.push('reserve-neighborhood');return new Response(JSON.stringify(neighborhoodRow));}
       if(url.includes('accept_family_invitation'))return new Response(JSON.stringify({code:'P0001',message:'Invitation not found for your email address.'}),{status:400});
-      const body=JSON.parse(options.body);operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
+      if(options.method==='DELETE'){operations.push('delete');return new Response(JSON.stringify([]));}
+      const body=JSON.parse(options.body);if(body.status==='cancelled'){assert(url.includes('neighborhood_id=eq.55555555-5555-4555-8555-555555555555'));assert(url.includes('email=eq.recipient%40example.test'));assert(url.includes('inviter_id=eq.owner'));assert(url.includes('status=eq.pending'));return new Response(JSON.stringify([{id:neighborhoodRow.id,...body}]));}if(body.read_at){assert(url.includes('kind=eq.neighborhood_invitation'));operations.push('read');return new Response(JSON.stringify([{id:'notification-test',...body}]));}operations.push(body.status || 'family');return new Response(JSON.stringify([{...row,...body}]));
     }
   };
   vm.runInNewContext(require('node:module').stripTypeScriptTypes(read('supabase/functions/family-invitations/index.ts').replace(/^import[^\r\n]*\r?\n/,'')),backend);
@@ -85,7 +86,9 @@ async function main() {
   outgoingFamilyPending=true;const outgoingList=await (await handler(request({action:'list'}))).json();assert.equal(outgoingList.members.length,1);assert.equal(outgoingList.members[0].status,'invited');assert.equal(outgoingList.members[0].incomingInvitation,false);outgoingFamilyPending=false;
   incomingFamilyPending=true;const incomingList=await (await handler(request({action:'list'}))).json();assert.equal(incomingList.members.length,1);assert.equal(incomingList.members[0].incomingInvitation,true);incomingFamilyPending=false;
   smtpFails=false;neighborhoodScenario=true;operations.length=0;const neighborhoodInvite=await (await handler(request({action:'invite-neighborhood',recipientId}))).json();assert.equal(neighborhoodInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));
-  operations.length=0;const houseInvite=await (await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'resident@example.test'}))).json();assert.equal(houseInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));neighborhoodScenario=false;
+  operations.length=0;const houseInvite=await (await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'resident@example.test'}))).json();assert.equal(houseInvite.invited,true);assert(operations.includes('reserve-neighborhood'));assert(operations.includes('smtp'));assert.equal(sentMail.at(-1).to,'resident@example.test');assert.equal(sentMail.at(-1).envelope.from,'noreply@example.test');assert.equal(sentMail.at(-1).envelope.to[0],'resident@example.test');neighborhoodScenario=false;
+  operations.length=0;const acceptedNeighborhood=await (await handler(request({action:'accept-neighborhood',id:neighborhoodRow.id}))).json();assert.equal(acceptedNeighborhood.accepted,true);assert(operations.includes('read'));assert(!operations.includes('delete'));
+  operations.length=0;const cancelled=await (await handler(request({action:'cancel',kind:'neighborhood',neighborhoodId:neighborhoodRow.neighborhood_id,email:neighborhoodRow.email}))).json();assert.equal(cancelled.cancelled,true);assert(operations.includes('read'));
   neighborhoodScenario=true;actingUserId='member';operations.length=0;assert.equal((await handler(request({action:'invite-neighborhood-address',neighborhoodId:'55555555-5555-4555-8555-555555555555',address:'Example Street 2',email:'outsider@example.test'}))).status,400);assert(!operations.includes('smtp'));actingUserId='owner';neighborhoodScenario=false;
 
   // Test reset landing-page flow without a real session or password change.

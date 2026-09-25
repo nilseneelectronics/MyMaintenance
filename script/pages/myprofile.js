@@ -74,9 +74,35 @@
     }
     function closeOverlay(el) {
         if (el && el.style.display === 'flex') {
+            closeRoleInfo();
             el.style.display = 'none';
             unlockScroll();
         }
+    }
+
+    function closeRoleInfo(except) {
+        document.querySelectorAll('.profile-role-info-wrap.show').forEach(function (wrap) {
+            if (wrap === except) return;
+            wrap.classList.remove('show');
+            var button = wrap.querySelector('.profile-role-info-btn');
+            if (button) button.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    function wireRoleInfo() {
+        document.querySelectorAll('.profile-role-info-btn').forEach(function (button) {
+            var wrap = button.closest('.profile-role-info-wrap');
+            if (!wrap) return;
+            button.setAttribute('aria-expanded', 'false');
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                var opening = !wrap.classList.contains('show');
+                closeRoleInfo(wrap);
+                wrap.classList.toggle('show', opening);
+                button.setAttribute('aria-expanded', String(opening));
+            });
+        });
     }
 
     /* ===================== SUB-HELPERS ===================== */
@@ -844,6 +870,10 @@
         wireAssetDropdown($('inv-role-dropdown'));
         wireAssetDropdown($('ma-role-dropdown'));
         wireAssetDropdown($('transfer-recipient-dropdown'));
+        wireRoleInfo();
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('.profile-role-info-wrap')) closeRoleInfo();
+        });
 
         $('inv-role-dropdown').__onChange = function (value) { invRole = value; };
         $('transfer-recipient-dropdown').__onChange = function (value) {
@@ -1032,6 +1062,7 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 e.preventDefault();
+                if (document.querySelector('.profile-role-info-wrap.show')) { closeRoleInfo(); return; }
                 cancelTopmost();
                 return;
             }

@@ -30,6 +30,8 @@ async function main() {
         vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../script/modules/profile-data.js'), 'utf8'), context);
         const data = context.window.MyMaintenanceProfileData;
         data.saveProfile = () => {};
+        assert.equal(data.presetAccess('Member').tools, true);
+        assert.equal(data.presetAccess('Viewer').tools, true);
         assert.equal(await data.hydrateFamily(), true);
         assert.deepEqual(JSON.parse(JSON.stringify(data.getFamily())), members, signedInUser);
         assert.equal(data.getFamilyLoadError(), '');

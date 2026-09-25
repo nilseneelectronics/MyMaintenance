@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const editBtn = document.getElementById('project-edit-btn');
     const searchInput = document.getElementById('project-doc-search');
     const listEl = document.getElementById('project-doc-list');
+    let projectSort = 'uploaded';
+    let projectSortReverse = false;
+    let selectedEditAsset = asset;
+    let projectPhotoId = '';
 
     const PROJECTS_KEY = 'mymaintenance_doc_projects';
 
@@ -23,11 +27,85 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveProjects(map) {
         localStorage.setItem(PROJECTS_KEY, JSON.stringify(map));
     }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char];
+        });
+    }
+
     function projectDocs() {
         if (!window.MyMaintenanceDocs) return [];
         return window.MyMaintenanceDocs.getItems().filter(function (d) {
             return (d.asset || '') === asset && (d.project || '') === project;
         });
+    }
+
+    function availableAssetGroups() {
+        const assets = window.MyMaintenanceAssets;
+        if (!assets) return [];
+        return [
+            { label: 'Addresses', values: assets.getHomes().map(assets.homeLabel) },
+            { label: 'Vehicles', values: assets.getVehicles().map(assets.vehicleLabel) }
+        ].map(function (group) {
+            group.values = group.values.filter(Boolean).filter(function (value, index, values) {
+                return values.indexOf(value) === index;
+            });
+            return group;
+        }).filter(function (group) { return group.values.length; });
+    }
+
+    function renderEditAssetMenu(selected) {
+        const menu = document.getElementById('project-edit-asset-menu');
+        const label = document.querySelector('#project-edit-asset-dropdown .asset-value');
+        if (!menu || !label) return;
+        const groups = availableAssetGroups();
+        const values = groups.reduce(function (all, group) { return all.concat(group.values); }, []);
+        if (selected && values.indexOf(selected) === -1) {
+            groups.unshift({ label: 'Current asset', values: [selected] });
+        }
+        menu.innerHTML = groups.map(function (group) {
+            return '<li class="asset-optgroup">' + escapeHtml(group.label) + '</li>'
+                + group.values.map(function (value) {
+                    return '<li><button type="button" data-value="' + escapeHtml(value) + '">' + escapeHtml(value) + '</button></li>';
+                }).join('');
+        }).join('');
+        label.textContent = selected || '-- Select an asset --';
+        menu.querySelectorAll('button').forEach(function (button) {
+            button.classList.toggle('selected', button.dataset.value === selected);
+            button.addEventListener('click', function () {
+                selectedEditAsset = button.dataset.value;
+                label.textContent = button.textContent;
+                menu.style.maxHeight = '0px';
+                menu.closest('.custom-dropdown').classList.remove('open');
+            });
+        });
+    }
+
+    function sortBefore(a, b) {
+        switch (projectSort) {
+            case 'alpha':
+                return String(a.name || '').toLowerCase() < String(b.name || '').toLowerCase();
+            case 'size':
+                return (a.size || 0) < (b.size || 0);
+            case 'type':
+                return String(a.docType || '').toLowerCase() < String(b.docType || '').toLowerCase();
+            case 'asset':
+                return String(a.asset || '').toLowerCase() < String(b.asset || '').toLowerCase();
+            case 'project':
+                return String(a.project || '').toLowerCase() < String(b.project || '').toLowerCase();
+            case 'performed':
+                return String(a.performed || '') > String(b.performed || '');
+            default:
+                return String(a.uploaded || '') > String(b.uploaded || '');
+        }
+    }
+
+    function sortComparator() {
+        return function (a, b) {
+            const result = sortBefore(a, b) ? -1 : (sortBefore(b, a) ? 1 : 0);
+            return projectSortReverse ? -result : result;
+        };
     }
 
     function renderOverview() {
@@ -36,34 +114,62 @@ document.addEventListener('DOMContentLoaded', () => {
         const docs = projectDocs();
         const count = docs.length;
         let cost = 0;
+        const categoryCosts = {};
         docs.forEach(function (d) {
+            let documentCost = 0;
             if (d.receiptTotal != null && !isNaN(Number(d.receiptTotal))) {
-                cost += Number(d.receiptTotal);
-                return;
+                documentCost = Number(d.receiptTotal);
+            } else if (Array.isArray(d.receiptItems)) {
+                d.receiptItems.forEach(function (item) {
+                    const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
+                    const qty = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
+                    if (!isNaN(price)) documentCost += price * (isNaN(qty) ? 1 : qty);
+                });
             }
-            if (!Array.isArray(d.receiptItems)) return;
-            d.receiptItems.forEach(function (item) {
-                const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
-                const qty = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
-                if (!isNaN(price)) cost += price * (isNaN(qty) ? 1 : qty);
-            });
+            cost += documentCost;
+            if (documentCost) {
+                const category = String(d.subproject || 'General').trim() || 'General';
+                categoryCosts[category] = (categoryCosts[category] || 0) + documentCost;
+            }
         });
+        const formatCost = function (value) { return value ? 'kr ' + value.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'kr 0'; };
+        const categories = Object.keys(categoryCosts).sort(function (a, b) {
+            if (a === 'General') return -1;
+            if (b === 'General') return 1;
+            return a.localeCompare(b);
+        });
+        const summary = categories.length ? '<div class="project-cost-summary">' + categories.map(function (category) {
+            return '<div class="project-cost-row"><span>' + escapeHtml(category) + '</span><strong>' + formatCost(categoryCosts[category]) + '</strong></div>';
+        }).join('') + '</div>' : '';
         overviewEl.innerHTML = '<div class="project-overview-row">'
             + '<div class="project-overview-cell"><span class="project-overview-label">Documents</span><span class="project-overview-value">' + count + '</span></div>'
-            + '<div class="project-overview-cell"><span class="project-overview-label">Price</span><span class="project-overview-value">' + (cost ? 'kr ' + cost.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'kr 0') + '</span></div>'
+             + '<div class="project-overview-cell project-cost-cell"><span class="project-overview-label">Cost</span><span class="project-overview-value">' + formatCost(cost) + '</span>' + summary + '</div>'
             + '</div>';
+    }
+
+    async function connectProjectPhotos() {
+        if (!window.MyMaintenanceProjects || !window.MyMaintenanceProjects.find) return;
+        const row = await window.MyMaintenanceProjects.find(asset, project);
+        projectPhotoId = row ? row.id : '';
+        if (projectPhotoId) window.dispatchEvent(new CustomEvent('asset:selected', { detail: { type: 'project', id: projectPhotoId } }));
     }
 
     function renderList(query) {
         if (!listEl) return;
         renderOverview();
-        const docs = projectDocs().slice().sort(function (a, b) {
-            return String(b.uploaded || '').localeCompare(String(a.uploaded || ''));
-        });
+        const docs = projectDocs().slice().sort(sortComparator());
         const q = query ? query.trim().toLowerCase() : '';
-        const filtered = q ? docs.filter(function (d) {
-            return String(d.name || '').toLowerCase().indexOf(q) !== -1
-                || String(d.docType || '').toLowerCase().indexOf(q) !== -1;
+        const filtered = q ? docs.map(function (d) {
+            const score = window.MyMaintenanceDocs.searchScore
+                ? window.MyMaintenanceDocs.searchScore(d, q)
+                : [d.name, d.docType, d.fileName, d.format].join(' ').toLowerCase().indexOf(q) !== -1 ? 1 : 0;
+            return { doc: d, score: score };
+        }).filter(function (result) {
+            return result.score > 0;
+        }).sort(function (a, b) {
+            return b.score - a.score;
+        }).map(function (result) {
+            return result.doc;
         }) : docs;
 
         if (!filtered.length) {
@@ -99,18 +205,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (trigger) trigger.click();
         });
     }
+    const scanDocBtn = document.getElementById('project-scan-doc-btn');
+    if (scanDocBtn) {
+        scanDocBtn.addEventListener('click', function () {
+            window.MyMaintenanceDocumentContext = { asset: asset, project: project };
+            const trigger = document.getElementById('doc-scan-btn');
+            if (trigger) trigger.click();
+        });
+    }
 
-    // Edit project: rename or delete it.
+    // Edit project: rename, move to another asset, or delete it.
     if (editBtn) {
         editBtn.addEventListener('click', function () {
             const nameInput = document.getElementById('project-edit-name');
             const delBtn = document.getElementById('project-edit-delete');
             const popupEl = document.getElementById('project-edit-popup');
             if (nameInput) nameInput.value = project;
+            selectedEditAsset = asset;
+            renderEditAssetMenu(selectedEditAsset);
             if (delBtn) delBtn.style.display = '';
             if (popupEl) popupEl.style.display = 'flex';
         });
     }
+    window.addEventListener('assets:changed', function () {
+        if (document.getElementById('project-edit-popup')?.style.display === 'flex') {
+            renderEditAssetMenu(selectedEditAsset);
+        }
+    });
     const editCancel = document.getElementById('project-edit-cancel');
     if (editCancel) editCancel.addEventListener('click', function () {
         const popupEl = document.getElementById('project-edit-popup');
@@ -120,28 +241,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (editSave) editSave.addEventListener('click', async function () {
         const nameInput = document.getElementById('project-edit-name');
         const newName = nameInput ? nameInput.value.trim() : '';
-        if (!newName) {
+        const newAsset = selectedEditAsset || asset;
+        if (!newName || !newAsset) {
             if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Enter a project name.');
             return;
         }
-        const map = loadProjects();
-        const list = map[asset] || [];
-        const idx = list.indexOf(project);
-        if (idx !== -1) list.splice(idx, 1);
-        if (list.indexOf(newName) === -1) list.unshift(newName);
-        map[asset] = list;
-        saveProjects(map);
-        if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.rename(asset, project, newName);
-        // Rename the project on all its documents and persist the change.
-        window.MyMaintenanceDocs.getItems().forEach(function (d) {
-            if ((d.asset || '') === asset && (d.project || '') === project) {
-                d.project = newName;
-                if (window.MyMaintenanceDocs.persistItem) window.MyMaintenanceDocs.persistItem(d);
-            }
+        const existingDestination = (loadProjects()[newAsset] || []).some(function (name) {
+            return name === newName && !(newAsset === asset && newName === project);
         });
-        const popupEl = document.getElementById('project-edit-popup');
-        if (popupEl) popupEl.style.display = 'none';
-        window.location.href = 'myproject.html?asset=' + encodeURIComponent(asset) + '&project=' + encodeURIComponent(newName);
+        if (existingDestination) {
+            if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('A project with that name already exists for this asset.');
+            return;
+        }
+        const saveButton = editSave;
+        saveButton.disabled = true;
+        try {
+            const map = loadProjects();
+            const oldList = map[asset] || [];
+            const oldIndex = oldList.indexOf(project);
+            if (oldIndex !== -1) oldList.splice(oldIndex, 1);
+            map[asset] = oldList;
+            if (!map[newAsset]) map[newAsset] = [];
+            if (map[newAsset].indexOf(newName) === -1) map[newAsset].unshift(newName);
+            saveProjects(map);
+            if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.rename(asset, project, newName, newAsset);
+            // Update every linked document when the project is renamed or moved.
+            window.MyMaintenanceDocs.getItems().forEach(function (d) {
+                if ((d.asset || '') === asset && (d.project || '') === project) {
+                    d.asset = newAsset;
+                    d.project = newName;
+                    if (window.MyMaintenanceDocs.persistItem) window.MyMaintenanceDocs.persistItem(d);
+                }
+            });
+            const popupEl = document.getElementById('project-edit-popup');
+            if (popupEl) popupEl.style.display = 'none';
+            window.location.href = 'myproject.html?asset=' + encodeURIComponent(newAsset) + '&project=' + encodeURIComponent(newName);
+        } finally {
+            saveButton.disabled = false;
+        }
     });
     const editDelete = document.getElementById('project-edit-delete');
     if (editDelete) editDelete.addEventListener('click', function () {
@@ -152,6 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idx !== -1) list.splice(idx, 1);
             map[asset] = list;
             saveProjects(map);
+            if (projectPhotoId && window.MyMaintenancePhotos) {
+                const photos = await window.MyMaintenancePhotos.list(projectPhotoId, 'project');
+                await Promise.all(photos.map(function (photo) { return window.MyMaintenancePhotos.remove(photo); }));
+            }
             if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.remove(asset, project);
             window.MyMaintenanceDocs.getItems().forEach(function (d) {
                 if ((d.asset || '') === asset && (d.project || '') === project) {
@@ -161,17 +302,47 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             window.location.href = 'mydocuments.html';
         };
+        const popupEl = document.getElementById('project-edit-popup');
+        if (popupEl) popupEl.style.display = 'none';
         if (window.MyMaintenanceCommonUi) {
             window.MyMaintenanceCommonUi.confirm('Delete project "' + project + '"? Documents stay, but lose their project link.', {
                 title: 'Delete project',
-                confirmLabel: 'Delete'
+                confirmLabel: 'Delete',
+                destructive: true
             }).then(function (ok) { if (ok) doDelete(); });
         } else {
             doDelete();
         }
     });
 
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        const popupEl = document.getElementById('project-edit-popup');
+        if (popupEl && popupEl.style.display === 'flex') popupEl.style.display = 'none';
+    });
+
     if (searchInput) searchInput.addEventListener('input', function () { renderList(searchInput.value); });
+
+    const sortDropdown = document.getElementById('project-sort-dropdown');
+    const sortInvert = document.getElementById('project-sort-invert');
+    if (sortDropdown) {
+        sortDropdown.querySelectorAll('.dropdown-menu button').forEach(function (button) {
+            button.addEventListener('click', function () {
+                projectSort = button.getAttribute('data-sort') || 'uploaded';
+                sortDropdown.querySelector('.dropdown-toggle span').textContent = button.textContent;
+                sortDropdown.classList.remove('open');
+                renderList(searchInput ? searchInput.value : '');
+            });
+        });
+    }
+    if (sortInvert) {
+        sortInvert.addEventListener('click', function () {
+            projectSortReverse = !projectSortReverse;
+            sortInvert.classList.toggle('active', projectSortReverse);
+            if (sortDropdown) sortDropdown.classList.toggle('inverted', projectSortReverse);
+            renderList(searchInput ? searchInput.value : '');
+        });
+    }
     window.addEventListener('mydocs:changed', function () { renderList(searchInput ? searchInput.value : ''); });
 
     // The shared document page hydrate may still be loading; re-render when ready.
@@ -179,7 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.MyMaintenanceDocs.refresh().then(function () { renderList(''); });
     }
     if (window.MyMaintenanceProjects) {
-        window.MyMaintenanceProjects.hydrate().then(function () { renderList(searchInput ? searchInput.value : ''); });
+        window.MyMaintenanceProjects.hydrate().then(function () {
+            renderList(searchInput ? searchInput.value : '');
+            connectProjectPhotos();
+        });
     }
     window.addEventListener('projects:changed', function () { renderList(searchInput ? searchInput.value : ''); });
     setTimeout(function () { renderList(''); }, 300);

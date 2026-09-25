@@ -112,6 +112,11 @@
                 </div>
             </div>
 
+            <section class="projects-box" id="asset-projects-box">
+                <h3>Projects</h3>
+                <div id="asset-projects-list"></div>
+            </section>
+
             <!-- Home information -->
             <div class="asset-info-box" id="asset-info-box">
                 <div class="asset-info-header">
@@ -165,6 +170,12 @@
 
                 <div class="photo-modal-view">
                     <img id="modal-photo" src="" alt="Full screen photo">
+
+                    <div class="photo-zoom-controls" aria-label="Photo zoom">
+                        <button type="button" id="modal-zoom-out" aria-label="Zoom out">−</button>
+                        <output id="modal-zoom-level">100%</output>
+                        <button type="button" id="modal-zoom-in" aria-label="Zoom in">+</button>
+                    </div>
 
                     <div class="modal-arrows">
                         <button class="modal-arrow" id="modal-prev">

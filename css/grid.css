@@ -412,6 +412,94 @@
     box-sizing: border-box;
 }
 
+.support-box {
+    text-align: left;
+    position: fixed;
+    top: 150px;
+    right: 24px;
+    z-index: 50;
+    width: min(280px, calc(100vw - 32px));
+    max-height: calc(100vh - 174px);
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+
+.support-box-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 12px;
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.support-box h3 {
+    margin: 0 0 8px;
+    color: var(--accent-primary);
+}
+
+.support-box > p {
+    margin: 0 0 18px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.support-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.support-request-form label {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.support-request-form textarea {
+    width: 100%;
+    min-height: 130px;
+    padding: 12px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+    font: inherit;
+    resize: vertical;
+}
+
+.support-request-form textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.support-request-form button {
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.support-request-form button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.support-request-status {
+    height: 2.6em;
+    min-height: 2.6em;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.3;
+    overflow: hidden;
+}
+
+.support-request-status.success { color: var(--accent-secondary); }
+.support-request-status.error { color: var(--delete-red); }
+
 @media (max-width: 747px) {
     .dashboard-grid {
         grid-template-columns: minmax(0, 1fr);
@@ -429,6 +517,16 @@
     .dashboard-grid .planning-box,
     .dashboard-grid .planned-maintenance-box {
         grid-column: 1 / -1;
+    }
+    .support-box {
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        width: min(320px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        min-height: 0;
+        max-height: 72vh;
+        overflow-y: auto;
     }
 }
 
@@ -452,7 +550,11 @@
     #dash-homes .ev-cell-icon,
     #dash-vehicles .ev-cell-icon,
     #dash-upcoming .ev-cell-icon,
-    #dash-planned .ev-cell-icon {
+    #dash-planned .ev-cell-icon,
+    #dash-homes .ev-calendar-icon,
+    #dash-vehicles .ev-calendar-icon,
+    #dash-upcoming .ev-calendar-icon,
+    #dash-planned .ev-calendar-icon {
         display: none;
     }
 }
@@ -469,6 +571,16 @@
     max-width: 100%;
     width: 100%;
     overflow: hidden;
+}
+
+.dashboard-grid .support-box {
+    top: 245px;
+    width: min(280px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    min-height: 600px;
+    max-height: calc(100vh - 190px);
+    overflow-x: hidden;
+    overflow-y: visible;
 }
 
 /* My Homes / My Vehicles / Try MyTools / Edit MyProfile pair up in the
@@ -549,42 +661,60 @@
    shrinkable so no content overflows the box (name/asset/date/time truncate). */
 #dash-upcoming .ev-row,
 #dash-planned .ev-row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1.55fr) minmax(0, 0.95fr) minmax(110px, 0.75fr) 62px 62px;
+    align-items: center;
     gap: 10px;
 }
 #dash-upcoming .ev-row-left,
-#dash-planned .ev-row-left {
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 10px;
+#dash-planned .ev-row-left,
+#dash-upcoming .ev-row-right,
+#dash-planned .ev-row-right {
+    display: contents;
 }
 #dash-upcoming .ev-cell-name,
 #dash-planned .ev-cell-name {
     min-width: 0;
-    flex: 1 1 auto;
+    width: auto;
+    padding-left: 10px;
+    font-size: 1rem;
 }
 #dash-upcoming .ev-cell-asset,
 #dash-planned .ev-cell-asset {
     width: auto;
     min-width: 0;
-    flex: 0 1 auto;
-    max-width: 38%;
+    max-width: none;
     text-align: left;
-}
-#dash-upcoming .ev-row-right,
-#dash-planned .ev-row-right {
-    flex-shrink: 1;
-    min-width: 0;
-    gap: 10px;
+    padding-left: 18px;
+    font-size: 0.9rem;
 }
 #dash-upcoming .ev-cell-date,
 #dash-planned .ev-cell-date,
 #dash-upcoming .ev-cell-time,
 #dash-planned .ev-cell-time {
     width: auto;
-    flex: 0 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.88rem;
+}
+
+#dash-upcoming .ev-calendar-icon,
+#dash-planned .ev-calendar-icon {
+    margin-left: 4px;
+}
+
+#dash-upcoming .ev-header-row,
+#dash-planned .ev-header-row {
+    font-size: 0.78rem;
+}
+
+@media (max-width: 480px) {
+    #dash-upcoming .ev-row,
+    #dash-planned .ev-row {
+        grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.9fr) 70px 44px 44px;
+    }
 }
 
 .documents-box h3, .planning-box h3, .documents-box p, .planning-box p {
@@ -656,6 +786,46 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ev-name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ev-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+}
+
+.ev-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+}
+
+.ev-tag.neighborhood {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.ev-tag.maintenance {
+    border-color: #d89216;
+    color: #d89216;
 }
 
 .ev-cell-asset {

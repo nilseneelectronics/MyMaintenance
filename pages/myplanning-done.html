@@ -119,6 +119,12 @@
         <div class="photo-modal-content">
             <img id="done-modal-photo" src="" alt="Full screen photo">
 
+            <div class="photo-zoom-controls" aria-label="Photo zoom">
+                <button type="button" id="done-modal-zoom-out" aria-label="Zoom out">−</button>
+                <output id="done-modal-zoom-level">100%</output>
+                <button type="button" id="done-modal-zoom-in" aria-label="Zoom in">+</button>
+            </div>
+
             <div class="modal-arrows">
                 <button class="modal-arrow" id="done-modal-prev">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -302,13 +308,28 @@
         const photoModalPrev = document.getElementById('done-modal-prev');
         const photoModalNext = document.getElementById('done-modal-next');
         const photoModalClose = document.getElementById('done-modal-close');
+        const photoZoomOut = document.getElementById('done-modal-zoom-out');
+        const photoZoomIn = document.getElementById('done-modal-zoom-in');
+        const photoZoomLevel = document.getElementById('done-modal-zoom-level');
 
         let photoIndex = 0;
+        const photoZoomSteps = [25, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
+        let photoZoomIndex = photoZoomSteps.indexOf(100);
+
+        function setPhotoZoom(index) {
+            photoZoomIndex = Math.max(0, Math.min(index, photoZoomSteps.length - 1));
+            const value = photoZoomSteps[photoZoomIndex];
+            photoModalImg.style.setProperty('--photo-scale', value / 100);
+            photoZoomLevel.textContent = `${value}%`;
+            photoZoomOut.disabled = photoZoomIndex === 0;
+            photoZoomIn.disabled = photoZoomIndex === photoZoomSteps.length - 1;
+        }
 
         function showModalPhoto() {
             if (!currentPhotos.length) return;
             photoModalImg.src = currentPhotos[photoIndex];
             photoModalCaption.textContent = `Picture ${photoIndex + 1} of ${currentPhotos.length}`;
+            setPhotoZoom(photoZoomSteps.indexOf(100));
         }
 
         function openPhotoModal(index) {
@@ -323,6 +344,8 @@
         }
 
         if (photoModalClose) photoModalClose.addEventListener('click', closePhotoModal);
+        if (photoZoomOut) photoZoomOut.addEventListener('click', () => setPhotoZoom(photoZoomIndex - 1));
+        if (photoZoomIn) photoZoomIn.addEventListener('click', () => setPhotoZoom(photoZoomIndex + 1));
         if (photoModal) photoModal.addEventListener('click', (e) => { if (e.target === photoModal) closePhotoModal(); });
         if (photoModalPrev) photoModalPrev.addEventListener('click', () => {
             if (!currentPhotos.length) return;

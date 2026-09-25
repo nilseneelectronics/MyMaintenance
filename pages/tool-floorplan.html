@@ -19,7 +19,7 @@
       <!-- Toolbar -->
       <div class="fp-toolbar">
         <div class="fp-tool-group">
-          <button class="btn btn-sm fp-back-btn" onclick="goBack()" title="Back to MyTools">← Back</button>
+          <button class="btn btn-sm fp-back-btn" onclick="goBack()" title="Back to Floor Plans">← Back</button>
         </div>
         <div class="fp-tool-group">
           <span class="fp-tool-label">Draw</span>
@@ -86,6 +86,20 @@
               </button>
               <ul class="fp-asset-menu" id="planAssetMenu"></ul>
             </div>
+            <label class="fp-panel-field-label">Floor</label>
+            <div class="fp-asset-dropdown" id="planFloorDropdown">
+              <button type="button" class="fp-asset-toggle" id="planFloorToggle" aria-expanded="false">
+                <span class="fp-asset-value" id="planFloorValue">-- Not selected --</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <ul class="fp-asset-menu" id="planFloorMenu"></ul>
+            </div>
+            <div class="fp-add-floor-row" id="planFloorOtherRow" hidden>
+              <input type="text" id="planFloorInput" placeholder="Floor name">
+              <button type="button" class="btn btn-sm" onclick="addPlanFloor('panel')">Save floor</button>
+            </div>
           </div>
           <div class="fp-panel-section">
             <h3>Properties</h3>
@@ -142,12 +156,26 @@
       <label class="fp-modal-label">Connected Asset</label>
       <div class="fp-asset-dropdown" id="newPlanAssetDropdown">
         <button type="button" class="fp-asset-toggle" id="newPlanAssetToggle" aria-expanded="false">
-          <span class="fp-asset-value" id="newPlanAssetValue">-- Not connected --</span>
+          <span class="fp-asset-value" id="newPlanAssetValue">Select asset</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
         <ul class="fp-asset-menu" id="newPlanAssetMenu"></ul>
+      </div>
+      <label class="fp-modal-label">Floor</label>
+      <div class="fp-asset-dropdown" id="newPlanFloorDropdown">
+        <button type="button" class="fp-asset-toggle" id="newPlanFloorToggle" aria-expanded="false">
+          <span class="fp-asset-value" id="newPlanFloorValue">Select floor</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <ul class="fp-asset-menu" id="newPlanFloorMenu"></ul>
+      </div>
+      <div class="fp-add-floor-row" id="newPlanFloorOtherRow" hidden>
+        <input type="text" id="newPlanFloorInput" placeholder="Floor name">
+        <button type="button" class="btn btn-sm" onclick="addPlanFloor('modal')">Save floor</button>
       </div>
       <div class="fp-modal-actions">
         <button class="btn btn-sm btn-primary" onclick="newPlanConfirm()">Create</button>
