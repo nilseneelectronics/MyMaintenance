@@ -122,7 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 finishTime: row.finish_time,
                 location: row.location,
                 desc: row.description,
-                shared: row.shared
+                shared: row.shared,
+                neighborhoodId: row.neighborhood_id,
+                isNeighborhood: true,
+                _source: 'neighborhood'
             });
         });
     }
@@ -823,6 +826,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* Escape closes, Enter saves (both when editing and adding) */
     document.addEventListener('keydown', (e) => {
+        const rulePopup = document.getElementById('nb-rule-popup');
+        const alertPopup = document.getElementById('nb-alert-popup');
+        if (e.key === 'Escape' && rulePopup && rulePopup.style.display === 'flex') {
+            e.preventDefault();
+            rulePopup.style.display = 'none';
+            return;
+        }
+        if (e.key === 'Escape' && alertPopup && alertPopup.style.display === 'flex') {
+            e.preventDefault();
+            alertPopup.style.display = 'none';
+            return;
+        }
         const popup = document.getElementById('nb-info-popup');
         if (!popup || popup.style.display !== 'flex') return;
         if (e.key === 'Escape') {
@@ -1250,6 +1265,20 @@ document.addEventListener('DOMContentLoaded', () => {
             list.appendChild(row);
         });
     }
+
+    function renderRules() {
+        const list = document.getElementById('nb-rules-list');
+        if (!list) return;
+        const nb = current();
+        const defaults = ['Use common sense', 'No noise after 23:00', 'No noise on Sundays'];
+        const rules = nb && Array.isArray(nb.rules) && nb.rules.length ? nb.rules : defaults;
+        list.innerHTML = '';
+        rules.forEach(function (rule) {
+            const item = document.createElement('li');
+            item.textContent = rule;
+            list.appendChild(item);
+        });
+    }
     async function previewDoc(d) {
         const ov = document.getElementById('nb-doc-preview');
         if (!ov) return;
@@ -1286,16 +1315,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSelector();
         if (!currentId && neighborhoods.length) currentId = neighborhoods[0].id;
         selectorLabel.textContent = current() ? (current().name || 'Neighborhood') : '-- Select neighborhood --';
+        isAdmin = !current() || isMeAdmin(current());
         const sharedReadOnly = false;
         ['nb-add-photo-btn', 'nb-add-event', 'nb-add-document', 'nb-add-neighbor'].forEach(function (id) {
             const control = document.getElementById(id);
             if (control) control.hidden = sharedReadOnly;
         });
+        const ruleAction = document.getElementById('nb-add-rule');
+        if (ruleAction) ruleAction.hidden = !isAdmin;
         const neighborAction = document.getElementById('nb-add-neighbor');
         if (neighborAction) neighborAction.textContent = 'Edit neighborhood';
         renderNeighbors();
         renderEvents();
         renderDocs();
+        renderRules();
         setMainPhoto();
         renderNbThumbs();
     }
@@ -1303,6 +1336,152 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('mydocs:changed', function () {
         if (window.MyMaintenanceDocs && window.MyMaintenanceDocs.render) window.MyMaintenanceDocs.render();
         renderDocs();
+    });
+
+    document.getElementById('nb-add-rule').addEventListener('click', function () {
+        const nb = current();
+        if (!nb || !isAdmin) return;
+        const defaults = ['Use common sense', 'No noise after 23:00', 'No noise on Sundays'];
+        const rules = nb.rules && nb.rules.length ? nb.rules : defaults;
+        const fields = document.getElementById('nb-rule-fields');
+        fields.innerHTML = '';
+        rules.forEach(function (rule) {
+            const row = document.createElement('div');
+            row.className = 'nb-rule-edit-row';
+            const number = document.createElement('span');
+            number.className = 'nb-rule-edit-number';
+            number.textContent = '1.';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = rule;
+            input.className = 'nb-rule-edit-input';
+            row.append(number, input);
+            fields.appendChild(row);
+        });
+        renumberRules();
+        document.getElementById('nb-rule-popup').style.display = 'flex';
+    });
+    document.getElementById('nb-rule-add-line').addEventListener('click', function () {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'nb-rule-edit-input';
+        input.placeholder = 'New rule...';
+        const row = document.createElement('div');
+        row.className = 'nb-rule-edit-row';
+        row.innerHTML = '<span class="nb-rule-edit-number"></span>';
+        row.append(input);
+        document.getElementById('nb-rule-fields').appendChild(row);
+        renumberRules();
+        input.focus();
+    });
+    function renumberRules() {
+        document.querySelectorAll('#nb-rule-fields .nb-rule-edit-number').forEach(function (el, index) { el.textContent = (index + 1) + '.'; });
+    }
+    let draggedRule = null;
+    let dragStartY = 0;
+    let dragMinDelta = 0;
+    let dragMaxDelta = 0;
+    let dragScale = 1;
+    let dragSourceIndex = -1;
+    let dragTargetIndex = -1;
+    let dragInputs = [];
+    let dragCenters = [];
+    const ruleFields = document.getElementById('nb-rule-fields');
+    ruleFields.addEventListener('pointerdown', function (event) {
+        const input = event.target.closest('.nb-rule-edit-input');
+        if (!input || event.button !== 0) return;
+        draggedRule = input;
+        dragStartY = event.clientY;
+        const startRect = input.getBoundingClientRect();
+        dragInputs = Array.from(ruleFields.querySelectorAll('.nb-rule-edit-input'));
+        const rects = dragInputs.map(function (item) { return item.getBoundingClientRect(); });
+        dragScale = startRect.height && input.offsetHeight ? startRect.height / input.offsetHeight : 1;
+        if (!Number.isFinite(dragScale) || dragScale <= 0) dragScale = 1;
+        dragCenters = rects.map(function (rect) { return rect.top + rect.height / 2; });
+        dragSourceIndex = dragInputs.indexOf(input);
+        dragTargetIndex = dragSourceIndex;
+        dragMinDelta = (rects[0].top - startRect.top) / dragScale;
+        dragMaxDelta = (rects[rects.length - 1].bottom - startRect.bottom) / dragScale;
+        input.setPointerCapture(event.pointerId);
+        input.classList.add('dragging');
+    });
+    ruleFields.addEventListener('pointermove', function (event) {
+        if (!draggedRule) return;
+        event.preventDefault();
+        const requested = (event.clientY - dragStartY) / dragScale;
+        const delta = Math.max(dragMinDelta, Math.min(dragMaxDelta, requested));
+        draggedRule.style.transform = 'translateY(' + delta + 'px)';
+        const draggedCenter = Math.max(dragCenters[0], Math.min(dragCenters[dragCenters.length - 1], dragCenters[dragSourceIndex] + delta * dragScale));
+        dragTargetIndex = dragCenters.reduce(function (best, center, index) {
+            return Math.abs(center - draggedCenter) < Math.abs(dragCenters[best] - draggedCenter) ? index : best;
+        }, 0);
+        const distance = dragCenters.length > 1 ? (dragCenters[1] - dragCenters[0]) / dragScale : 0;
+        dragInputs.forEach(function (input, index) {
+            if (input === draggedRule) return;
+            if (dragSourceIndex < dragTargetIndex && index > dragSourceIndex && index <= dragTargetIndex) { input.classList.add('gliding'); input.style.transform = 'translateY(-' + distance + 'px)'; }
+            else if (dragSourceIndex > dragTargetIndex && index >= dragTargetIndex && index < dragSourceIndex) { input.classList.add('gliding'); input.style.transform = 'translateY(' + distance + 'px)'; }
+            else { input.classList.remove('gliding'); input.style.transform = ''; }
+        });
+    });
+    function finishRuleDrag() {
+        if (!draggedRule) return;
+        const reordered = dragInputs.slice();
+        const moved = reordered.splice(dragSourceIndex, 1)[0];
+        reordered.splice(dragTargetIndex, 0, moved);
+        const rows = Array.from(ruleFields.querySelectorAll('.nb-rule-edit-row'));
+        rows.forEach(function (row, index) { row.appendChild(reordered[index]); });
+        draggedRule.classList.remove('dragging');
+        reordered.forEach(function (input) { input.classList.remove('gliding'); input.style.transform = ''; input.classList.remove('drop-target'); });
+        draggedRule = null;
+        dragInputs = [];
+        dragCenters = [];
+        dragSourceIndex = -1;
+        dragTargetIndex = -1;
+        renumberRules();
+    }
+    ruleFields.addEventListener('pointerup', finishRuleDrag);
+    ruleFields.addEventListener('pointercancel', finishRuleDrag);
+    document.addEventListener('pointerup', finishRuleDrag);
+    document.addEventListener('pointercancel', finishRuleDrag);
+    document.getElementById('nb-rule-cancel').addEventListener('click', function () {
+        document.getElementById('nb-rule-popup').style.display = 'none';
+    });
+    document.getElementById('nb-rule-save').addEventListener('click', async function () {
+        const nb = current();
+        const rules = Array.from(document.querySelectorAll('#nb-rule-fields .nb-rule-edit-input')).map(function (input) { return input.value.trim(); }).filter(Boolean);
+        if (!nb || !isAdmin || !rules.length) return;
+        nb.rules = rules;
+        await saveNeighborhoods();
+        renderRules();
+        document.getElementById('nb-rule-popup').style.display = 'none';
+    });
+
+    document.getElementById('nb-send-alert').addEventListener('click', function () {
+        if (!current()) return;
+        document.getElementById('nb-alert-input').value = '';
+        document.getElementById('nb-alert-popup').style.display = 'flex';
+    });
+    document.getElementById('nb-alert-cancel').addEventListener('click', function () {
+        document.getElementById('nb-alert-popup').style.display = 'none';
+    });
+    ['nb-rule-popup', 'nb-alert-popup'].forEach(function (id) {
+        document.getElementById(id).addEventListener('click', function (event) {
+            if (event.target === event.currentTarget) event.currentTarget.style.display = 'none';
+        });
+    });
+    document.getElementById('nb-alert-send').addEventListener('click', async function () {
+        const message = document.getElementById('nb-alert-input').value.trim();
+        const nb = current();
+        if (!nb || !message) return;
+        const button = document.getElementById('nb-alert-send');
+        button.disabled = true;
+        try {
+            await window.MyMaintenanceAuth.familyRequest('neighborhood-alert', { neighborhoodId: nb.id, message: message });
+            document.getElementById('nb-alert-popup').style.display = 'none';
+            window.MyMaintenanceCommonUi.alert('Neighborhood alert sent.');
+        } catch (error) {
+            window.MyMaintenanceCommonUi.alert(error.message || 'Could not send neighborhood alert.');
+        } finally { button.disabled = false; }
     });
 
     /* ---- Wire events ---- */

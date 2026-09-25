@@ -550,7 +550,11 @@
     #dash-homes .ev-cell-icon,
     #dash-vehicles .ev-cell-icon,
     #dash-upcoming .ev-cell-icon,
-    #dash-planned .ev-cell-icon {
+    #dash-planned .ev-cell-icon,
+    #dash-homes .ev-calendar-icon,
+    #dash-vehicles .ev-calendar-icon,
+    #dash-upcoming .ev-calendar-icon,
+    #dash-planned .ev-calendar-icon {
         display: none;
     }
 }
@@ -657,42 +661,60 @@
    shrinkable so no content overflows the box (name/asset/date/time truncate). */
 #dash-upcoming .ev-row,
 #dash-planned .ev-row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1.55fr) minmax(0, 0.95fr) minmax(110px, 0.75fr) 62px 62px;
+    align-items: center;
     gap: 10px;
 }
 #dash-upcoming .ev-row-left,
-#dash-planned .ev-row-left {
-    flex: 1 1 auto;
-    min-width: 0;
-    gap: 10px;
+#dash-planned .ev-row-left,
+#dash-upcoming .ev-row-right,
+#dash-planned .ev-row-right {
+    display: contents;
 }
 #dash-upcoming .ev-cell-name,
 #dash-planned .ev-cell-name {
     min-width: 0;
-    flex: 1 1 auto;
+    width: auto;
+    padding-left: 10px;
+    font-size: 1rem;
 }
 #dash-upcoming .ev-cell-asset,
 #dash-planned .ev-cell-asset {
     width: auto;
     min-width: 0;
-    flex: 0 1 auto;
-    max-width: 38%;
+    max-width: none;
     text-align: left;
-}
-#dash-upcoming .ev-row-right,
-#dash-planned .ev-row-right {
-    flex-shrink: 1;
-    min-width: 0;
-    gap: 10px;
+    padding-left: 18px;
+    font-size: 0.9rem;
 }
 #dash-upcoming .ev-cell-date,
 #dash-planned .ev-cell-date,
 #dash-upcoming .ev-cell-time,
 #dash-planned .ev-cell-time {
     width: auto;
-    flex: 0 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.88rem;
+}
+
+#dash-upcoming .ev-calendar-icon,
+#dash-planned .ev-calendar-icon {
+    margin-left: 4px;
+}
+
+#dash-upcoming .ev-header-row,
+#dash-planned .ev-header-row {
+    font-size: 0.78rem;
+}
+
+@media (max-width: 480px) {
+    #dash-upcoming .ev-row,
+    #dash-planned .ev-row {
+        grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.9fr) 70px 44px 44px;
+    }
 }
 
 .documents-box h3, .planning-box h3, .documents-box p, .planning-box p {
@@ -764,6 +786,46 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ev-name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ev-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+}
+
+.ev-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+}
+
+.ev-tag.neighborhood {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.ev-tag.maintenance {
+    border-color: #d89216;
+    color: #d89216;
 }
 
 .ev-cell-asset {

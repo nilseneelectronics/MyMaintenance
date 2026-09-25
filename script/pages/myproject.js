@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let projectSort = 'uploaded';
     let projectSortReverse = false;
     let selectedEditAsset = asset;
+    let projectPhotoId = '';
 
     const PROJECTS_KEY = 'mymaintenance_doc_projects';
 
@@ -113,22 +114,44 @@ document.addEventListener('DOMContentLoaded', () => {
         const docs = projectDocs();
         const count = docs.length;
         let cost = 0;
+        const categoryCosts = {};
         docs.forEach(function (d) {
+            let documentCost = 0;
             if (d.receiptTotal != null && !isNaN(Number(d.receiptTotal))) {
-                cost += Number(d.receiptTotal);
-                return;
+                documentCost = Number(d.receiptTotal);
+            } else if (Array.isArray(d.receiptItems)) {
+                d.receiptItems.forEach(function (item) {
+                    const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
+                    const qty = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
+                    if (!isNaN(price)) documentCost += price * (isNaN(qty) ? 1 : qty);
+                });
             }
-            if (!Array.isArray(d.receiptItems)) return;
-            d.receiptItems.forEach(function (item) {
-                const price = parseFloat(String(item.price || '0').replace(/\s/g, '').replace(',', '.'));
-                const qty = parseFloat(String(item.quantity || '1').replace(/\s/g, '').replace(',', '.'));
-                if (!isNaN(price)) cost += price * (isNaN(qty) ? 1 : qty);
-            });
+            cost += documentCost;
+            if (documentCost) {
+                const category = String(d.subproject || 'General').trim() || 'General';
+                categoryCosts[category] = (categoryCosts[category] || 0) + documentCost;
+            }
         });
+        const formatCost = function (value) { return value ? 'kr ' + value.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'kr 0'; };
+        const categories = Object.keys(categoryCosts).sort(function (a, b) {
+            if (a === 'General') return -1;
+            if (b === 'General') return 1;
+            return a.localeCompare(b);
+        });
+        const summary = categories.length ? '<div class="project-cost-summary">' + categories.map(function (category) {
+            return '<div class="project-cost-row"><span>' + escapeHtml(category) + '</span><strong>' + formatCost(categoryCosts[category]) + '</strong></div>';
+        }).join('') + '</div>' : '';
         overviewEl.innerHTML = '<div class="project-overview-row">'
             + '<div class="project-overview-cell"><span class="project-overview-label">Documents</span><span class="project-overview-value">' + count + '</span></div>'
-             + '<div class="project-overview-cell"><span class="project-overview-label">Cost</span><span class="project-overview-value">' + (cost ? 'kr ' + cost.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'kr 0') + '</span></div>'
+             + '<div class="project-overview-cell project-cost-cell"><span class="project-overview-label">Cost</span><span class="project-overview-value">' + formatCost(cost) + '</span>' + summary + '</div>'
             + '</div>';
+    }
+
+    async function connectProjectPhotos() {
+        if (!window.MyMaintenanceProjects || !window.MyMaintenanceProjects.find) return;
+        const row = await window.MyMaintenanceProjects.find(asset, project);
+        projectPhotoId = row ? row.id : '';
+        if (projectPhotoId) window.dispatchEvent(new CustomEvent('asset:selected', { detail: { type: 'project', id: projectPhotoId } }));
     }
 
     function renderList(query) {
@@ -136,9 +159,17 @@ document.addEventListener('DOMContentLoaded', () => {
         renderOverview();
         const docs = projectDocs().slice().sort(sortComparator());
         const q = query ? query.trim().toLowerCase() : '';
-        const filtered = q ? docs.filter(function (d) {
-            return String(d.name || '').toLowerCase().indexOf(q) !== -1
-                || String(d.docType || '').toLowerCase().indexOf(q) !== -1;
+        const filtered = q ? docs.map(function (d) {
+            const score = window.MyMaintenanceDocs.searchScore
+                ? window.MyMaintenanceDocs.searchScore(d, q)
+                : [d.name, d.docType, d.fileName, d.format].join(' ').toLowerCase().indexOf(q) !== -1 ? 1 : 0;
+            return { doc: d, score: score };
+        }).filter(function (result) {
+            return result.score > 0;
+        }).sort(function (a, b) {
+            return b.score - a.score;
+        }).map(function (result) {
+            return result.doc;
         }) : docs;
 
         if (!filtered.length) {
@@ -258,6 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (idx !== -1) list.splice(idx, 1);
             map[asset] = list;
             saveProjects(map);
+            if (projectPhotoId && window.MyMaintenancePhotos) {
+                const photos = await window.MyMaintenancePhotos.list(projectPhotoId, 'project');
+                await Promise.all(photos.map(function (photo) { return window.MyMaintenancePhotos.remove(photo); }));
+            }
             if (window.MyMaintenanceProjects) await window.MyMaintenanceProjects.remove(asset, project);
             window.MyMaintenanceDocs.getItems().forEach(function (d) {
                 if ((d.asset || '') === asset && (d.project || '') === project) {
@@ -315,7 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.MyMaintenanceDocs.refresh().then(function () { renderList(''); });
     }
     if (window.MyMaintenanceProjects) {
-        window.MyMaintenanceProjects.hydrate().then(function () { renderList(searchInput ? searchInput.value : ''); });
+        window.MyMaintenanceProjects.hydrate().then(function () {
+            renderList(searchInput ? searchInput.value : '');
+            connectProjectPhotos();
+        });
     }
     window.addEventListener('projects:changed', function () { renderList(searchInput ? searchInput.value : ''); });
     setTimeout(function () { renderList(''); }, 300);

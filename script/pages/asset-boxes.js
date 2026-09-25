@@ -3,7 +3,8 @@
 
     const REGISTER_LABELS = ['Register new address', 'Register new vehicle'];
     const HOUSE_TYPE_OPTIONS = ['House', 'Apartment', 'Cabin', 'Other'];
-    const VEHICLE_TYPE_OPTIONS = ['Car', 'Boat', 'Other'];
+    const VEHICLE_TYPE_OPTIONS = ['Car', 'Truck', 'Trailer', 'Scooter', 'Bike', 'Boat', 'Other'];
+    const VEHICLE_COUNTRY_OPTIONS = ['NO', 'SE', 'DK', 'FI', 'IS', 'DE', 'GB', 'OTHER'];
 
     let currentAssetName = '';
     let currentAssetId = null;
@@ -112,24 +113,31 @@
                 const doc = window.MyMaintenanceDocs.getItems().filter(function (d) { return d.id === id; })[0];
                 if (doc) window.MyMaintenanceDocs.openPreview(doc);
             });
-            const editBtn = document.createElement('button');
-            editBtn.type = 'button';
-            editBtn.className = 'doc-edit-btn';
-            editBtn.setAttribute('title', 'Edit document');
-            editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
-            editBtn.addEventListener('click', function (e) {
+            const editBtn = el.querySelector('.doc-edit-btn');
+            if (editBtn) editBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 if (!window.MyMaintenanceDocs) return;
                 const doc = window.MyMaintenanceDocs.getItems().filter(function (d) { return d.id === id; })[0];
                 if (doc) window.MyMaintenanceDocs.openEdit(doc);
             });
-            el.appendChild(editBtn);
         });
     }
 
+    function renderProjects() {
+        const box = document.getElementById('asset-projects-list');
+        if (!box || !window.MyMaintenanceDocs) return;
+        const asset = currentAsset();
+        const docs = window.MyMaintenanceDocs.getItems().filter(function (d) {
+            return d.asset === asset;
+        });
+        box.replaceChildren(window.MyMaintenanceDocs.renderProjectFolders(asset, docs, renderProjects));
+    }
+
     function meterField(rec) {
-        const boat = rec && rec.type === 'Boat';
-        return { key: boat ? 'Engine Hours' : 'Odometer', id: 'aie-meter', prop: 'distance', type: 'number', unit: boat ? 'h' : 'km' };
+        const type = rec && rec.type;
+        const boat = type === 'Boat';
+        const distance = type === 'Bike' || type === 'Trailer';
+        return { key: boat ? 'Engine Hours' : (distance ? 'Distance' : 'Odometer'), id: 'aie-meter', prop: 'distance', type: 'number', unit: boat ? 'h' : 'km' };
     }
 
     function assetConfig(rec) {
@@ -166,7 +174,8 @@
         const vehicleFields = [
             { key: 'Name', id: 'aie-name', prop: 'name', required: true },
             { key: 'Type', id: 'aie-type', kind: 'dropdown', options: VEHICLE_TYPE_OPTIONS, prop: 'type', comment: 'typeComment' },
-            { key: 'Registration', id: 'aie-registration', prop: 'registration', required: function (rec, sel) { return sel.type !== 'Boat'; } }
+            { key: 'Plate Country', id: 'aie-registration-country', kind: 'dropdown', options: VEHICLE_COUNTRY_OPTIONS, prop: 'registrationCountry', defaultValue: 'NO' },
+            { key: 'Registration', id: 'aie-registration', prop: 'registration', required: function (rec, sel) { return sel.type !== 'Boat' && sel.type !== 'Bike'; } }
         ];
         if (rec && rec.type === 'Car') {
             vehicleFields.push({ key: 'VIN', id: 'aie-vin', prop: 'vin' });
@@ -319,7 +328,7 @@
 
     function fieldDisplay(field, rec) {
         if (field.kind === 'dropdown') {
-            const v = rec[field.prop] || '';
+            const v = rec[field.prop] || field.defaultValue || '';
             const comment = field.comment ? rec[field.comment] : '';
             return comment ? esc(v + ' (' + comment + ')') : esc(v);
         }
@@ -462,7 +471,7 @@
         }
 
         function dropdownField(field) {
-            const value = rec[field.prop] || '';
+            const value = rec[field.prop] || field.defaultValue || '';
             const comment = field.comment ? rec[field.comment] || '' : '';
             const options = field.options.slice();
             if (value && options.indexOf(value) === -1) options.unshift(value);
@@ -529,7 +538,7 @@
 
         cfg.sections.forEach(function (section) {
             section.fields.forEach(function (field) {
-                if (field.kind === 'dropdown') editDropdowns[field.prop] = rec[field.prop] || '';
+                if (field.kind === 'dropdown') editDropdowns[field.prop] = rec[field.prop] || field.defaultValue || '';
             });
         });
 
@@ -643,6 +652,15 @@
                 }
             });
         });
+        if (pageAssetType() === 'vehicles' && fields.registration && window.MyMaintenanceVehiclePlates) {
+            const country = fields.registrationCountry || 'NO';
+            if (!window.MyMaintenanceVehiclePlates.isValid(country, fields.registration, sel.type)) {
+                const el = document.getElementById('aie-registration');
+                if (el) el.classList.add('invalid');
+                ok = false;
+                if (!firstInvalid) firstInvalid = el;
+            }
+        }
         if (!ok) {
             if (firstInvalid) firstInvalid.focus();
             return;
@@ -777,6 +795,7 @@
             buildAssetMenu();
             renderPlanned();
             renderDocs();
+            renderProjects();
             infoEditMode = false;
             renderAssetInfo();
             renderFloorplans();
@@ -805,10 +824,15 @@
         wireInfoKeyboard();
         renderPlanned();
         renderDocs();
+        renderProjects();
         renderAssetInfo();
         renderFloorplans();
         window.addEventListener('myevents:changed', renderPlanned);
-        window.addEventListener('mydocs:changed', renderDocs);
+        window.addEventListener('mydocs:changed', function () {
+            renderDocs();
+            renderProjects();
+        });
+        window.addEventListener('projects:changed', renderProjects);
         window.addEventListener('floorplans:changed', renderFloorplans);
         window.addEventListener('assets:changed', function () {
             infoEditMode = false;
@@ -816,6 +840,7 @@
             syncSelectedAsset();
             renderPlanned();
             renderDocs();
+            renderProjects();
             renderAssetInfo();
             renderFloorplans();
             publishAssetSelection();

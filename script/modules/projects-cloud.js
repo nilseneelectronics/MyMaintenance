@@ -102,6 +102,19 @@
         } catch (error) { console.warn('Could not rename project:', error); }
     }
 
+    async function find(asset, name) {
+        if (!asset || !name || !window.MyMaintenanceData) return null;
+        try {
+            const rows = await window.MyMaintenanceData.request('projects', {
+                query: { select: 'id,asset,name', asset: 'eq.' + asset, name: 'eq.' + name, limit: '1' }
+            });
+            return rows && rows[0] ? rows[0] : null;
+        } catch (error) {
+            console.warn('Could not load project:', error);
+            return null;
+        }
+    }
+
     async function remove(asset, name) {
         if (!window.MyMaintenanceData) return;
         try {
@@ -112,5 +125,5 @@
         } catch (error) { console.warn('Could not delete project:', error); }
     }
 
-    window.MyMaintenanceProjects = { hydrate: hydrate, add: add, rename: rename, remove: remove };
+    window.MyMaintenanceProjects = { hydrate: hydrate, add: add, find: find, rename: rename, remove: remove };
 })();

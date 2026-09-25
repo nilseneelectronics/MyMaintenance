@@ -19,7 +19,7 @@
     function writeLocalPlan(plan) {
         localStorage.setItem(DATA_PREFIX + plan.id, JSON.stringify(plan.data || {}));
         const list = localList().filter(function (item) { return item.id !== plan.id; });
-        list.unshift({ id: plan.id, name: plan.name || plan.id, preview: plan.preview || '', updatedAt: plan.updatedAt || Date.now(), asset: plan.asset || '' });
+        list.unshift({ id: plan.id, name: plan.name || plan.id, preview: plan.preview || '', updatedAt: plan.updatedAt || Date.now(), asset: plan.asset || '', floor: plan.floor || (plan.data && plan.data._floorplanFloor) || '' });
         saveLocalList(list);
     }
 
@@ -29,7 +29,7 @@
     }
 
     function remoteToLocal(row) {
-        return { id: row.id, name: row.name || row.id, preview: row.preview || '', updatedAt: row.updated_at || Date.now(), asset: row.asset || '' };
+        return { id: row.id, name: row.name || row.id, preview: row.preview || '', updatedAt: row.updated_at || Date.now(), asset: row.asset || '', floor: row.data && row.data._floorplanFloor || '' };
     }
 
     async function userKey() {
@@ -39,6 +39,8 @@
     }
 
     async function saveRemote(plan) {
+        const data = Object.assign({}, plan.data || {});
+        if (plan.floor) data._floorplanFloor = plan.floor;
         await window.MyMaintenanceData.request('floorplans', {
             method: 'POST',
             query: { on_conflict: 'user_id,id' },
@@ -46,7 +48,7 @@
                 id: plan.id,
                 name: plan.name || plan.id,
                 asset: plan.asset || '',
-                data: plan.data || {},
+                data: data,
                 preview: plan.preview || '',
                 updated_at: new Date(plan.updatedAt || Date.now()).toISOString()
             },
@@ -71,6 +73,7 @@
                             id: item.id,
                             name: item.name || item.id,
                             asset: item.asset || '',
+                            floor: item.floor || '',
                             preview: item.preview || '',
                             data: localData(item.id) || {},
                             updatedAt: item.updatedAt

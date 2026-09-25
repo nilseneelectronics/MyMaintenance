@@ -84,6 +84,15 @@
                 </div>
             </div>
 
+            <div class="neighbor-rules-box" id="nb-rules-box">
+                <h3>Neighborhood rules</h3>
+                <ol class="neighbor-rules-list" id="nb-rules-list"></ol>
+                <div class="box-actions neighbor-rules-actions">
+                    <button class="view-button" id="nb-add-rule">Edit rules</button>
+                    <button class="view-button" id="nb-send-alert">Send neighborhood alert</button>
+                </div>
+            </div>
+
             <!-- Neighbors list -->
             <div class="neighbor-box" id="nb-neighbor-box">
                 <div class="asset-info-header">
@@ -93,6 +102,22 @@
                 <div class="neighbor-list" id="nb-neighbor-list"></div>
             </div>
 
+        </div>
+
+        <div class="popup-overlay" id="nb-rule-popup">
+            <div class="popup-content nb-popup-wide">
+                <h3>Edit neighborhood rules</h3>
+                <div class="done-fields"><div id="nb-rule-fields"></div><button type="button" class="view-button" id="nb-rule-add-line">Add rule</button></div>
+                <div class="popup-buttons"><button class="popup-btn cancel" id="nb-rule-cancel">Cancel</button><button class="popup-btn confirm" id="nb-rule-save">Save</button></div>
+            </div>
+        </div>
+
+        <div class="popup-overlay" id="nb-alert-popup">
+            <div class="popup-content nb-popup-wide">
+                <h3>Send neighborhood alert</h3>
+                <div class="done-fields"><label>Message</label><textarea id="nb-alert-input" rows="7" placeholder="Write alert message..."></textarea></div>
+                <div class="popup-buttons"><button class="popup-btn cancel" id="nb-alert-cancel">Cancel</button><button class="popup-btn confirm" id="nb-alert-send">Send alert</button></div>
+            </div>
         </div>
 
             </main>

@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const OVERRIDES_KEY = STORAGE_KEY + '_overrides';
 
     const pageParams = new URLSearchParams(window.location.search);
-    let assetId = pageParams.get('id') || '';
-    const assetType = window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home';
+    let assetId = window.GALLERY_ASSET_ID || pageParams.get('id') || '';
+    const assetType = window.GALLERY_ASSET_TYPE || (window.location.pathname.toLowerCase().includes('myvehicles') ? 'vehicle' : 'home');
     let photoLoadToken = 0;
 
     function loadStoredPhotos() {

@@ -38,36 +38,82 @@
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 <input type="text" id="project-doc-search" placeholder="Search documents..." autocomplete="off">
             </div>
-            <div class="doc-sort-controls project-sort-controls">
-                <button type="button" id="project-sort-invert" class="doc-sort-invert" title="Invert sort direction" aria-label="Invert sort direction">
-                    <svg class="doc-invert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
-                        <path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15l-1.41 1.41L12 21l4.59-4.59L15.17 15 12 18.17z"/>
-                    </svg>
-                </button>
-                <div class="custom-dropdown project-sort-dropdown" id="project-sort-dropdown">
-                    <div class="dropdown-toggle">
-                        <span>Uploaded</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+            <div class="project-summary-layout">
+                <section class="photo-box project-photo-box" id="photo-box">
+                    <h3>Project photos</h3>
+                    <div class="big-photo-container" id="big-photo-container">
+                        <img id="main-home-photo" alt="Project photo" hidden>
+                        <div class="photo-empty-state" role="button" tabindex="0" aria-label="Add project photos">
+                            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg>
+                            <strong>Add project photos</strong>
+                            <span>Keep project pictures together</span>
+                        </div>
+                        <div class="photo-arrows">
+                            <button class="arrow left" id="prev-arrow" aria-label="Previous photo"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button class="arrow right" id="next-arrow" aria-label="Next photo"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        </div>
                     </div>
-                    <ul class="dropdown-menu">
-                        <li><button type="button" data-sort="alpha">Alphabetic</button></li>
-                        <li><button type="button" data-sort="uploaded">Date Uploaded</button></li>
-                        <li><button type="button" data-sort="performed">Date Performed</button></li>
-                        <li><button type="button" data-sort="size">Size</button></li>
-                        <li><button type="button" data-sort="type">Doctype</button></li>
-                        <li><button type="button" data-sort="modified">Modified</button></li>
-                    </ul>
+                    <div class="photo-box-side">
+                        <button class="view-button" id="view-all-photos">View all photos</button>
+                        <button class="view-button add-photos-outline" id="add-photo-btn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg>Add photos</button>
+                        <div class="photo-thumbs" id="photo-thumbs"><img id="thumb-1" src="" alt="More photo"><img id="thumb-2" src="" alt="More photo"></div>
+                    </div>
+                </section>
+                <div class="project-right-column">
+                    <div id="project-overview"></div>
                 </div>
             </div>
-            <div id="project-overview"></div>
         </div>
 
-        <div class="grid-container">
+        <div class="grid-container project-documents-section">
+            <div class="project-documents-header">
+                <h2 class="project-documents-title">Documents</h2>
+                <div class="doc-sort-controls project-sort-controls">
+                    <button type="button" id="project-sort-invert" class="doc-sort-invert" title="Invert sort direction" aria-label="Invert sort direction"><svg class="doc-invert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 5.83L15.17 9l1.41-1.41L12 3 7.41 7.59 8.83 9 12 5.83zm0 12.34L8.83 15 7.41 16.41 12 21l4.59-4.59L15.17 15 12 18.17z"/></svg></button>
+                    <div class="custom-dropdown project-sort-dropdown" id="project-sort-dropdown">
+                        <div class="dropdown-toggle"><span>Uploaded</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                        <ul class="dropdown-menu">
+                            <li><button type="button" data-sort="alpha">Alphabetic</button></li>
+                            <li><button type="button" data-sort="uploaded">Date Uploaded</button></li>
+                            <li><button type="button" data-sort="performed">Date Performed</button></li>
+                            <li><button type="button" data-sort="size">Size</button></li>
+                            <li><button type="button" data-sort="type">Doctype</button></li>
+                            <li><button type="button" data-sort="modified">Modified</button></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div id="project-doc-list"></div>
         </div>
     </main>
+
+    <div class="photo-modal" id="photo-modal">
+        <div class="photo-modal-content">
+            <button class="modal-back-btn modal-back-overlay" id="close-modal" aria-label="Go back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</button>
+            <div class="modal-top-actions"><button class="modal-back-btn delete" id="modal-delete" style="display:none">Delete</button><button class="modal-back-btn" id="modal-edit">Edit</button></div>
+            <div class="photo-modal-view">
+                <img id="modal-photo" src="" alt="Full screen project photo">
+                <div class="photo-zoom-controls" aria-label="Photo zoom"><button type="button" id="modal-zoom-out">−</button><output id="modal-zoom-level">100%</output><button type="button" id="modal-zoom-in">+</button></div>
+                <div class="modal-arrows"><button class="modal-arrow" id="modal-prev" aria-label="Previous photo"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="modal-arrow" id="modal-next" aria-label="Next photo"><svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+            </div>
+            <p class="modal-photo-caption" id="modal-photo-caption"></p>
+            <input type="text" class="modal-photo-text" id="modal-photo-text" placeholder="Photo text..." style="display:none" aria-label="Photo text">
+        </div>
+    </div>
+
+    <div class="photo-modal" id="gallery-modal">
+        <div class="gallery-modal-content">
+            <div class="modal-header"><button class="modal-back-btn" id="gallery-close" aria-label="Go back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back</button><h3>Project photos</h3><div class="modal-header-actions"><button class="modal-back-btn" id="gallery-edit-photo">Edit photos</button><button class="modal-back-btn" id="gallery-add-photo">Add photos</button></div></div>
+            <div class="gallery-scroll-pad"><div class="gallery-grid" id="gallery-grid"></div></div>
+        </div>
+    </div>
+
+    <div id="add-photos-popup" class="popup-overlay">
+        <div class="popup-content"><h3>Add project photos</h3><div class="done-fields"><label>Pictures</label><div class="done-pictures"><p class="done-no-photos" id="ap-no-photos">No pictures added</p><div class="done-photo-grid" id="ap-photo-grid"></div><button type="button" class="photo-picker-btn" id="ap-picture-btn"><svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 -960 960 960" width="22" fill="currentColor"><path d="M480-480ZM180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h335q13 0 21.5 8.5T545-810q0 13-8.5 21.5T515-780H180v600h600v-335q0-13 8.5-21.5T810-545q13 0 21.5 8.5T840-515v335q0 24-18 42t-42 18H180Zm60-162h480L576-474 449-307l-94-124-115 149Zm453-410h-58q-13 0-21.5-8.5T605-722q0-13 8.5-21.5T635-752h58v-58q0-13 8.5-21.5T723-840q13 0 21.5 8.5T753-810v58h57q13 0 21.5 8.5T840-722q0 13-8.5 21.5T810-692h-57v57q0 13-8.5 21.5T723-605q-13 0-21.5-8.5T693-635v-57Z"/></svg>Add pictures</button></div></div><div class="popup-buttons"><button id="ap-cancel" class="popup-btn cancel">Cancel</button><button id="ap-save" class="popup-btn confirm">Save</button></div></div>
+    </div>
+
+    <div id="ap-edit-popup" class="popup-overlay"><div class="popup-content"><h3>Edit photo</h3><div class="done-fields"><label>Photo text</label><input type="text" id="ap-edit-text" placeholder="Photo text..."></div><div class="popup-buttons"><button id="ap-edit-delete" class="popup-btn delete">Delete</button><button id="ap-edit-cancel" class="popup-btn cancel">Cancel</button><button id="ap-edit-save" class="popup-btn confirm">Save</button></div></div></div>
+    <div id="delete-photo-popup" class="popup-overlay"><div class="popup-content"><h3>Delete photo?</h3><div class="done-fields"><label>This picture will be removed permanently.</label></div><div class="popup-buttons"><button id="dp-cancel" class="popup-btn cancel">Cancel</button><button id="dp-delete" class="popup-btn delete">Delete</button></div></div></div>
 
     <div id="project-edit-popup" class="popup-overlay">
         <div class="popup-content">
@@ -106,8 +152,12 @@
                     </button>
                     <span class="doc-file-name" id="doc-file-name">No file selected</span>
                 </div>
-                 <input type="file" id="doc-file" style="display:none">
-                 <div class="doc-scan-status" id="doc-scan-status" style="display:none;"></div>
+                <input type="file" id="doc-file" style="display:none">
+
+                <label>File format</label>
+                <input type="text" id="doc-format" readonly>
+
+                <div class="doc-scan-status" id="doc-scan-status" style="display:none;"></div>
 
                  <label>Name</label>
                 <input type="text" id="doc-name" placeholder="Document name...">
@@ -137,6 +187,27 @@
                     </ul>
                 </div>
                 <input type="text" id="doc-project-other" placeholder="Project name..." style="display:none">
+
+                <label>Subproject</label>
+                <div class="asset-dropdown" id="doc-subproject-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-subproject-toggle">
+                        <span class="asset-value">General</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-subproject-menu">
+                        <li><button type="button" data-value="General" class="selected">General</button></li>
+                        <li><button type="button" data-value="Electrician">Electrician</button></li>
+                        <li><button type="button" data-value="Plumber">Plumber</button></li>
+                        <li><button type="button" data-value="Carpenter">Carpenter</button></li>
+                        <li><button type="button" data-value="Painter">Painter</button></li>
+                        <li><button type="button" data-value="Masonry">Masonry</button></li>
+                        <li><button type="button" data-value="Roofing">Roofing</button></li>
+                        <li><button type="button" data-value="HVAC">HVAC</button></li>
+                        <li class="asset-optgroup"></li>
+                        <li><button type="button" data-value="__other__">Other</button></li>
+                    </ul>
+                </div>
+                <input type="text" id="doc-subproject-other" placeholder="Subproject name..." style="display:none">
 
                  <label>Doc type</label>
                  <div class="asset-dropdown" id="doc-type-dropdown">
@@ -194,10 +265,13 @@
     <button id="doc-scan-btn" style="display:none;"></button>
 
     <script src="../script/modules/assets.js"></script>
+    <script>window.GALLERY_ASSET_TYPE = 'project';</script>
+    <script src="../script/pages/gallery.js"></script>
     <script src="../script/pages/mydocuments.js"></script>
     <script src="../script/pages/myproject.js"></script>
     <script src="../script/app-config.js"></script>
     <script src="../script/modules/projects-cloud.js"></script>
+    <script src="../script/modules/photos-cloud.js"></script>
     <script src="../script/modules/auth.js"></script>
     <script src="../script/modules/common-ui.js"></script>
     <script src="../script/script.js"></script>

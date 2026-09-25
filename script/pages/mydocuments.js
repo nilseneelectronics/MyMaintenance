@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectMenu = document.getElementById('doc-project-menu');
     const projectValueEl = document.querySelector('#doc-project-toggle .asset-value');
     const projectOther = document.getElementById('doc-project-other');
+    const subprojectDropdown = document.getElementById('doc-subproject-dropdown');
+    const subprojectToggle = document.getElementById('doc-subproject-toggle');
+    const subprojectMenu = document.getElementById('doc-subproject-menu');
+    const subprojectValueEl = document.querySelector('#doc-subproject-toggle .asset-value');
+    const subprojectOther = document.getElementById('doc-subproject-other');
 
     if (!addBtn || !popup) return;
 
@@ -185,6 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedDocType = '';
     let docTypeUserEdited = false;
     let selectedProject = '';
+    let selectedSubproject = 'General';
+    let neighborhoodAssets = [];
     let lockedAsset = '';
     let docSort = 'uploaded';
     let docReverse = false;
@@ -426,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'name', text: normalizeForSearch(it.name), weight: 100 },
             { key: 'asset', text: normalizeForSearch(it.asset || 'Other'), weight: 90 },
             { key: 'fileName', text: normalizeForSearch(it.fileName), weight: 40 },
+            { key: 'format', text: normalizeForSearch(it.format || info.label), weight: 20 },
             { key: 'type', text: normalizeForSearch(info.label), weight: 20 },
             { key: 'performed', text: normalizeForSearch(formatDateLabel(it.performed)), weight: 15 },
             { key: 'uploaded', text: normalizeForSearch(formatDateLabel(it.uploaded)), weight: 15 },
@@ -433,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { key: 'size', text: normalizeSizeForSearch(formatSize(it.size)), weight: 10, norm: normalizeSizeForSearch },
             { key: 'privacy', text: normalizeForSearch(it.privacy), weight: 10 },
             { key: 'docType', text: normalizeForSearch(it.docType), weight: 40 },
+            { key: 'subproject', text: normalizeForSearch(it.subproject || 'General'), weight: 50 },
             { key: 'ocr', text: normalizeOcrForSearch(it.ocrText), weight: 60, norm: normalizeOcrForSearch },
             { key: 'ocrItems', text: ocrItemsSearchText(it), weight: 70, norm: normalizeOcrForSearch },
             { key: 'receiptItems', text: receiptItemsSearchText(it.receiptItems), weight: 80, norm: normalizeOcrForSearch }
@@ -488,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function searchResults(query) {
-        const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+        const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean);
         if (!terms.length) return [];
         const scored = [];
         for (let i = 0; i < items.length; i++) {
@@ -500,6 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return sortBefore(a.it, b.it) ? -1 : (sortBefore(b.it, a.it) ? 1 : 0);
         });
         return scored;
+    }
+
+    function searchScore(it, query) {
+        const terms = normalizeForSearch(query).split(/\s+/).filter(Boolean);
+        return terms.length ? docScore(it, terms) : 0;
     }
 
     function highlight(text, terms) {
@@ -825,6 +839,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (projectOther) { projectOther.value = ''; projectOther.style.display = 'none'; }
         if (projectDropdown) projectDropdown.classList.remove('open');
+        selectedSubproject = 'General';
+        if (subprojectValueEl) subprojectValueEl.textContent = 'General';
+        if (subprojectMenu) subprojectMenu.querySelectorAll('button[data-value]').forEach(function (button) {
+            button.classList.toggle('selected', button.dataset.value === 'General');
+        });
+        if (subprojectOther) { subprojectOther.value = ''; subprojectOther.style.display = 'none'; }
+        if (subprojectDropdown) subprojectDropdown.classList.remove('open');
         currentOcrText = '';
         currentOcrItems = [];
         currentOcrExpanded = '';
@@ -867,10 +888,82 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!asset || !name) return;
         const map = loadProjects();
         const list = map[asset] || [];
-        if (list.indexOf(name) === -1) list.unshift(name);
+        if (list.indexOf(name) === -1) list.push(name);
         map[asset] = list;
         saveProjects(map);
         if (window.MyMaintenanceProjects) window.MyMaintenanceProjects.add(asset, name);
+    }
+
+    function registeredAssets() {
+        if (!window.MyMaintenanceAssets) return [];
+        const homes = (window.MyMaintenanceAssets.getHomes() || []).map(function (record) {
+            return { id: record.id || '', kind: 'home', label: window.MyMaintenanceAssets.homeLabel(record) };
+        });
+        const vehicles = (window.MyMaintenanceAssets.getVehicles() || []).map(function (record) {
+            return { id: record.id || '', kind: 'vehicle', label: window.MyMaintenanceAssets.vehicleLabel(record) };
+        });
+        return homes.concat(vehicles).filter(function (entry) { return entry.label; });
+    }
+
+    function neighborhoodAssetEntries() {
+        const entries = neighborhoodAssets.slice();
+        items.forEach(function (item) {
+            const label = String(item.asset || '').trim();
+            if (!/^Neighborhood:/i.test(label) || entries.some(function (entry) { return entry.label === label; })) return;
+            entries.push({ id: item.neighborhoodId || '', kind: 'neighborhood', label: label, displayLabel: label.replace(/^Neighborhood:\s*/i, '') });
+        });
+        return entries.sort(function (a, b) { return a.displayLabel.localeCompare(b.displayLabel); });
+    }
+
+    async function hydrateNeighborhoodAssets() {
+        if (!window.MyMaintenanceData) return;
+        try {
+            const rows = await window.MyMaintenanceData.request('neighborhoods', { query: { select: 'id,name', order: 'name.asc' } });
+            neighborhoodAssets = (rows || []).filter(function (row) { return row.id && row.name; }).map(function (row) {
+                return { id: row.id, kind: 'neighborhood', label: 'Neighborhood: ' + row.name, displayLabel: row.name };
+            });
+            refreshDocumentAssetMenu();
+            updateView();
+        } catch (error) {
+            console.warn('Could not load neighborhood assets:', error);
+        }
+    }
+
+    function documentOnlyAssets() {
+        const registered = new Set(registeredAssets().map(function (entry) { return entry.label; }));
+        const names = items.map(function (item) { return String(item.asset || '').trim(); })
+            .concat(Object.keys(loadProjects()));
+        return names.filter(function (name, index) {
+            return name && name !== '__other__' && !/^Neighborhood:/i.test(name)
+                && !registered.has(name) && names.indexOf(name) === index;
+        }).sort(function (a, b) { return a.localeCompare(b); });
+    }
+
+    function refreshDocumentAssetMenu() {
+        if (!assetMenu) return;
+        const registered = registeredAssets();
+        const homes = registered.filter(function (entry) { return entry.kind === 'home'; });
+        const vehicles = registered.filter(function (entry) { return entry.kind === 'vehicle'; });
+        const neighborhoods = neighborhoodAssetEntries();
+        const custom = documentOnlyAssets();
+        let html = '';
+        function addGroup(label, entries) {
+            if (!entries.length) return;
+            html += '<li class="asset-optgroup">' + escapeHtml(label) + '</li>';
+            html += entries.map(function (entry) {
+                const value = typeof entry === 'string' ? entry : entry.label;
+                const attrs = typeof entry === 'string' ? '' : ' data-asset-id="' + escapeHtml(entry.id) + '" data-asset-kind="' + entry.kind + '"';
+                const text = typeof entry === 'string' ? entry : (entry.displayLabel || entry.label);
+                return '<li><button type="button" data-value="' + escapeHtml(value) + '"' + attrs + '>' + escapeHtml(text) + '</button></li>';
+            }).join('');
+        }
+        addGroup('Addresses', homes);
+        addGroup('Vehicles', vehicles);
+        addGroup('Neighborhood', neighborhoods);
+        html += '<li class="asset-optgroup">Other</li>';
+        html += custom.map(function (name) { return '<li><button type="button" data-value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</button></li>'; }).join('');
+        html += '<li><button type="button" data-value="__other__">Other</button></li>';
+        assetMenu.innerHTML = html;
     }
 
     function populateProjectMenu(asset) {
@@ -887,6 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openPopup() {
+        refreshDocumentAssetMenu();
         resetPopupFields();
         const context = window.MyMaintenanceDocumentContext;
         window.MyMaintenanceDocumentContext = null;
@@ -911,6 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openScanPopup() {
+        refreshDocumentAssetMenu();
         resetPopupFields();
         const context = window.MyMaintenanceDocumentContext;
         window.MyMaintenanceDocumentContext = null;
@@ -937,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openEditPopup(it) {
+        refreshDocumentAssetMenu();
         editingId = it.id;
         selectedFile = null;
         scanMode = false;
@@ -958,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadedInput.value = formatDateLabel(it.uploaded) || '';
         sizeInput.value = formatSize(it.size);
         if (receiptTotalInput) receiptTotalInput.value = it.receiptTotal != null ? String(it.receiptTotal).replace('.', ',') : receiptItemsTotal(it.receiptItems);
-        if (formatInput) formatInput.value = fileTypeInfo(it).label;
+        if (formatInput) formatInput.value = it.format || fileTypeInfo(it).label;
         if (fileNameLabel) fileNameLabel.textContent = it.fileName || 'No file selected';
         if (assetMenu) {
             const known = Array.prototype.slice.call(assetMenu.querySelectorAll('button[data-value]'));
@@ -1062,6 +1158,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (projectDropdown) projectDropdown.classList.remove('open');
+        const subprojectVal = it.subproject || 'General';
+        const subprojectButtons = subprojectMenu ? Array.prototype.slice.call(subprojectMenu.querySelectorAll('button[data-value]')) : [];
+        const subprojectMatch = subprojectButtons.find(function (button) { return button.dataset.value === subprojectVal; });
+        selectedSubproject = subprojectMatch ? subprojectVal : '__other__';
+        subprojectButtons.forEach(function (button) { button.classList.toggle('selected', button === (subprojectMatch || subprojectButtons.find(function (entry) { return entry.dataset.value === '__other__'; }))); });
+        if (subprojectValueEl) subprojectValueEl.textContent = subprojectVal;
+        if (subprojectOther) {
+            subprojectOther.value = subprojectMatch ? '' : subprojectVal;
+            subprojectOther.style.display = subprojectMatch ? 'none' : '';
+        }
+        if (subprojectDropdown) subprojectDropdown.classList.remove('open');
         const h = popup.querySelector('h3');
         if (h) h.textContent = 'Edit document';
         popup.style.display = 'flex';
@@ -1075,12 +1182,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function documentStateSnapshot() {
         return JSON.stringify({
             name: nameInput.value, performed: performedInput.value,
-            otherAsset: docAssetOther ? docAssetOther.value : ''
+            otherAsset: docAssetOther ? docAssetOther.value : '',
+            subproject: selectedSubproject,
+            otherSubproject: subprojectOther ? subprojectOther.value : ''
         });
     }
 
     function hasDocumentText() {
-        return [nameInput, performedInput, docAssetOther].some(function (el) {
+        return [nameInput, performedInput, docAssetOther, subprojectOther].some(function (el) {
             return el && String(el.value || '').trim() !== '';
         });
     }
@@ -1223,6 +1332,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    if (subprojectToggle) {
+        subprojectToggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (subprojectDropdown) subprojectDropdown.classList.toggle('open');
+        });
+    }
+    if (subprojectMenu) {
+        subprojectMenu.addEventListener('click', function (e) {
+            const btn = e.target.closest('button[data-value]');
+            if (!btn) return;
+            selectedSubproject = btn.dataset.value;
+            if (subprojectValueEl) subprojectValueEl.textContent = btn.textContent;
+            subprojectMenu.querySelectorAll('button[data-value]').forEach(function (button) { button.classList.remove('selected'); });
+            btn.classList.add('selected');
+            if (subprojectDropdown) subprojectDropdown.classList.remove('open');
+            if (subprojectOther) {
+                const custom = selectedSubproject === '__other__';
+                subprojectOther.style.display = custom ? '' : 'none';
+                if (custom) subprojectOther.focus();
+            }
+        });
+    }
     document.addEventListener('click', (e) => {
         if (assetDropdown && !assetDropdown.contains(e.target)) {
             assetDropdown.classList.remove('open');
@@ -1232,6 +1363,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (projectDropdown && !projectDropdown.contains(e.target)) {
             projectDropdown.classList.remove('open');
+        }
+        if (subprojectDropdown && !subprojectDropdown.contains(e.target)) {
+            subprojectDropdown.classList.remove('open');
         }
         if (cal && !cal.contains(e.target) && e.target !== performedInput) {
             cal.classList.remove('open');
@@ -2287,6 +2421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.asset = asset;
         rec.homeId = selectedAssetKind === 'home' ? selectedAssetId : '';
         rec.vehicleId = selectedAssetKind === 'vehicle' ? selectedAssetId : '';
+        rec.neighborhoodId = selectedAssetKind === 'neighborhood' ? selectedAssetId : '';
         rec.privacy = privacy;
         rec.docType = selectedDocType;
         rec.format = file ? fileTypeInfo(file).label : (rec.format || fileTypeInfo(rec).label);
@@ -2296,6 +2431,9 @@ document.addEventListener('DOMContentLoaded', () => {
         rec.project = selectedProject
             ? selectedProject
             : (projectOther ? projectOther.value.trim() : '');
+        rec.subproject = selectedSubproject === '__other__'
+            ? ((subprojectOther && subprojectOther.value.trim()) || 'Other')
+            : (selectedSubproject || 'General');
         if (rec.project && asset && asset !== '__other__') addProjectForAsset(asset, rec.project);
         rec.performed = performedDt ? toISO(performedDt) : '';
 
@@ -2627,13 +2765,15 @@ function openAddDocPopup() {
         openPopup();
     }
 
-    function renderProjectFolders(assetKey, assetDocs) {
+    function renderProjectFolders(assetKey, assetDocs, onChange) {
         const wrap = document.createElement('div');
         wrap.className = 'doc-projects';
         const projects = projectsForAsset(assetKey);
         // Only show folders that still have documents, or keep all saved projects.
-        const projectSet = new Set((assetDocs || []).map(function (d) { return d.project || ''; }).filter(Boolean));
-        projects.forEach(function (name) { projectSet.add(name); });
+        const projectSet = new Set(projects);
+        (assetDocs || []).forEach(function (d) {
+            if (d.project) projectSet.add(d.project);
+        });
         const projectNames = Array.from(projectSet);
 
         function folderHtml(name) {
@@ -2687,7 +2827,7 @@ function openAddDocPopup() {
             input.value = '';
             if (name && assetKey && assetKey !== '__other__') {
                 addProjectForAsset(assetKey, name);
-                render();
+                (onChange || render)();
             }
         };
         add.addEventListener('click', function (e) {
@@ -2712,22 +2852,15 @@ function openAddDocPopup() {
         input.addEventListener('blur', commit);
         wrap.appendChild(add);
 
-        // Fill columns first, capped at six per row. The columns adapt to the
-        // number of boxes so every row fills the full width (e.g. 3 boxes use
-        // 3 columns; 8 boxes use 6 columns and wrap to a second row).
         const vw = window.innerWidth;
-        let maxCols = 6;
-        if (vw <= 460) maxCols = 2;
-        else if (vw <= 640) maxCols = 3;
-        else if (vw <= 900) maxCols = 4;
-        const cols = Math.max(1, Math.min(maxCols, wrap.children.length));
-        wrap.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-
-        // When the Add-project box is the only box on its row (e.g. exactly six
-        // projects already fill the previous row), it spans the whole row.
-        const boxCount = wrap.children.length;
-        if (boxCount % cols === 1) {
-            add.style.gridColumn = '1 / -1';
+        const cols = vw <= 760 ? 3 : (vw <= 1000 ? 4 : (vw <= 1200 ? 5 : 6));
+        const boxes = Array.from(wrap.children);
+        const remainder = boxes.length % cols;
+        if (remainder) {
+            boxes.slice(boxes.length - remainder).forEach(function (box) {
+                box.style.flexGrow = '1';
+                box.style.flexBasis = '0';
+            });
         }
 
         // Clicking a project folder opens that project's own page.
@@ -2741,30 +2874,44 @@ function openAddDocPopup() {
     }
 
     function render() {
-        if (!items.length) {
-            const groupsEl = document.getElementById('doc-groups');
-            if (groupsEl) groupsEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
-            const recentEl = document.getElementById('doc-recent');
-            if (recentEl) recentEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
-            return;
-        }
-
         const groupsEl = document.getElementById('doc-groups');
         if (groupsEl) {
             groupsEl.innerHTML = '';
             const byAsset = new Map();
+            if (!neighborhoodOnly) {
+                registeredAssets().forEach(function (asset) { byAsset.set(asset.label, []); });
+                neighborhoodAssetEntries().forEach(function (asset) { byAsset.set(asset.label, []); });
+                documentOnlyAssets().forEach(function (asset) { byAsset.set(asset, []); });
+            }
             items.forEach(function (it) {
                 const key = it.asset && String(it.asset).trim() ? String(it.asset).trim() : '__other__';
                 if (!byAsset.has(key)) byAsset.set(key, []);
                 byAsset.get(key).push(it);
             });
+            if (!byAsset.size) {
+                groupsEl.innerHTML = '<p class="doc-empty">No assets registered yet.</p>';
+            }
             const groupKeys = Array.from(byAsset.keys()).sort(function (a, b) {
+                const registered = registeredAssets().map(function (entry) { return entry.label; });
+                const neighborhoods = neighborhoodAssetEntries().map(function (entry) { return entry.label; });
+                const aRegistered = registered.indexOf(a);
+                const bRegistered = registered.indexOf(b);
+                if (aRegistered !== -1 || bRegistered !== -1) {
+                    if (aRegistered === -1) return 1;
+                    if (bRegistered === -1) return -1;
+                    return aRegistered - bRegistered;
+                }
+                const aNeighborhood = neighborhoods.indexOf(a);
+                const bNeighborhood = neighborhoods.indexOf(b);
+                if (aNeighborhood !== -1 || bNeighborhood !== -1) {
+                    if (aNeighborhood === -1) return 1;
+                    if (bNeighborhood === -1) return -1;
+                    return aNeighborhood - bNeighborhood;
+                }
                 const aOther = a === '__other__';
                 const bOther = b === '__other__';
-                const aNb = /^Neighborhood:/i.test(a);
-                const bNb = /^Neighborhood:/i.test(b);
-                const aRank = aOther ? 1 : (aNb ? 2 : 0);
-                const bRank = bOther ? 1 : (bNb ? 2 : 0);
+                const aRank = aOther ? 1 : 0;
+                const bRank = bOther ? 1 : 0;
                 if (aRank !== bRank) return aRank - bRank;
                 return a < b ? -1 : 1;
             });
@@ -2780,7 +2927,7 @@ function openAddDocPopup() {
                 const content = document.createElement('div');
                 content.className = 'subgroup-content';
                 content.appendChild(renderProjectFolders(key, byAsset.get(key)));
-                content.appendChild(renderHeaderRow());
+                if (sortedArr.length) content.appendChild(renderHeaderRow());
                 sortedArr.forEach(function (it) { content.appendChild(renderRow(it)); });
                 grp.appendChild(head);
                 grp.appendChild(content);
@@ -2791,10 +2938,14 @@ function openAddDocPopup() {
         const recentEl = document.getElementById('doc-recent');
         if (recentEl) {
             recentEl.innerHTML = '';
-            recentEl.appendChild(renderHeaderRow());
-            items.slice().sort(function (x, y) {
-                return recTime(y) - recTime(x);
-            }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
+            if (!items.length) {
+                recentEl.innerHTML = '<p class="doc-empty">No documents yet.</p>';
+            } else {
+                recentEl.appendChild(renderHeaderRow());
+                items.slice().sort(function (x, y) {
+                    return recTime(y) - recTime(x);
+                }).slice(0, 3).forEach(function (it) { recentEl.appendChild(renderRow(it)); });
+            }
         }
     }
 
@@ -3124,11 +3275,21 @@ function openAddDocPopup() {
 
     initDocSort();
     updateView();
+    let projectGridResizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(projectGridResizeTimer);
+        projectGridResizeTimer = setTimeout(updateView, 20);
+    });
     if (window.MyMaintenanceProjects) {
         window.MyMaintenanceProjects.hydrate().then(function () { updateView(); });
         window.addEventListener('projects:changed', updateView);
     }
     if (!neighborhoodOnly) hydrateDocuments();
+    if (!neighborhoodOnly) hydrateNeighborhoodAssets();
+    window.addEventListener('assets:changed', function () {
+        refreshDocumentAssetMenu();
+        updateView();
+    });
 
     window.MyMaintenanceDocs = {
         getItems: function () { return items.slice(); },
@@ -3143,6 +3304,9 @@ function openAddDocPopup() {
             persistDocument(it);
             window.dispatchEvent(new CustomEvent('mydocs:changed'));
         },
+        renderProjectFolders: renderProjectFolders,
+        refreshAssetMenu: refreshDocumentAssetMenu,
+        searchScore: searchScore,
         headerRowHtml: headerRowHtml,
         rowHtml: rowHtml
     };

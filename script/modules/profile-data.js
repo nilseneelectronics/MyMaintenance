@@ -12,12 +12,12 @@ window.MyMaintenanceProfileData = (function () {
     var ACCESS_AREAS = [
         { key: 'dashboard', label: 'Dashboard' },
         { key: 'homes', label: 'My Homes' },
-        { key: 'neighborhood', label: 'MyNeighborhood', invitation: true },
         { key: 'vehicles', label: 'My Vehicles' },
         { key: 'documents', label: 'My Documents' },
         { key: 'planning', label: 'My Planning' },
         { key: 'tools', label: 'My Tools' },
-        { key: 'subscription', label: 'Subscription' }
+        { key: 'subscription', label: 'Subscription' },
+        { key: 'neighborhood', label: 'MyNeighborhood', invitation: true }
     ];
 
     var NOTIF_CHANNELS = [
@@ -39,9 +39,9 @@ window.MyMaintenanceProfileData = (function () {
     }
 
     function presetAccess(role) {
-        var member = { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: true, tools: false, subscription: false };
+        var member = { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: true, tools: true, subscription: false };
         if (role === 'Owner') return { dashboard: true, homes: true, neighborhood: true, vehicles: true, documents: true, planning: true, tools: true, subscription: true };
-        if (role === 'Viewer') return { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: false, tools: false, subscription: false };
+        if (role === 'Viewer') return { dashboard: true, homes: true, neighborhood: false, vehicles: true, documents: true, planning: false, tools: true, subscription: false };
         return member;
     }
 

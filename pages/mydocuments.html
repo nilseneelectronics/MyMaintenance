@@ -147,6 +147,27 @@
                 </div>
                 <input type="text" id="doc-project-other" placeholder="Project name..." style="display:none">
 
+                <label>Subproject</label>
+                <div class="asset-dropdown" id="doc-subproject-dropdown">
+                    <button type="button" class="asset-toggle" id="doc-subproject-toggle">
+                        <span class="asset-value">General</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <ul class="asset-menu" id="doc-subproject-menu">
+                        <li><button type="button" data-value="General" class="selected">General</button></li>
+                        <li><button type="button" data-value="Electrician">Electrician</button></li>
+                        <li><button type="button" data-value="Plumber">Plumber</button></li>
+                        <li><button type="button" data-value="Carpenter">Carpenter</button></li>
+                        <li><button type="button" data-value="Painter">Painter</button></li>
+                        <li><button type="button" data-value="Masonry">Masonry</button></li>
+                        <li><button type="button" data-value="Roofing">Roofing</button></li>
+                        <li><button type="button" data-value="HVAC">HVAC</button></li>
+                        <li class="asset-optgroup"></li>
+                        <li><button type="button" data-value="__other__">Other</button></li>
+                    </ul>
+                </div>
+                <input type="text" id="doc-subproject-other" placeholder="Subproject name..." style="display:none">
+
                 <label>Doc type</label>
                 <div class="asset-dropdown" id="doc-type-dropdown">
                     <button type="button" class="asset-toggle" id="doc-type-toggle">

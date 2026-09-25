@@ -161,7 +161,20 @@
                     <label for="inv-email">Email *</label>
                     <input type="email" id="inv-email" placeholder="e.g. jane@example.com">
 
-                    <label>Role</label>
+                    <div class="profile-role-label-row">
+                        <span>Role</span>
+                        <div class="profile-role-info-wrap">
+                            <button type="button" class="profile-role-info-btn" aria-label="Role information" title="Role information">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M504.5-288.63q8.5-8.62 8.5-21.37v-180q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v180q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63Zm-1-314.57q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></svg>
+                            </button>
+                            <div class="profile-role-tooltip" role="tooltip">
+                                <p><strong>Owner</strong> manages family members and all shared access.</p>
+                                <p><strong>Member</strong> starts with standard shared access.</p>
+                                <p><strong>Viewer</strong> starts with limited shared access.</p>
+                                <p>Access areas can be customized. MyNeighborhood requires a separate invitation.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="asset-dropdown" id="inv-role-dropdown">
                         <button type="button" class="asset-toggle" id="inv-role-toggle">
                             <span class="asset-value" id="inv-role-value">Member</span>
@@ -195,7 +208,20 @@
                 <h3>Manage access</h3>
                 <p class="profile-popup-hint" id="ma-name"></p>
                 <div class="done-fields">
-                    <label>Role</label>
+                    <div class="profile-role-label-row">
+                        <span>Role</span>
+                        <div class="profile-role-info-wrap">
+                            <button type="button" class="profile-role-info-btn" aria-label="Role information" title="Role information">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M504.5-288.63q8.5-8.62 8.5-21.37v-180q0-12.75-8.68-21.38-8.67-8.62-21.5-8.62-12.82 0-21.32 8.62-8.5 8.63-8.5 21.38v180q0 12.75 8.68 21.37 8.67 8.63 21.5 8.63 12.82 0 21.32-8.63Zm-1-314.57q9.5-9.2 9.5-22.8 0-14.45-9.48-24.22-9.48-9.78-23.5-9.78t-23.52 9.78Q447-640.45 447-626q0 13.6 9.48 22.8 9.48 9.2 23.5 9.2t23.52-9.2ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></svg>
+                            </button>
+                            <div class="profile-role-tooltip" role="tooltip">
+                                <p><strong>Owner</strong> manages family members and all shared access.</p>
+                                <p><strong>Member</strong> starts with standard shared access.</p>
+                                <p><strong>Viewer</strong> starts with limited shared access.</p>
+                                <p>Access areas can be customized. MyNeighborhood requires a separate invitation.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="asset-dropdown" id="ma-role-dropdown">
                         <button type="button" class="asset-toggle" id="ma-role-toggle">
                             <span class="asset-value" id="ma-role-value">Member</span>
@@ -469,6 +495,10 @@
                         </button>
                         <ul class="asset-menu" id="rv-type-menu">
                             <li><button type="button" data-value="Car">Car</button></li>
+                            <li><button type="button" data-value="Truck">Truck</button></li>
+                            <li><button type="button" data-value="Trailer">Trailer</button></li>
+                            <li><button type="button" data-value="Scooter">Scooter</button></li>
+                            <li><button type="button" data-value="Bike">Bike</button></li>
                             <li><button type="button" data-value="Boat">Boat</button></li>
                             <li><button type="button" data-value="Other">Other</button></li>
                         </ul>
@@ -476,7 +506,14 @@
                     <input type="text" id="rv-type-other" placeholder="Specify type..." style="display:none">
 
                     <label id="rv-registration-label">Registration *</label>
-                    <input type="text" id="rv-registration" placeholder="e.g. AB12345">
+                    <div class="vehicle-registration-group">
+                        <div class="asset-dropdown registration-country-dropdown" id="rv-registration-country">
+                            <button type="button" class="asset-toggle" id="rv-registration-country-toggle" aria-label="Registration country"><span class="asset-value" id="rv-registration-country-value"></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <ul class="asset-menu" id="rv-registration-country-menu"></ul>
+                        </div>
+                        <input type="text" id="rv-registration" placeholder="e.g. AB 12345" autocomplete="off">
+                    </div>
+                    <small class="vehicle-registration-format" id="rv-registration-format"></small>
 
                     <label id="rv-vin-label" style="display:none">VIN</label>
                     <input type="text" id="rv-vin" placeholder="e.g. W0L0..." style="display:none">

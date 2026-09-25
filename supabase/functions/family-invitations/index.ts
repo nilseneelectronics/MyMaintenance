@@ -170,6 +170,45 @@ async function addAcceptedResident(invitation: Record<string, any>, user: Record
     details.addresses = addresses;
     await database('neighborhoods?id=eq.' + invitation.neighborhood_id, 'PATCH', { details });
 }
+async function removeRejectedResident(invitation: Record<string, any>) {
+    if (!invitation?.neighborhood_id) return '';
+    const rows = await database('neighborhoods?id=eq.' + invitation.neighborhood_id + '&select=id,name,details');
+    if (!rows.length) return '';
+    const neighborhood = rows[0];
+    const details = neighborhood.details && typeof neighborhood.details === 'object' ? neighborhood.details : {};
+    const email = String(invitation.email || '').trim().toLowerCase();
+    const address = String(invitation.address || '').trim().toLowerCase();
+    let changed = false;
+    details.addresses = (Array.isArray(details.addresses) ? details.addresses : []).map((item: Record<string, any>) => {
+        if (address && String(item.address || '').trim().toLowerCase() !== address) return item;
+        const people = Array.isArray(item.people) ? item.people : [];
+        const filtered = people.filter((person: Record<string, any>) => {
+            const sameInvitation = person.invitationId && person.invitationId === invitation.id;
+            const samePendingEmail = !person.userId && person.invitationStatus === 'invited'
+                && email && String(person.email || '').trim().toLowerCase() === email;
+            if (sameInvitation || samePendingEmail) changed = true;
+            return !sameInvitation && !samePendingEmail;
+        });
+        return filtered.length === people.length ? item : { ...item, people: filtered };
+    });
+    if (changed) await database('neighborhoods?id=eq.' + invitation.neighborhood_id, 'PATCH', { details });
+    return String(neighborhood.name || 'MyNeighborhood');
+}
+async function notifyInvitationRejected(invitation: Record<string, any>, kind: string, neighborhoodName = '') {
+    if (!invitation?.inviter_id) return;
+    const recipient = String(invitation.name || invitation.email || 'The invited person').trim();
+    const subject = kind === 'neighborhood'
+        ? `${recipient} declined the invitation to ${neighborhoodName || 'your neighborhood'}.`
+        : `${recipient} declined your family invitation.`;
+    await database('notifications?on_conflict=recipient_id,kind,reference_id', 'POST', {
+        recipient_id: invitation.inviter_id,
+        kind: 'system',
+        reference_id: invitation.id,
+        title: kind === 'neighborhood' ? 'Neighborhood invitation declined' : 'Family invitation declined',
+        body: subject,
+        read_at: null
+    }, 'resolution=merge-duplicates,return=representation');
+}
 async function syncNotifications(user: Record<string, any>) {
     const email = encodeURIComponent(String(user.email || '').toLowerCase());
     const [familyInvites, neighborhoodInvites] = await Promise.all([
@@ -276,6 +315,38 @@ Deno.serve(async request => {
             await sendNeighborhoodInviteEmail(user, invitation, recipient.email, owned[0].name || 'MyNeighborhood');
             return reply({ invited: true, email: recipient.email });
         }
+        if (body.action === 'neighborhood-alert') {
+            const neighborhoodId = String(body.neighborhoodId || '');
+            const message = String(body.message || '').trim();
+            if (!/^[0-9a-f-]{36}$/i.test(neighborhoodId) || !message) throw new Error('Enter an alert message.');
+            const neighborhoods = await database('neighborhoods?id=eq.' + neighborhoodId + '&select=id,owner_id,name');
+            if (!neighborhoods.length) throw new Error('Neighborhood not found.');
+            const neighborhood = neighborhoods[0];
+            if (neighborhood.owner_id !== user.id) {
+                const membership = await database('neighborhood_members?neighborhood_id=eq.' + neighborhoodId + '&user_id=eq.' + user.id + '&select=user_id');
+                if (!membership.length) throw new Error('You do not belong to this neighborhood.');
+            }
+            const members = await database('neighborhood_members?neighborhood_id=eq.' + neighborhoodId + '&select=user_id');
+            const ids = Array.from(new Set([neighborhood.owner_id, ...members.map((row: Record<string, any>) => row.user_id)].filter(Boolean)));
+            if (!ids.length || !env('SMTP_HOST') || !env('SMTP_USER') || !env('SMTP_PASSWORD') || !env('SMTP_FROM')) throw new Error('Email delivery is not configured.');
+            const profiles = await database('profiles?id=in.(' + ids.join(',') + ')&select=id,display_name,details');
+            const recipients = profiles.map((profile: Record<string, any>) => ({
+                email: String(profile.details?.profile?.email || '').trim().toLowerCase(),
+                name: String(profile.details?.profile?.name || profile.display_name || 'neighbor').trim()
+            })).filter((recipient: Record<string, string>) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email));
+            const transport = mailTransport();
+            try {
+                for (const recipient of recipients) await transport.sendMail({
+                    from: { name: 'Vedlikeholdt', address: env('SMTP_FROM') },
+                    to: recipient.email,
+                    subject: 'Neighborhood alert: ' + (neighborhood.name || 'MyNeighborhood'),
+                    text: `Hi ${recipient.name},\n\n${message}\n\nNeighborhood: ${neighborhood.name || 'MyNeighborhood'}`,
+                    html: brandedEmail('Neighborhood alert', `Hi ${recipient.name}, ${message}`, 'Open Vedlikeholdt', site),
+                    attachments: emailAttachments()
+                });
+            } finally { transport.close(); }
+            return reply({ sent: true, recipients: recipients.length });
+        }
         if (body.action === 'details') {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
             const invitations = await database('family_invitations?id=eq.' + body.id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending&select=inviter_id,role,expires_at');
@@ -359,7 +430,6 @@ Deno.serve(async request => {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
             const accepted = await database('rpc/accept_family_invitation', 'POST', { p_id: body.id, p_user: user.id, p_email: user.email });
             const invitation = Array.isArray(accepted) ? accepted[0] : accepted;
-            if (invitation?.family_id) await database('family_members', 'POST', { family_id: invitation.family_id, user_id: user.id, role: invitation.role });
             const neighborhoodInvites = await database('neighborhood_invitations?inviter_id=eq.' + invitation.inviter_id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending&select=id');
             for (const neighborhoodInvite of neighborhoodInvites) {
                 const joined = await database('rpc/accept_neighborhood_invitation', 'POST', { p_id: neighborhoodInvite.id, p_user: user.id, p_email: user.email });
@@ -371,10 +441,14 @@ Deno.serve(async request => {
         }
         if (body.action === 'reject') {
             if (!/^[0-9a-f-]{36}$/i.test(body.id || '')) throw new Error('Invalid invitation.');
-            const table = body.kind === 'neighborhood' ? 'neighborhood_invitations' : 'family_invitations';
-            const rejected = await database(table + '?id=eq.' + body.id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending', 'PATCH', { status: 'rejected' });
+            const kind = body.kind === 'neighborhood' ? 'neighborhood' : 'family';
+            const table = kind === 'neighborhood' ? 'neighborhood_invitations' : 'family_invitations';
+            const fields = kind === 'neighborhood' ? 'id,inviter_id,neighborhood_id,email,name,address' : 'id,inviter_id,email,name';
+            const rejected = await database(table + '?id=eq.' + body.id + '&email=eq.' + encodeURIComponent(user.email.toLowerCase()) + '&status=eq.pending&select=' + fields, 'PATCH', { status: 'rejected' });
             if (!rejected.length) throw new Error('Invitation not found for your email address.');
-            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (body.kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'PATCH', { title: 'Invitation declined', body: 'This invitation was declined.', read_at: new Date().toISOString() });
+            const neighborhoodName = kind === 'neighborhood' ? await removeRejectedResident(rejected[0]) : '';
+            await notifyInvitationRejected(rejected[0], kind, neighborhoodName);
+            await database('notifications?recipient_id=eq.' + user.id + '&kind=eq.' + (kind === 'neighborhood' ? 'neighborhood_invitation' : 'family_invitation') + '&reference_id=eq.' + body.id, 'PATCH', { title: 'Invitation declined', body: 'This invitation was declined.', read_at: new Date().toISOString() });
             return reply({ rejected: true });
         }
         if (body.action === 'cancel') {

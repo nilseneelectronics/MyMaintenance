@@ -661,6 +661,81 @@
     border-left: none !important;
 }
 
+.done-fields .vehicle-registration-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+}
+
+.done-fields .vehicle-registration-group .registration-country-dropdown {
+    flex: 0 0 105px;
+    width: 105px;
+    min-width: 0;
+}
+
+.done-fields .vehicle-registration-group .registration-country-dropdown .asset-toggle {
+    height: 100%;
+    min-height: 43px;
+    padding: 8px 10px;
+    border-radius: 25px 0 0 25px;
+    justify-content: center;
+    gap: 7px;
+}
+
+.registration-country-dropdown .asset-value,
+.registration-country-dropdown .asset-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.registration-country-dropdown > .asset-toggle > svg,
+.registration-country-dropdown .asset-toggle .vehicle-country-flag svg {
+    margin-left: 0;
+}
+
+.registration-country-dropdown .asset-menu button {
+    padding-left: 10px;
+}
+
+.registration-country-dropdown .asset-menu {
+    min-width: 150px;
+}
+
+.vehicle-country-flag {
+    display: inline-flex;
+    width: 24px;
+    height: 16px;
+    flex: 0 0 24px;
+    border: 1px solid rgba(128, 128, 128, 0.45);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.vehicle-country-flag svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.done-fields .vehicle-registration-group #rv-registration {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0 25px 25px 0;
+    border-left: 0;
+    text-transform: uppercase;
+}
+
+.vehicle-registration-format {
+    margin: -7px 8px 2px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.vehicle-registration-format.invalid {
+    color: var(--delete-red);
+}
+
 .done-fields textarea {
     resize: vertical;
     max-height: 220px;
