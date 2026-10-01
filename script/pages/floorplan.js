@@ -16,23 +16,42 @@ function initCanvas() {
   canvas = new fabric.Canvas('canvas', {
     width: wrapper.clientWidth,
     height: wrapper.clientHeight - 4,
-    selection: true,
+    selection: false,
     preserveObjectStacking: true,
     hoverCursor: 'pointer'
   });
+  if (typeof installFloorplanPointerMapping === 'function') installFloorplanPointerMapping(canvas);
 
   canvas.on('mouse:wheel', onMouseWheel);
-  wrapper.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+  wrapper.addEventListener('wheel', e => {
+    if (e.target !== canvas.upperCanvasEl && e.target !== canvas.lowerCanvasEl) onMouseWheel({ e });
+    else e.preventDefault();
+  }, { passive: false });
 
-  canvas.on('object:modified', () => { isDirty = true; syncSaveButton(); });
-  canvas.on('object:added', () => { isDirty = true; syncSaveButton(); });
-  canvas.on('object:removed', () => { isDirty = true; syncSaveButton(); });
+  const flagEdited = () => {
+    if (typeof floorplanRoomsUpdating !== 'undefined' && floorplanRoomsUpdating) return;
+    isDirty = true; syncSaveButton();
+  };
+  canvas.on('object:modified', flagEdited);
+  canvas.on('object:added', flagEdited);
+  canvas.on('object:removed', flagEdited);
 
   // Center world origin at canvas center
   canvas.viewportTransform = [1, 0, 0, 1, canvas.width / 2, canvas.height / 2];
   canvas.calcOffset();
 
   setupPan();
+  setupWalls();
+  if (typeof setupFloorplanOpenings === 'function') setupFloorplanOpenings();
+  if (typeof setupFloorplanRooms === 'function') setupFloorplanRooms();
+  if (typeof setupFloorplanInspector === 'function') setupFloorplanInspector();
+  if (typeof setupFloorplanStairs === 'function') setupFloorplanStairs();
+  if (typeof setupFloorplanSymbols === 'function') setupFloorplanSymbols();
+  if (typeof setupFloorplanControls === 'function') setupFloorplanControls();
+  if (typeof setupFloorplanSelection === 'function') setupFloorplanSelection();
+  if (typeof setupFloorplanDropdowns === 'function') setupFloorplanDropdowns();
+  if (typeof setupFloorplanTheme === 'function') setupFloorplanTheme();
+  syncFloorplanUnitControls();
 
   setupGridRenderer();
   createGrid();
@@ -65,24 +84,28 @@ function resizeCanvas() {
 
 // ====================== TOOL MANAGEMENT ======================
 function setTool(tool) {
+  finishCurrent();
   currentTool = tool;
+  canvas.discardActiveObject();
+  canvas.skipTargetFind = tool !== 'select';
   canvas.calcOffset();
-  canvas.selection = (tool === 'select');
+  canvas.selection = false;
   canvas.defaultCursor = (tool === 'select') ? 'default' : 'crosshair';
   canvas.hoverCursor = (tool === 'select') ? 'move' : 'crosshair';
+  document.getElementById('canvasWrapper').dataset.tool = tool;
   document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`[data-tool="${tool}"]`);
   if (btn) btn.classList.add('active');
+  if (tool === 'stair') document.getElementById('wallStatus').textContent = 'Drag a rectangle for stairs. Select the stair to choose its type and direction.';
+  if (typeof syncFloorplanSelectionTool === 'function') syncFloorplanSelectionTool(tool);
+  canvas.requestRenderAll();
 }
 
 // ====================== GRID ======================
 function getGridInterval() {
-  const ideal = GRID_TARGET_PX / (canvas?.viewportTransform?.[0] ?? 1);
-  let best = GRID_INTERVALS[0];
-  for (const v of GRID_INTERVALS) {
-    if (Math.abs(v - ideal) < Math.abs(best - ideal)) best = v;
-  }
-  return best;
+  let step = getSnapInterval();
+  while (step * (canvas?.viewportTransform?.[0] ?? 1) < 8) step *= 2;
+  return step;
 }
 
 function setupGridRenderer() {
@@ -91,7 +114,8 @@ function setupGridRenderer() {
   const ctx = gc.getContext('2d');
   const wrapper = document.getElementById('canvasWrapper');
 
-  function draw() {
+  function draw(renderEvent) {
+    if (renderEvent?.ctx && renderEvent.ctx !== canvas.contextContainer) return;
     const w = wrapper.clientWidth, h = wrapper.clientHeight;
     gc.width = w;
     gc.height = h;
@@ -102,9 +126,9 @@ function setupGridRenderer() {
     const step = getGridInterval();
 
     // Line widths that look the same at any zoom
-    const thinW = 0.75 / zoom;
+    const thinW = 0.5 / zoom;
     const midW  = 1 / zoom;
-    const thickW = 2 / zoom;
+    const thickW = 1 / zoom;
 
     // Visible world bounds
     const bx1 = -vpt[4] / zoom, by1 = -vpt[5] / zoom;
@@ -112,7 +136,7 @@ function setupGridRenderer() {
 
     // Compute a "major" multiple that stays > ~40px on screen
     let majorMult = 5;
-    while (step * majorMult * zoom < 40) majorMult *= 2;
+    while (step * majorMult * zoom < 120) majorMult *= 2;
     const majorStep = step * majorMult;
 
     const startX = Math.floor(bx1 / step) * step;
@@ -123,7 +147,8 @@ function setupGridRenderer() {
 
     // Determine how many decimal places to show
     const decimals = step < 1 ? 1 : 0;
-    const fmt = v => v.toFixed(decimals) + 'cm';
+    const fmt = v => floorplanFormatLength(v, decimals) + floorplanUnitLabel();
+    const colors = floorplanColors();
 
     const fontSize = `${14 / zoom}px Poppins, sans-serif`;
 
@@ -131,13 +156,13 @@ function setupGridRenderer() {
     for (let x = startX; x <= bx2; x += step) {
       const isCenter = Math.abs(x) < step * 0.01;
       const isMajor = isCenter || (majorStep > 0 && Math.abs(x % majorStep) < step * 0.01);
-      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#c8c8c8';
+      ctx.strokeStyle = isCenter ? colors.gridAxis : isMajor ? colors.gridMajor : colors.gridMinor;
       ctx.lineWidth = isCenter ? thickW : isMajor ? midW : thinW;
       ctx.beginPath(); ctx.moveTo(x, by1); ctx.lineTo(x, by2); ctx.stroke();
 
       if (isMajor) {
         const labelY = Math.max(by1 + 18 / zoom, Math.min(-4 / zoom, by2 - 6 / zoom));
-        ctx.fillStyle = isCenter ? '#444' : '#777';
+        ctx.fillStyle = colors.text;
         ctx.font = isCenter ? `${16 / zoom}px Poppins, sans-serif` : fontSize;
         ctx.textBaseline = 'bottom';
         ctx.fillText(isCenter ? '0' : fmt(x), x + 4 / zoom, labelY);
@@ -148,7 +173,7 @@ function setupGridRenderer() {
     for (let y = startY; y <= by2; y += step) {
       const isCenter = Math.abs(y) < step * 0.01;
       const isMajor = isCenter || (majorStep > 0 && Math.abs(y % majorStep) < step * 0.01);
-      ctx.strokeStyle = isCenter ? '#666' : isMajor ? '#aaa' : '#c8c8c8';
+      ctx.strokeStyle = isCenter ? colors.gridAxis : isMajor ? colors.gridMajor : colors.gridMinor;
       ctx.lineWidth = isCenter ? thickW : isMajor ? midW : thinW;
       ctx.beginPath(); ctx.moveTo(bx1, y); ctx.lineTo(bx2, y); ctx.stroke();
 
@@ -156,7 +181,7 @@ function setupGridRenderer() {
         const axisVisible = bx1 < 0 && bx2 > 0;
         const axisIsLeft = bx1 >= 0;
         const labelX = axisVisible ? -4 / zoom : axisIsLeft ? bx1 + 8 / zoom : bx2 - 8 / zoom;
-        ctx.fillStyle = isCenter ? '#444' : '#777';
+        ctx.fillStyle = colors.text;
         ctx.font = isCenter ? `${16 / zoom}px Poppins, sans-serif` : fontSize;
         ctx.textAlign = axisVisible || !axisIsLeft ? 'right' : 'left';
         ctx.textBaseline = 'bottom';
@@ -178,6 +203,7 @@ function createGrid() {
 function toggleGrid() {
   showGrid = !showGrid;
   document.getElementById('gridBtn').classList.toggle('active', showGrid);
+  document.getElementById('gridBtn').setAttribute('aria-pressed', String(showGrid));
   canvas.renderAll();
 }
 
@@ -225,8 +251,18 @@ function zoomTo(zoom, point) {
 function zoomIn() { zoomTo(Math.min(currentZoom * 1.25, 8)); }
 function zoomOut() { zoomTo(Math.max(currentZoom / 1.25, 0.2)); }
 function resetZoom() {
-  canvas.setZoom(1); currentZoom = 1;
-  canvas.viewportTransform = [1, 0, 0, 1, canvas.width / 2, canvas.height / 2];
+  const objects = canvas.getObjects().filter(o => o.data?.kind !== 'room');
+  if (!objects.length) {
+    canvas.setZoom(1); currentZoom = 1;
+    canvas.viewportTransform = [1, 0, 0, 1, canvas.width / 2, canvas.height / 2];
+  } else {
+    const bounds = objects.map(o => o.getBoundingRect(true, true));
+    const left = Math.min(...bounds.map(b => b.left)), top = Math.min(...bounds.map(b => b.top));
+    const right = Math.max(...bounds.map(b => b.left+b.width)), bottom = Math.max(...bounds.map(b => b.top+b.height));
+    currentZoom = Math.max(.2, Math.min(4, (canvas.width-120)/(right-left), (canvas.height-120)/(bottom-top)));
+    canvas.setZoom(currentZoom);
+    canvas.viewportTransform = [currentZoom,0,0,currentZoom,canvas.width/2-(left+right)/2*currentZoom,canvas.height/2-(top+bottom)/2*currentZoom];
+  }
   updateZoomDisplay();
   createGrid();
 }
@@ -265,7 +301,7 @@ function setupPan() {
   document.addEventListener('mouseup', e => {
     if (e.button !== 1 || !isPanning) return;
     isPanning = false;
-    canvas.selection = (currentTool === 'select');
+    canvas.selection = false;
     el.style.cursor = (currentTool === 'select') ? 'default' : 'crosshair';
     canvas.renderAll();
   });
@@ -353,10 +389,12 @@ function newFromFileManager() {
 function openPlanFromList(id) {
   const data = loadPlanData(id);
   if (!data) return;
+  resetWallSession();
   closeFileManager();
   planFileName = id;
   document.getElementById('planTitle').textContent = id;
-  canvas.loadFromJSON(data, () => { canvas.renderAll(); isDirty = false; syncSaveButton(); });
+  restoreFloorplanSettings(data._floorplanSettings);
+  canvas.loadFromJSON(data, () => { refreshFloorplanGeometry(); canvas.renderAll(); isDirty = false; syncSaveButton(); });
   const rec = getFileList().find(f => f.id === id);
   planAsset = rec && rec.asset ? rec.asset : 'Other';
   planFloor = rec && rec.floor ? rec.floor : data._floorplanFloor || '';
@@ -490,8 +528,8 @@ function renamePlan(id) {
 function shareSavedPlan(id) {
   let data = loadPlanData(id);
   if (!data) {
-    data = canvas.toJSON();
-    const preview = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
+    data = serializeFloorplan();
+    const preview = captureFloorplanImage({ format: 'png', multiplier: 0.3 });
     savePlanData(id, data, preview);
   }
   document.getElementById('shareModalTitle').textContent = 'Share Plan';
@@ -500,7 +538,7 @@ function shareSavedPlan(id) {
     window.open('mailto:?subject=' + encodeURIComponent('Floor Plan: ' + id) + '&body=' + encodeURIComponent('Here is my floor plan "' + id + '". Open it in the Floor Plan Designer to view or edit.'), '_blank');
   };
   document.getElementById('sharePrintBtn').onclick = () => {
-    const imgData = canvas.toDataURL({ format: 'png', multiplier: 2 });
+    const imgData = captureFloorplanImage({ format: 'png', multiplier: 2 });
     const win = window.open('', '_blank');
     if (win) {
       win.document.write('<html><head><title>Print: ' + id + '</title></head><body style="margin:0;text-align:center"><img src="' + imgData + '" style="max-width:100%;height:auto"><script>window.onload=function(){window.print();setTimeout(function(){window.close()},500)}<\/script></body></html>');
@@ -910,14 +948,33 @@ function wireAssetDropdown(ddId, toggleId, menuId, valueId, onSelect) {
 function doSave(name) {
   planFileName = name;
   document.getElementById('planTitle').textContent = name.replace(/\.json$/i, '');
-  const data = canvas.toJSON();
-  const preview = canvas.toDataURL({ format: 'png', multiplier: 0.3 });
+  const data = serializeFloorplan();
+  const preview = captureFloorplanImage({ format: 'png', multiplier: 0.3 });
   planAsset = currentPlanAsset() || 'Other';
   savePlanData(name, data, preview, planAsset, planFloor);
   syncPanelAsset();
   syncPanelFloor();
   isDirty = false;
   syncSaveButton();
+}
+
+function serializeFloorplan() {
+  return { ...canvas.toJSON(['data']), _floorplanSettings: floorplanSettings() };
+}
+
+function captureFloorplanImage(options) {
+  // Fabric 5 restores its temporary export state only after render callbacks
+  // complete. An exception there otherwise leaves interaction disabled, the
+  // viewport scaled to the thumbnail, and contextTop null.
+  const state = {};
+  for (const key of ['width','height','viewportTransform','contextTop','interactive','enableRetinaScaling']) state[key] = canvas[key];
+  try { return canvas.toDataURL(options); }
+  finally {
+    Object.assign(canvas,state);
+    canvas.calcViewportBoundaries?.();
+    canvas.calcOffset?.();
+    canvas.renderAll();
+  }
 }
 
 // Save stays dimmed until the user actually makes a change.
@@ -965,7 +1022,7 @@ function doExport(format) {
   if (titleEl) titleEl.style.display = showNameChecked ? '' : 'none';
 
   if (format === 'json') {
-    const json = JSON.stringify(canvas.toJSON(), null, 2);
+    const json = JSON.stringify(serializeFloorplan(), null, 2);
     downloadBlob(json, baseName + '.json', 'application/json');
     // Restore visibility that JSON doesn't need
     textObjects.forEach(o => o.visible = true);
@@ -980,7 +1037,7 @@ function doExport(format) {
   const gc = document.getElementById('gridCanvas');
 
   // Capture Fabric canvas
-  const fabricDataUrl = canvas.toDataURL({ format: 'png', multiplier: 2 });
+  const fabricDataUrl = captureFloorplanImage({ format: 'png', multiplier: 2 });
 
   // Composite grid canvas and Fabric canvas
   const composeCanvas = document.createElement('canvas');
@@ -993,13 +1050,14 @@ function doExport(format) {
   // Draw the Fabric canvas (with text visibility applied)
   const img = new Image();
   img.onload = () => {
-    cctx.drawImage(img, 0, 0);
+    cctx.fillStyle = '#fff'; cctx.fillRect(0, 0, w, h);
 
     // Overlay grid canvas if checked
     const gc = document.getElementById('gridCanvas');
     if (gc && showGridChecked) {
       cctx.drawImage(gc, 0, 0);
     }
+    cctx.drawImage(img, 0, 0, w, h);
 
     // Draw plan title if checked
     if (titleEl && showNameChecked && titleEl.style.display !== 'none') {
@@ -1054,7 +1112,7 @@ function downloadDataUrl(dataUrl, filename) {
 }
 
 function exportPDF(filename, dataUrl) {
-  const imgData = dataUrl || canvas.toDataURL({ format: 'png', multiplier: 2 });
+  const imgData = dataUrl || captureFloorplanImage({ format: 'png', multiplier: 2 });
   const imgW = canvas.width, imgH = canvas.height;
   const script = document.createElement('script');
   script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -1076,8 +1134,13 @@ function importPlan(e) {
     const reader = new FileReader();
     reader.onload = () => {
       const data = JSON.parse(reader.result);
-      canvas.loadFromJSON(data, () => canvas.renderAll());
-       savePlanData(planFileName, data, canvas.toDataURL({ format: 'png', multiplier: 0.3 }), currentPlanAsset());
+      resetWallSession();
+      restoreFloorplanSettings(data._floorplanSettings);
+      canvas.loadFromJSON(data, () => {
+        refreshFloorplanGeometry();
+        canvas.renderAll();
+        savePlanData(planFileName, serializeFloorplan(), captureFloorplanImage({ format: 'png', multiplier: 0.3 }), currentPlanAsset());
+      });
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -1123,10 +1186,6 @@ function newPlanConfirm() {
   }
   const asset = currentModalAsset() || 'Other';
   const floor = currentModalFloor();
-  if (!floor) {
-    if (window.MyMaintenanceCommonUi) window.MyMaintenanceCommonUi.alert('Please select or add a floor.');
-    return;
-  }
   document.getElementById('newPlanModal').style.display = 'none';
   planFileName = name;
   planAsset = asset;
@@ -1144,7 +1203,10 @@ function newPlanCancel() {
 }
 
 function doClear() {
+  resetWallSession();
   canvas.clear();
+  if (typeof floorplanSymbolsVisible !== 'undefined' && !floorplanSymbolsVisible) toggleFloorplanSymbols();
+  if (typeof resetFloorplanRooms === 'function') resetFloorplanRooms();
   planFileName = '';
   document.getElementById('planTitle').textContent = 'Untitled Plan';
   isDirty = false;
@@ -1218,8 +1280,8 @@ function setupPlanTitle() {
     });
   }
 }
-function addRoomFromWalls() { console.log('addRoomFromWalls'); }
-function autoClassifyWalls() { console.log('autoClassifyWalls'); }
+function addRoomFromWalls() { if (typeof refreshFloorplanRooms === 'function') refreshFloorplanRooms(); }
+function autoClassifyWalls() { refreshFloorplanGeometry(); }
 function showNewZoneDialog() { console.log('showNewZoneDialog'); }
 
 // ====================== WINDOW EXPORTS ======================

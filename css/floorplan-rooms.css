@@ -1,0 +1,9 @@
+.fp-room-ui { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 4; }
+.fp-room-target { position: absolute; transform: translate(-50%, -50%); padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: transparent; cursor: grab; touch-action: none; user-select: none; }
+.fp-room-target.is-dragging { cursor: grabbing; }
+.fp-room-target:hover, .fp-room-target:focus-visible { border-color: var(--fp-field-border, #a7b8c6); background: transparent; outline: none; }
+.fp-room-name-input { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; box-sizing: border-box; width: 180px; max-width: 80%; height: 30px; padding: 2px 5px; border: 1px solid var(--accent-primary, #008c85); border-radius: 5px; background: var(--fp-surface, #fff); color: var(--fp-text, #34404a); font: 500 18px/24px Arial, sans-serif; text-align: center; box-shadow: 0 0 0 2px var(--fp-hover, #e5f7f5); outline: none; }
+.fp-room-list-item { width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 2px 0; padding: 9px 8px; background: var(--fp-surface, #f7f9fb); border: 1px solid var(--fp-border, #e0e6ec); border-radius: 5px; color: var(--fp-text, #34404a); text-align: left; cursor: text; font: inherit; font-size: 12px; }
+.fp-room-list-item:hover, .fp-room-list-item:focus-visible { background: var(--fp-hover, #eef3f6); border-color: var(--accent-primary, #20b2aa); outline: none; }
+.fp-room-list-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.fp-room-list-item small { flex-shrink: 0; padding-left: 12px; border-left: 1px solid var(--fp-border, #dce3e9); color: var(--fp-muted, #617280); font-size: 11px; font-variant-numeric: tabular-nums; }
