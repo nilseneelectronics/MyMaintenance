@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const ctx=vm.createContext({console});
+for(const file of ['floorplan-dimensions.js','floorplan-walls.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../script/pages',file),'utf8'),ctx);
+const run=s=>vm.runInContext(s,ctx),near=(x,y)=>assert.ok(Math.abs(x-y)<.001,`${x} != ${y}`);
+run(`const r=(wall,ax,ay,bx,by)=>({wall,thickness:20,points:[{x:ax,y:ay},{x:bx,y:by}]});let records=[r('a',0,0,400,0),r('b',400,0,400,300),r('c',400,300,0,300),r('d',0,300,0,0)];let moved=wallTranslateSolution(records,'a',{x:0,y:-50});`);
+assert.equal(run('validWallDrag(records,moved)'),true);
+near(run('moved[0].points[0].y'),-50);near(run('moved[0].points[1].y'),-50);near(run('moved[1].points[1].y'),300);
+assert.equal(run('JSON.stringify(moved.slice(1).map(r=>r.points))'),run('JSON.stringify(records.slice(1).map(r=>r.points))'),'Whole-wall drag leaves all neighboring wall points unchanged');
+run(`records=[r('a',0,0,400,0),r('b',200,0,200,300),r('c',0,300,400,300)];moved=wallTranslateSolution(records,'b',{x:50,y:0});`);
+assert.equal(run('validWallDrag(records,moved)'),true);near(run('moved[1].points[0].x'),250);near(run('moved[1].points[1].x'),250);
+near(run('moved[0].points[0].x'),0);near(run('moved[0].points[1].x'),400);
+run(`moved=wallTranslateSolution(records,'b',{x:300,y:0});`);
+assert.equal(run('validWallDrag(records,moved)'),true,'Direct dragging may detach a wall without moving its previous neighbors');
+assert.equal(run('JSON.stringify(moved.filter(r=>r.wall!=="b").map(r=>r.points))'),run('JSON.stringify(records.filter(r=>r.wall!=="b").map(r=>r.points))'));
+run(`records=[r('a',0,0,300,0),r('b',300,0,300,200)];moved=wallEndpointSolution(records,'a',1,{x:200,y:200});`);
+assert.equal(run('validWallDrag(records,moved)'),true);near(run('moved[0].points[0].x'),0);near(run('moved[0].points[1].y'),200);
+assert.equal(run('JSON.stringify(moved[1].points)'),run('JSON.stringify(records[1].points)'),'Endpoint drag only changes the selected endpoint');
+console.log('Independent whole-wall and endpoint dragging, unchanged neighbors, and valid wall geometry passed.');

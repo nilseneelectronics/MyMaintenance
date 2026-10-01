@@ -10,25 +10,26 @@
   <link rel="stylesheet" href="../css/footer.css">
   <link rel="stylesheet" href="../css/button.css">
   <link rel="stylesheet" href="../css/floorplan.css">
+  <link rel="stylesheet" href="../css/floorplan-rooms.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 </head>
-<body class="sidebar-open logged-in">
+<body class="sidebar-open logged-in fp-editor">
   <main class="main floorplan-main">
     <div class="fp-layout">
       <!-- Toolbar -->
-      <div class="fp-toolbar">
+      <div class="fp-toolbar" role="toolbar" aria-label="Floor plan drawing tools">
         <div class="fp-tool-group">
           <button class="btn btn-sm fp-back-btn" onclick="goBack()" title="Back to Floor Plans">← Back</button>
         </div>
         <div class="fp-tool-group">
           <span class="fp-tool-label">Draw</span>
-          <button class="btn btn-sm" data-tool="select" onclick="setTool('select')">Select</button>
-          <button class="btn btn-sm" data-tool="wall" onclick="setTool('wall')">Wall</button>
-          <button class="btn btn-sm" data-tool="door" onclick="setTool('door')">Door</button>
-          <button class="btn btn-sm" data-tool="window" onclick="setTool('window')">Window</button>
-          <button class="btn btn-sm" data-tool="room" onclick="setTool('room')">Room</button>
-          <button class="btn btn-sm" data-tool="dimension" onclick="setTool('dimension')">Measure</button>
+          <button class="btn btn-sm" data-tool="select" onclick="setTool('select')" title="Select a wall, door or window to edit">Select</button>
+          <button class="btn btn-sm" data-tool="wall" onclick="setTool('wall')" title="Draw connected walls">Wall</button>
+          <button class="btn btn-sm" data-tool="door" onclick="setTool('door')" title="Draw a door on a wall or anywhere on the plan">Door</button>
+          <button class="btn btn-sm" data-tool="window" onclick="setTool('window')" title="Draw a window on a wall or anywhere on the plan">Window</button>
+          <button class="btn btn-sm" data-tool="stair" onclick="setTool('stair')" title="Place stairs and adjust their size">Stairs</button>
+          <button class="btn btn-sm" id="symbolLibraryBtn" onclick="toggleFloorplanSymbolLibrary()" aria-expanded="false" aria-controls="floorplanSymbolLibrary" title="Choose furniture, fixtures and equipment">Symbols</button>
         </div>
         <div class="fp-tool-group">
           <span class="fp-tool-label">Edit</span>
@@ -37,23 +38,38 @@
           <button class="btn btn-sm btn-delete" onclick="deleteSelected()">Delete</button>
         </div>
         <div class="fp-tool-group">
+          <label class="fp-tool-label" for="wallThickness">Thickness</label>
+          <div class="fp-tool-number"><input id="wallThickness" aria-label="Wall thickness (mm)" type="number" min="10" max="1000" step="10" value="150"><span data-fp-unit>mm</span></div>
+        </div>
+        <div class="fp-tool-group">
           <span class="fp-tool-label">View</span>
           <button class="btn btn-sm" onclick="zoomIn()">Zoom +</button>
           <button class="btn btn-sm" onclick="zoomOut()">Zoom -</button>
           <button class="btn btn-sm" onclick="resetZoom()">Fit</button>
           <span class="fp-zoom-level" id="zoomLevel">100%</span>
+          <button class="btn btn-sm active" onclick="toggleGrid()" id="gridBtn" aria-pressed="true">Grid</button>
+          <button class="btn btn-sm active" onclick="toggleFloorplanDimensions()" id="dimensionsBtn" aria-pressed="true" title="Show or hide measurements">Dimensions</button>
+          <button class="btn btn-sm active" onclick="toggleFloorplanSymbols()" id="symbolsVisibilityBtn" aria-pressed="true" title="Show or hide furniture and fixtures">Symbols</button>
         </div>
         <div class="fp-tool-group">
-          <span class="fp-tool-label">Grid</span>
-          <button class="btn btn-sm" onclick="toggleGrid()" id="gridBtn">Grid</button>
+          <span class="fp-tool-label">Restrictions</span>
           <button class="btn btn-sm" onclick="toggleSnap()" id="snapBtn">Snap</button>
+          <button class="btn btn-sm active" onclick="toggleAngleSnap()" id="angleSnapBtn" aria-pressed="true" title="Attract to nearby 90° and 45° angles; move farther away for any angle. Hold Shift to lock 90°.">90° / 45°</button>
+          <div class="fp-tool-number"><input id="gridStep" aria-label="Grid snap spacing (mm)" title="Grid snap spacing" type="number" min="10" max="10000" step="10" value="100" onchange="setFloorplanGridStep(this.value)"><span data-fp-unit>mm</span></div>
+        </div>
+        <div class="fp-tool-group">
+          <label class="fp-tool-label" for="floorplanUnit">Units</label>
+          <select id="floorplanUnit" aria-label="Measurement units" onchange="setFloorplanUnit(this.value)"><option value="mm" selected>mm</option><option value="cm">cm</option></select>
+        </div>
+        <div class="fp-symbol-library" id="floorplanSymbolLibrary" role="dialog" aria-label="Furniture and fixtures" hidden>
+          <div class="fp-symbol-library-heading"><strong>Furniture &amp; fixtures</strong><button class="btn btn-sm" type="button" onclick="toggleFloorplanSymbolLibrary(false)" aria-label="Close symbol library">Close</button></div>
+          <div class="fp-symbol-library-filters"><input id="floorplanSymbolSearch" type="search" placeholder="Search symbols…" aria-label="Search furniture and fixtures"><select id="floorplanSymbolCategory" aria-label="Symbol category"><option value="all">All categories</option></select></div>
+          <div id="floorplanSymbolList" class="fp-symbol-list"></div>
         </div>
       </div>
       <input type="file" id="importInput" accept=".json" style="display:none" onchange="importPlan(event)">
 
-      <!-- Canvas Area -->
-      <div class="fp-canvas-area">
-        <div class="fp-canvas-wrapper" id="canvasWrapper">
+      <div class="fp-documentbar">
           <div class="fp-filebar">
             <button class="btn btn-sm" onclick="clearAll()" title="New plan">New</button>
             <button class="btn btn-sm btn-primary" id="saveBtn" onclick="savePlan()" title="Save plan">Save</button>
@@ -61,22 +77,47 @@
             <button class="btn btn-sm" onclick="exportPlan()" title="Export plan">Export</button>
             <button class="btn btn-sm" onclick="sharePlan()" title="Share plan">Share</button>
           </div>
-          <canvas id="gridCanvas"></canvas>
-          <canvas id="canvas"></canvas>
           <div class="fp-plan-title-wrap" id="planTitleWrap">
-            <div class="fp-plan-title" id="planTitle">Untitled Plan</div>
+            <div class="fp-plan-title" id="planTitle" role="heading" aria-level="1" title="Double-click to rename this floor plan">Untitled Plan</div>
             <button type="button" class="fp-plan-title-check" id="planTitleCheck" title="Save name" aria-label="Save name">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </button>
           </div>
+        <span class="fp-units">PLAN · <span data-fp-unit>mm</span></span>
+      </div>
+
+      <!-- Canvas Area -->
+      <div class="fp-canvas-area">
+        <div class="fp-canvas-wrapper" id="canvasWrapper">
+          <canvas id="gridCanvas"></canvas>
+          <canvas id="canvas"></canvas>
         </div>
 
         <!-- Right Panel -->
-        <div class="fp-panel" id="rightPanel">
+        <aside class="fp-panel" id="rightPanel" aria-label="Floor plan properties">
+          <div class="fp-panel-section fp-properties-section">
+            <h3 id="inspectorTitle">Properties</h3>
+            <div id="propertiesContent">
+              <p class="fp-hint">Select an element to edit its measurements.</p>
+            </div>
+          </div>
           <div class="fp-panel-section">
-            <h3>Connected Asset</h3>
+            <h3>Rooms</h3>
+            <div id="roomsList">
+              <p class="fp-hint">Close the walls to create a room automatically.</p>
+            </div>
+            <p class="fp-inspector-note">Drag the name to move the label. Double-click to rename.</p>
+          </div>
+          <div class="fp-panel-section">
+            <h3>Plan details</h3>
+            <fieldset class="fp-inspector-group fp-wall-defaults">
+              <legend>Default wall thickness</legend>
+              <label class="fp-inspector-field" for="innerWallThickness"><span>Inner wall · <span data-fp-unit>mm</span></span><input id="innerWallThickness" type="number" min="10" max="1000" step="10" value="150" onchange="setWallDefaultThickness('inner',this.value)"></label>
+              <label class="fp-inspector-field" for="outerWallThickness"><span>Outer wall · <span data-fp-unit>mm</span></span><input id="outerWallThickness" type="number" min="10" max="1000" step="10" value="250" onchange="setWallDefaultThickness('outer',this.value)"></label>
+            </fieldset>
+            <label class="fp-panel-field-label" for="planAssetToggle">Connected asset</label>
             <div class="fp-asset-dropdown" id="planAssetDropdown">
               <button type="button" class="fp-asset-toggle" id="planAssetToggle" aria-expanded="false">
                 <span class="fp-asset-value" id="planAssetValue">-- Not connected --</span>
@@ -86,7 +127,7 @@
               </button>
               <ul class="fp-asset-menu" id="planAssetMenu"></ul>
             </div>
-            <label class="fp-panel-field-label">Floor</label>
+            <label class="fp-panel-field-label" for="planFloorToggle">Floor <span class="fp-optional">(optional)</span></label>
             <div class="fp-asset-dropdown" id="planFloorDropdown">
               <button type="button" class="fp-asset-toggle" id="planFloorToggle" aria-expanded="false">
                 <span class="fp-asset-value" id="planFloorValue">-- Not selected --</span>
@@ -101,28 +142,11 @@
               <button type="button" class="btn btn-sm" onclick="addPlanFloor('panel')">Save floor</button>
             </div>
           </div>
-          <div class="fp-panel-section">
-            <h3>Properties</h3>
-            <div id="propertiesContent">
-              <p class="fp-hint">Select an element</p>
-            </div>
-          </div>
-          <div class="fp-panel-section">
-            <h3>Rooms</h3>
-            <div id="roomsList">
-              <p class="fp-hint">No rooms defined</p>
-            </div>
-            <button class="btn btn-sm btn-primary" onclick="addRoomFromWalls()" style="width:100%;margin-top:8px">Detect Rooms</button>
-            <button class="btn btn-sm" onclick="autoClassifyWalls()" style="width:100%;margin-top:4px">Classify Walls</button>
-          </div>
-          <div class="fp-panel-section">
-            <h3>Zones</h3>
-            <div id="zonesList">
-              <p class="fp-hint">No zones created</p>
-            </div>
-            <button class="btn btn-sm btn-primary" onclick="showNewZoneDialog()" style="width:100%;margin-top:8px">+ New Zone</button>
-          </div>
-        </div>
+        </aside>
+      </div>
+      <div class="fp-statusbar">
+        <span class="fp-hint" id="wallStatus" aria-live="polite">Click to start · Type a length · Enter places · Escape finishes</span>
+        <span class="fp-navigation-hint">Scroll to zoom · Middle-drag to pan</span>
       </div>
     </div>
   </main>
@@ -163,7 +187,7 @@
         </button>
         <ul class="fp-asset-menu" id="newPlanAssetMenu"></ul>
       </div>
-      <label class="fp-modal-label">Floor</label>
+      <label class="fp-modal-label" for="newPlanFloorToggle">Floor (optional)</label>
       <div class="fp-asset-dropdown" id="newPlanFloorDropdown">
         <button type="button" class="fp-asset-toggle" id="newPlanFloorToggle" aria-expanded="false">
           <span class="fp-asset-value" id="newPlanFloorValue">Select floor</span>
@@ -239,6 +263,19 @@
   <script src="../script/modules/assets.js"></script>
   <script src="../script/modules/common-ui.js"></script>
   <script src="../script/script.js"></script>
+  <script src="../script/pages/floorplan-units.js"></script>
+  <script src="../script/pages/floorplan-theme.js"></script>
+  <script src="../script/pages/floorplan-dimensions.js"></script>
+  <script src="../script/pages/floorplan-wall-obstacles.js"></script>
+  <script src="../script/pages/floorplan-walls.js"></script>
+  <script src="../script/pages/floorplan-openings.js"></script>
+  <script src="../script/pages/floorplan-rooms.js"></script>
+  <script src="../script/pages/floorplan-stairs.js"></script>
+  <script src="../script/pages/floorplan-symbols.js"></script>
+  <script src="../script/pages/floorplan-dropdowns.js"></script>
+  <script src="../script/pages/floorplan-inspector.js"></script>
+  <script src="../script/pages/floorplan-controls.js"></script>
+  <script src="../script/pages/floorplan-selection.js"></script>
   <script src="../script/pages/floorplan.js"></script>
 </body>
 </html>
